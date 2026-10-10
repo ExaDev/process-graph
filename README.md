@@ -1,5 +1,7 @@
 # process-graph
 
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![Release](https://img.shields.io/github/v/release/ExaDev/process-graph)](https://github.com/ExaDev/process-graph/releases/latest) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+
 A process and dependency graph model, with the reasoning, command line and React UI built on it, over work tracked in several systems at once. One layout-free model carries activities, participants, transitions and decisions; a flowchart, a swimlane, a state machine and a sequence diagram are views of it. GitHub issues are the first source, and further sources are adapters behind one port.
 
 TypeScript, ESM, pnpm workspaces, Turborepo, Vitest, ESLint with `@exadev/eslint-config`, semantic-release.

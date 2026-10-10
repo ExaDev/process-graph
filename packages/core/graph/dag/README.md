@@ -1,5 +1,7 @@
 # @exadev/process-graph-dag
 
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@exadev/process-graph-dag) [![Release](https://img.shields.io/github/v/release/ExaDev/process-graph)](https://github.com/ExaDev/process-graph/releases/latest) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+
 Dependency-graph primitives over any node set and a `needs` accessor: topological layers, ancestors, descendants, cycle detection, transitive reduction and the critical path. No runtime dependencies, no knowledge of any process model, and no recursion, so a deep graph cannot overflow the call stack. `src/` imports nothing Node-only and runs unchanged in a browser or a Worker.
 
 A graph is built once from the data you already have, then analysed with plain functions:
