@@ -147,4 +147,53 @@ describe("validate", () => {
       },
     ]);
   });
+
+  it("reports an activity source used by two activities", () => {
+    const issues = validate(
+      open({
+        elements: [
+          {
+            kind: "activity",
+            id: "a",
+            label: "A",
+            source: "github:org/repo#1",
+          },
+          {
+            kind: "activity",
+            id: "b",
+            label: "B",
+            source: "github:org/repo#1",
+          },
+          {
+            kind: "activity",
+            id: "c",
+            label: "C",
+            source: "github:org/repo#2",
+          },
+        ],
+        transitions: [],
+      }),
+    );
+
+    expect(issues).toEqual([
+      {
+        code: "duplicate-source",
+        message: 'Duplicate activity source "github:org/repo#1"',
+      },
+    ]);
+  });
+
+  it("allows activities without a source to repeat the absence", () => {
+    const issues = validate(
+      open({
+        elements: [
+          { kind: "activity", id: "a", label: "A" },
+          { kind: "activity", id: "b", label: "B" },
+        ],
+        transitions: [],
+      }),
+    );
+
+    expect(issues).toEqual([]);
+  });
 });

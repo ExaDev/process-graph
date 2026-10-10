@@ -3,8 +3,11 @@ import { type ModelIssue, ModelParseError, parseModel } from "./parse.ts";
 import { order } from "./test-support/order.ts";
 
 /** Round-trips through JSON text, as a loaded document would arrive. */
-const fromJson = (value: unknown): unknown =>
-  JSON.parse(JSON.stringify(value)) as unknown;
+const fromJson = (value: unknown): unknown => {
+  const parsed: unknown = JSON.parse(JSON.stringify(value));
+
+  return parsed;
+};
 
 /** The issues `parseModel` reports for an input it must reject. */
 const issuesOf = (input: unknown): readonly ModelIssue[] => {
@@ -97,6 +100,23 @@ describe("parseModel", () => {
         message: 'transition "t1" target refers to unknown id "nowhere"',
       },
     ]);
+  });
+
+  it("keeps an activity's source through loading", () => {
+    const activity = {
+      kind: "activity",
+      id: "a",
+      label: "A",
+      source: "github:org/repo#1",
+    };
+    const model = parseModel({
+      ...order,
+      elements: [activity],
+      transitions: [],
+      projections: [],
+    });
+
+    expect(model.elements).toEqual([activity]);
   });
 
   it("names every problem in the error message", () => {
