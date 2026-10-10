@@ -46,7 +46,9 @@ const stateOf = <I extends IdSpace>(
 };
 
 /**
- * Activity-as-state projection. Each activity becomes a state the subject entity rests in, and a decision collapses into guarded transitions leaving the state before it. The target activity's action becomes the effect of the transition that enters it.
+ * Activity-as-state projection. Each activity that affects the subject becomes a state the subject entity rests in, and a decision collapses into guarded transitions leaving the state before it. The target activity's action becomes the effect of the transition that enters it.
+ *
+ * Which activities affect the subject is declared by their `affects`. An activity that does not list the subject is not a state of it: transitions through it are folded into the transition that leaves the previous state, exactly as a decision is. Authored `state` elements and pseudo-states are always kept. When no activity in the model declares `affects`, the model carries no such information and every activity is kept, which is the unscoped behaviour.
  *
  * Other conventions exist, such as steps as transitions with states between them. Naming states such as "Paid" needs authored states, which the model can hold as `state` elements.
  */
@@ -84,6 +86,16 @@ export const toStateMachine = <I extends IdSpace>(
     }
   }
 
+  const scoped = model.elements.some(
+    (element) => element.kind === "activity" && element.affects !== undefined,
+  );
+  /** Whether an element is folded through rather than shown as a state: a decision, or an activity that does not affect the subject in a model that declares what activities affect. */
+  const isTransparent = (element: ElementOf<I>): boolean =>
+    element.kind === "decision" ||
+    (element.kind === "activity" &&
+      scoped &&
+      element.affects?.includes(subject) !== true);
+
   const joinGuards = (
     first: string | undefined,
     second: string | undefined,
@@ -100,7 +112,7 @@ export const toStateMachine = <I extends IdSpace>(
     seen: ReadonlySet<I["element"]>,
   ): readonly Arrival[] => {
     const target = elements.get(transition.target);
-    if (target?.kind === "decision" && !seen.has(target.id)) {
+    if (target !== undefined && isTransparent(target) && !seen.has(target.id)) {
       const visited = new Set(seen).add(target.id);
       const arrivals: Arrival[] = [];
       for (const onward of outgoing.get(target.id) ?? []) {
@@ -116,7 +128,10 @@ export const toStateMachine = <I extends IdSpace>(
 
       return arrivals;
     }
-    const entryAction = target?.kind === "activity" ? target.action : undefined;
+    const entryAction =
+      target?.kind === "activity" && !isTransparent(target)
+        ? target.action
+        : undefined;
 
     return [
       {
@@ -131,7 +146,7 @@ export const toStateMachine = <I extends IdSpace>(
   const states: StateMachineState<I>[] = [];
   const transitions: StateMachineTransition<I>[] = [];
   for (const element of model.elements) {
-    const state = stateOf<I>(element);
+    const state = isTransparent(element) ? undefined : stateOf<I>(element);
     if (state === undefined) {
       continue;
     }

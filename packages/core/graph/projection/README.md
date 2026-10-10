@@ -21,6 +21,12 @@ toSequence(model, ["t1", "t2"]);
 
 A transition between two elements with different actors is a hand-off, never stored. Elements without an actor never produce one.
 
+## State machine scope
+
+`toStateMachine(model, subject)` keeps the activities whose `affects` lists the subject, plus authored `state` elements and pseudo-states. A step that does not affect the subject is not one of its states: transitions through it are folded into the transition leaving the previous state, the way a decision is, so one model yields a different machine per subject.
+
+When no activity in the model declares `affects`, the model carries no such information and every activity is kept. Once any activity declares it, an activity without `affects` is not kept (an empty list is a declaration that it affects nothing).
+
 ## Lossy directions
 
 A flowchart drops ownership, a state machine needs its subject recorded, and a sequence diagram follows one path, so one model yields a different diagram per scenario. Branches off the scenario are not drawn.
