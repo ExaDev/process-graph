@@ -34,6 +34,7 @@ export {
   OverlayParseError,
   overlaySchema,
   parseOverlay,
+  validateOverlay,
   type Overlay,
   type OverlayIssue,
 } from "./overlay.ts";

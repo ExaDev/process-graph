@@ -1,11 +1,13 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { z } from "zod";
 import type { OpenIds } from "./ids.ts";
+import { defineModel } from "./model.ts";
 import {
   OverlayParseError,
   type Overlay,
   type overlaySchema,
   parseOverlay,
+  validateOverlay,
 } from "./overlay.ts";
 
 /** The issues `parseOverlay` reports for an input it must reject. */
@@ -65,5 +67,58 @@ describe("parseOverlay", () => {
 
     expect(error.message).toBe("Invalid overlay: /a: bad; /: worse");
     expect(error.name).toBe("OverlayParseError");
+  });
+});
+
+describe("validateOverlay", () => {
+  const model = defineModel({
+    participants: [],
+    events: [],
+    actions: [],
+    artefacts: [],
+    elements: [
+      { kind: "activity", id: "a-submit", label: "Submit" },
+      { kind: "activity", id: "a-pack", label: "Pack" },
+    ],
+    transitions: [],
+    fragments: [],
+    projections: [],
+  });
+
+  it("accepts an overlay whose ids are all declared elements", () => {
+    expect(
+      validateOverlay(model, { "a-submit": "done", "a-pack": "open" }),
+    ).toEqual([]);
+  });
+
+  it("reports an id the model does not declare, naming it", () => {
+    expect(
+      validateOverlay(model, { "a-submit": "done", "a-ship": "open" }),
+    ).toEqual([
+      {
+        code: "overlay-unknown-element",
+        message: 'overlay refers to unknown element id "a-ship"',
+      },
+    ]);
+  });
+
+  it("reports an id that names another kind of identifier", () => {
+    const issues = validateOverlay(
+      defineModel({
+        participants: [{ id: "shop", label: "Shop", kind: "system" }],
+        events: [],
+        actions: [],
+        artefacts: [],
+        elements: [],
+        transitions: [],
+        fragments: [],
+        projections: [],
+      }),
+      parseOverlay({ shop: "done" }),
+    );
+
+    expect(issues.map((issue) => issue.code)).toEqual([
+      "overlay-unknown-element",
+    ]);
   });
 });
