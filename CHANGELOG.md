@@ -1,0 +1,10 @@
+## 1.0.0 (2026-10-10)
+
+* add checks, mutation testing and release workflows ([0535d81](https://github.com/ExaDev/process-graph/commit/0535d813c60c153240a77d9fd4c5a74927917bef))
+* add lint, format, commit and dead-code tooling ([e56dc98](https://github.com/ExaDev/process-graph/commit/e56dc98425a1c06ca7005b30cb1f9d83593167dd))
+* add shared mutation testing configuration ([b6fa9b1](https://github.com/ExaDev/process-graph/commit/b6fa9b14de49868e042e6bdf3be5861c2a31f89e))
+* add the dependency-graph primitives package ([57a68d7](https://github.com/ExaDev/process-graph/commit/57a68d78a418597915b6d19c2f9ba46a1060e498))
+* add the instruction file, contributing guide and licence ([dfdc872](https://github.com/ExaDev/process-graph/commit/dfdc872332d24661013c84fb3f4f59c1db2d3443))
+* add workspace, package manager and task configuration ([e9ef240](https://github.com/ExaDev/process-graph/commit/e9ef2403f08b012ed6463fa7d0346a3be4fe4db7))
+* pin vitest to the 4.x line ([bf0ff08](https://github.com/ExaDev/process-graph/commit/bf0ff086d4f0e98350e626e3a77e31755fce12c0))
+* stop ignoring Stryker plugins in knip ([251a561](https://github.com/ExaDev/process-graph/commit/251a561c5289306103720100aae96fb6772560f1))
