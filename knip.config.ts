@@ -29,7 +29,8 @@ const config: KnipConfig = {
       project: ["src/**/*.{ts,tsx}!"],
     },
     "packages/targets/*": {
-      entry: ["src/index.{ts,tsx}"],
+      // A target's bin is an entry point of its own, run as a process rather than imported.
+      entry: ["src/index.{ts,tsx}", "src/bin.ts"],
       project: ["src/**/*.{ts,tsx}!"],
     },
     // An app rather than a library: knip's Vite plugin finds the page's module from index.html; the store's worker, which main.tsx starts by URL, the build script and the Playwright suite are entries of their own.
