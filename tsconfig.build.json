@@ -12,6 +12,9 @@
     },
     {
       "path": "packages/core/graph/domain/tsconfig.build.json"
+    },
+    {
+      "path": "packages/targets/process-graph/tsconfig.build.json"
     }
   ]
 }
