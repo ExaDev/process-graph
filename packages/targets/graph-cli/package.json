@@ -1,0 +1,86 @@
+{
+  "name": "@exadev/process-graph-cli",
+  "version": "0.0.0",
+  "description": "The process-graph command line: sync work from GitHub issues into a SQLite store, ask what is ready, blocked or on the critical path, explain a status, and show the model as a flowchart, swimlane, state machine or sequence diagram in Mermaid or Graphviz DOT.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ExaDev/process-graph.git",
+    "directory": "packages/targets/graph-cli"
+  },
+  "homepage": "https://github.com/ExaDev/process-graph/tree/main/packages/targets/graph-cli#readme",
+  "bugs": {
+    "url": "https://github.com/ExaDev/process-graph/issues"
+  },
+  "bin": {
+    "process-graph-cli": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
+  },
+  "sideEffects": false,
+  "license": "MIT",
+  "scripts": {
+    "build": "turbo run _build",
+    "_build": "tsc -b tsconfig.build.json",
+    "lint": "turbo run _lint",
+    "_lint": "eslint . --cache --max-warnings 0",
+    "_lint:fix": "eslint . --fix --cache --max-warnings 0",
+    "typecheck": "turbo run _typecheck _typecheck:attw",
+    "_typecheck": "tsc -p tsconfig.json --noEmit",
+    "_typecheck:attw": "attw --pack --profile esm-only",
+    "test": "turbo run _test",
+    "_test": "vitest run --project unit",
+    "test:coverage": "turbo run _test:coverage",
+    "_test:coverage": "vitest run --project unit --coverage",
+    "test:smoke": "turbo run _test:smoke",
+    "_test:smoke": "vitest run --project smoke",
+    "test:mutation": "turbo run _test:mutation",
+    "_test:mutation": "stryker run stryker.config.ts",
+    "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && publint && attw --pack --profile esm-only"
+  },
+  "keywords": [
+    "process-model",
+    "dependency-graph",
+    "cli",
+    "github-issues",
+    "mermaid",
+    "graphviz"
+  ],
+  "dependencies": {
+    "@exadev/process-graph-dag": "1.0.2",
+    "@exadev/process-graph-domain": "1.0.3",
+    "@exadev/process-graph-projection": "1.0.3",
+    "@exadev/process-graph-schema": "1.1.0",
+    "@exadev/process-graph-source-contract": "1.0.1",
+    "@exadev/process-graph-source-github-issues": "1.0.1",
+    "@exadev/process-graph-sqlite-node": "1.0.0",
+    "@exadev/process-graph-store-contract": "1.0.1",
+    "@orpc/server": "2.0.0-beta.41",
+    "commander": "15.0.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/typescript-checker": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
+    "@types/node": "26.6.4",
+    "@vitest/coverage-v8": "5.0.3",
+    "eslint": "10.12.0",
+    "publint": "0.3.25",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}
