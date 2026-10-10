@@ -6,8 +6,9 @@ on:
   push:
     branches: [main]
 
+# One run per ref at a time. A single repository-wide group would let GitHub cancel a queued run of one pull request when another queues behind it, leaving the required mutation result check missing.
 concurrency:
-  group: mutation-testing
+  group: mutation-testing-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
