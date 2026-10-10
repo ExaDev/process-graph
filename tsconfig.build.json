@@ -14,6 +14,9 @@
       "path": "packages/core/graph/domain/tsconfig.build.json"
     },
     {
+      "path": "packages/core/graph/source-contract/tsconfig.build.json"
+    },
+    {
       "path": "packages/core/graph/layout/tsconfig.build.json"
     },
     {
