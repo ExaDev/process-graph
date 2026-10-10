@@ -269,7 +269,7 @@ importers:
   packages/adapters/graph/source-github-issues:
     dependencies:
       '@exadev/process-graph-source-contract':
-        specifier: 0.0.0
+        specifier: 1.0.0
         version: link:../../../core/graph/source-contract
       zod:
         specifier: 4.6.5
