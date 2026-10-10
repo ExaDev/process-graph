@@ -1,7 +1,7 @@
 import { readySet } from "@exadev/process-graph-domain";
 import type { Model, OpenIds, Overlay } from "@exadev/process-graph-schema";
 import { describe, expect, test } from "vitest";
-import { queryModel } from "./fixtures.ts";
+import { queryModel } from "./conformance.ts";
 import { blockedChainOf, impactOf, readyOf, structureOf } from "./structure.ts";
 
 const noFacts = () => ({ found: false }) as const;

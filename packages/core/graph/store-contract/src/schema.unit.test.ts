@@ -1,6 +1,6 @@
 import { modelSchema, validate } from "@exadev/process-graph-schema";
 import { describe, expect, expectTypeOf, test } from "vitest";
-import { everyFieldModel, queryModel } from "./fixtures.ts";
+import { everyFieldModel, queryModel } from "./conformance.ts";
 import { boundActivitySchema, type BoundActivity } from "./schema.ts";
 
 describe("fixtures", () => {
