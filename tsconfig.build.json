@@ -23,6 +23,9 @@
       "path": "packages/core/graph/layout/tsconfig.build.json"
     },
     {
+      "path": "packages/core/graph/store-contract/tsconfig.build.json"
+    },
+    {
       "path": "packages/targets/process-graph/tsconfig.build.json"
     }
   ]
