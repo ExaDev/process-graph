@@ -133,6 +133,44 @@ describe("the order process", () => {
           label: "payment authorised",
         },
       ],
+      items: [
+        {
+          kind: "message",
+          message: {
+            transition: "t2",
+            from: "customer",
+            to: "shop",
+            label: "Request payment",
+          },
+        },
+        {
+          kind: "message",
+          message: {
+            transition: "t3",
+            from: "shop",
+            to: "provider",
+            label: "Authorise or decline",
+          },
+        },
+        {
+          kind: "message",
+          message: {
+            transition: "t4",
+            from: "provider",
+            to: "shop",
+            label: "Payment authorised?",
+          },
+        },
+        {
+          kind: "message",
+          message: {
+            transition: "t5",
+            from: "shop",
+            to: "shop",
+            label: "payment authorised",
+          },
+        },
+      ],
       loss: [
         { kind: "scenario", elements: ["a-cancel"] },
         { kind: "unshown-branches", transitions: ["t6"] },
