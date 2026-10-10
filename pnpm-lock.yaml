@@ -940,6 +940,9 @@ importers:
 
   packages/targets/process-graph:
     dependencies:
+      '@exadev/process-graph-cli':
+        specifier: 0.0.0
+        version: link:../graph-cli
       '@exadev/process-graph-dag':
         specifier: 1.1.0
         version: link:../../core/graph/dag
