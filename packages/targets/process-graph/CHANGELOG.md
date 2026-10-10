@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/ExaDev/process-graph/compare/process-graph@1.0.0...process-graph@1.0.1) (2026-10-10)
+
+### Bug Fixes
+
+* **process-graph:** link the npm page to the repository, releases and CI with badges ([a51103d](https://github.com/ExaDev/process-graph/commit/a51103d344df2d1ec111ff7aa60148c71f56e2d8))
+
 ## 1.0.0 (2026-10-10)
 
 ### Features
