@@ -177,30 +177,45 @@ jobs:
         zizmor,
       ]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Two pushes to main close together must never release at the same time: the orchestrator pushes its release commit and tags to main, and semantic-release refuses to publish the moment the remote holds a commit this checkout does not, so a concurrent run's pushes would make every package after that point report "no release". `cancel-in-progress: false` queues the second run behind the first, because cancelling mid-release would leave published packages without their dependents' bumps.
     concurrency:
       group: release-workspace
       cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write # to push the release commit and tags, and create a GitHub Release
+      contents: write # to push the release commit and tags, and create a GitHub Release per package
       issues: write # to comment on released issues
       pull-requests: write # to comment on released pull requests
+      id-token: write # OIDC identity for npm trusted publishing (no NPM_TOKEN)
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          persist-credentials: false
+          # ref: main, not the bare event SHA: the orchestrator pushes to the current branch by name, so a detached HEAD stops the run with a WorkspaceStateError rather than pushing HEAD:HEAD. fetch-depth: 0 because each package's release range is analysed from its own last matching tag.
+          ref: main
           fetch-depth: 0
+          # Left at its default: the orchestrator pushes its commit and tags with plain `git push origin`, which needs the checkout's credential (this job's GITHUB_TOKEN) to stay in the git config for the duration of the job.
+          persist-credentials: true
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           standalone: true
+      # Deliberately no `registry-url`: setting it writes an .npmrc `_authToken` line that wins over the OIDC exchange, so the input that looks like it configures the registry is the one that breaks trusted publishing.
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version-file: .tool-versions
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Release the whole workspace as one version
-        # npmPublish: false throughout release.config.ts. This cuts a single shared version, CHANGELOG.md, git tag, and GitHub Release for the whole repository, and never calls `npm publish`.
+      - name: Upgrade npm for OIDC trusted publishing (needs npm CLI >=11.5.1)
+        # Pinned, not npm@latest: a moved dist-tag must not run new code in a job that goes on to hold a push credential. 11.5.1 is the first release with trusted publishing (OIDC); the pin is the newest release at least a week old when it was chosen, matching the install age gate, and its Node engine range includes the version in .tool-versions. Raise it deliberately.
+        # zizmor's adhoc-packages audit flags any install outside a lockfile; this one is a single exact version, chosen and raised deliberately as the comment above says, so it is ignored here rather than in the whole repository.
+        run: npm install -g npm@12.1.0 # zizmor: ignore[adhoc-packages]
+      - name: Release every package that changed, in dependency order
+        # One orchestrator run discovers the workspace from pnpm-workspace.yaml, orders the packages topologically and runs semantic-release per package, with commits path-filtered to that package's own directory and tags in `name@version` form. A package whose only change is a sibling's release still gets a patch release, because its published dependency range changed. HUSKY=0 so local git hooks never fire against the automated commits.
         run: HUSKY=0 pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Provenance for every package the run publishes, matching each package.json's own publishConfig.provenance.
+          NPM_CONFIG_PROVENANCE: "true"
+          # Blanked, not omitted: an inherited NPM_TOKEN or NODE_AUTH_TOKEN from a workflow-level env block, reusable workflow or composite action would otherwise be used in preference to the OIDC exchange.
+          NPM_TOKEN: ""
+          NODE_AUTH_TOKEN: ""
