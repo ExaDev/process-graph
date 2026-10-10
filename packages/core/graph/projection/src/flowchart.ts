@@ -1,5 +1,6 @@
 import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import type { ElementOf } from "./actors.ts";
+import { commonLoss, type Loss } from "./loss.ts";
 
 export interface FlowNode<I extends IdSpace> {
   readonly id: I["element"];
@@ -16,6 +17,8 @@ export interface FlowEdge<I extends IdSpace> {
 export interface Flowchart<I extends IdSpace> {
   readonly nodes: readonly FlowNode<I>[];
   readonly edges: readonly FlowEdge<I>[];
+  /** What the projection dropped from the model. */
+  readonly loss: readonly Loss<I>[];
 }
 
 const flowNode = <I extends IdSpace>(
@@ -76,5 +79,5 @@ export const toFlowchart = <I extends IdSpace>(
     }
   }
 
-  return { nodes, edges };
+  return { nodes, edges, loss: commonLoss(model, "flowchart") };
 };

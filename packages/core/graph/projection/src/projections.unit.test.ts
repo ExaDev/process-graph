@@ -23,6 +23,7 @@ describe("the order process", () => {
   it("projects to a flowchart of steps and decisions with guarded edges", () => {
     const flow = toFlowchart(order);
 
+    expect(flow.loss).toEqual([{ kind: "layout", elements: ["a-request"] }]);
     expect(flow.nodes).toEqual([
       { id: "start", label: "Start", shape: "terminator" },
       { id: "a-submit", label: "Submit order", shape: "process" },
@@ -61,6 +62,7 @@ describe("the order process", () => {
         nodes: ["a-authorise"],
       },
     ]);
+    expect(lanes.loss).toEqual([]);
     expect(lanes.unassigned).toEqual(["start", "end"]);
     expect(lanes.handoffs).toEqual(handoffs(order));
   });
@@ -69,6 +71,7 @@ describe("the order process", () => {
     const machine = toStateMachine(order, "order");
 
     expect(machine.subject).toBe("order");
+    expect(machine.loss).toEqual([]);
     expect(machine.states).toEqual([
       { id: "start", label: "Start", role: "initial" },
       { id: "a-submit", label: "Submit order", role: "state" },
@@ -130,6 +133,10 @@ describe("the order process", () => {
           label: "payment authorised",
         },
       ],
+      loss: [
+        { kind: "scenario", elements: ["a-cancel"] },
+        { kind: "unshown-branches", transitions: ["t6"] },
+      ],
     });
   });
 
@@ -137,6 +144,10 @@ describe("the order process", () => {
     const diagram = toSequence(order, cancelled);
 
     expect(diagram.lifelines).toEqual(["customer", "shop", "provider"]);
+    expect(diagram.loss).toEqual([
+      { kind: "scenario", elements: ["a-pack"] },
+      { kind: "unshown-branches", transitions: ["t5"] },
+    ]);
     expect(diagram.messages.map((message) => message.label)).toEqual([
       "Request payment",
       "Authorise or decline",

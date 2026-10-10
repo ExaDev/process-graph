@@ -2,6 +2,7 @@ import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import { actorMap } from "./actors.ts";
 import { toFlowchart, type Flowchart } from "./flowchart.ts";
 import { handoffs, type Handoff } from "./handoffs.ts";
+import { commonLoss } from "./loss.ts";
 
 /** One lane. `participant` is a declared role or system; in a runtime model it may instead be an actor that was named but never declared, which `validate` reports. */
 export interface Lane<I extends IdSpace> {
@@ -59,5 +60,11 @@ export const toSwimlane = <I extends IdSpace>(model: Model<I>): Swimlane<I> => {
     }
   }
 
-  return { ...flow, lanes, unassigned, handoffs: handoffs(model) };
+  return {
+    ...flow,
+    lanes,
+    unassigned,
+    handoffs: handoffs(model),
+    loss: commonLoss(model, "swimlane"),
+  };
 };
