@@ -7,8 +7,11 @@
     "declarationMap": false,
     "rootDir": "src",
     "outDir": "dist",
-    "rewriteRelativeImportExtensions": true
+    "rewriteRelativeImportExtensions": true,
+    "types": ["node"]
   },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts", "src/test-support/**"],
   "references": [
     {
       "path": "../../core/graph/dag/tsconfig.build.json"
@@ -21,6 +24,9 @@
     },
     {
       "path": "../../core/graph/domain/tsconfig.build.json"
+    },
+    {
+      "path": "../graph-cli/tsconfig.build.json"
     }
   ]
 }

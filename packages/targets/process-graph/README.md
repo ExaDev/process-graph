@@ -47,7 +47,19 @@ Install `process-graph` to author, load, project and reason about a model. Insta
 | Domain     | `@exadev/process-graph-domain`     | flat                     |
 | DAG        | `@exadev/process-graph-dag`        | namespaced as `dag`      |
 
-Each package's own README documents its functions and rules; this package adds no behaviour of its own.
+Each package's own README documents its functions and rules; this package adds no behaviour of its own beyond the bin.
+
+## The command line
+
+The package carries the `process-graph` bin, the command line from [`@exadev/process-graph-cli`](../graph-cli/README.md): sync work from GitHub issues into a SQLite store, ask what is ready, blocked, affected, on the critical path or handed off, explain a status, and draw the model in Mermaid or Graphviz DOT.
+
+```sh
+npx process-graph sync github:ExaDev
+npx process-graph ready
+npx process-graph show --view swimlane
+```
+
+The bin delegates to that package's library entry, which this package does not re-export: the command line is Node-only, while everything this package exports runs unchanged in a browser or a Worker. A program that embeds the command line, or calls its operations for data, imports `@exadev/process-graph-cli` directly.
 
 ## What is exported, and under which name
 
