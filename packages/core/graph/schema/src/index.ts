@@ -18,6 +18,7 @@ export type {
   ArtefactDef,
   Element,
   EventDef,
+  Extensions,
   Fragment,
   FragmentOperand,
   Participant,

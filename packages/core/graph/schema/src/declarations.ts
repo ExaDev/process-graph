@@ -1,4 +1,4 @@
-import type { PredicateNode } from "trilean";
+import type { JsonValue, PredicateNode } from "trilean";
 import type { IdSpace } from "./ids.ts";
 import type {
   FragmentOperator,
@@ -43,6 +43,11 @@ export interface ActionDef<Id extends string> {
 }
 
 /**
+ * Concepts that belong to one notation only, such as an activation bar, a history pseudo-state or a pool, keyed by notation name. The model gives them no meaning, so a projection ignores them and reports that it did; they exist so a round trip through a view restores them.
+ */
+export type Extensions = Readonly<Record<string, JsonValue>>;
+
+/**
  * Something activities consume or produce: data, a document, a deliverable. An artefact nothing produces is an input to the process; one flagged `deliverable` is an output of it.
  */
 export interface ArtefactDef<Id extends string> {
@@ -55,6 +60,7 @@ export type Element<Id extends string, R extends IdSpace> =
   | {
       readonly kind: "activity";
       readonly id: Id;
+      readonly extensions?: Extensions;
       readonly label: string;
       readonly actor?: R["actor"];
       readonly action?: R["action"];
@@ -74,12 +80,14 @@ export type Element<Id extends string, R extends IdSpace> =
   | {
       readonly kind: "decision";
       readonly id: Id;
+      readonly extensions?: Extensions;
       readonly label: string;
       readonly actor?: R["actor"];
     }
   | {
       readonly kind: "state";
       readonly id: Id;
+      readonly extensions?: Extensions;
       readonly label: string;
       readonly parent?: R["element"];
       readonly entry?: R["action"];
@@ -88,12 +96,14 @@ export type Element<Id extends string, R extends IdSpace> =
   | {
       readonly kind: "pseudo";
       readonly id: Id;
+      readonly extensions?: Extensions;
       readonly role: PseudoRole;
       readonly parent?: R["element"];
     }
   | {
       readonly kind: "message";
       readonly id: Id;
+      readonly extensions?: Extensions;
       readonly label: string;
       readonly from: R["actor"];
       readonly to: R["actor"];

@@ -219,6 +219,55 @@ describe("parseModel", () => {
     ).toEqual([activity]);
   });
 
+  it("round-trips notation-only extensions on every kind of element unchanged", () => {
+    const extensions = {
+      sequence: { activation: { from: "t2", to: "t4" } },
+      stateMachine: { history: "deep", tags: ["a", 1, null, true] },
+    };
+    const input = {
+      ...order,
+      elements: [
+        { kind: "activity", id: "a", label: "A", extensions },
+        { kind: "decision", id: "d", label: "D", extensions },
+        { kind: "state", id: "s", label: "S", extensions },
+        { kind: "pseudo", id: "p", role: "history", extensions },
+        {
+          kind: "message",
+          id: "m",
+          label: "M",
+          from: "shop",
+          to: "provider",
+          mode: "sync",
+          extensions,
+        },
+      ],
+      transitions: [],
+      projections: [],
+    };
+
+    expect(parseModel(fromJson(input))).toEqual(input);
+  });
+
+  it("rejects an extension value that is not JSON", () => {
+    const issues = issuesOf({
+      ...order,
+      elements: [
+        {
+          kind: "activity",
+          id: "a",
+          label: "A",
+          extensions: { sequence: { at: undefined, fn: () => 1 } },
+        },
+      ],
+      transitions: [],
+      projections: [],
+    });
+
+    expect(issues).toMatchObject([
+      { source: "schema", pointer: "/elements/0/extensions/sequence" },
+    ]);
+  });
+
   it("names every problem in the error message", () => {
     const error = new ModelParseError([
       { source: "schema", pointer: "/a", message: "bad" },
