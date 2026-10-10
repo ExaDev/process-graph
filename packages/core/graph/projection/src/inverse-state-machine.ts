@@ -188,11 +188,11 @@ export const diffStateMachine = <I extends IdSpace>(
   for (const edit of edited.transitions) {
     const key = editedKey(edit);
     const before = key === undefined ? undefined : originals.get(key);
-    const [first, ...rest] = edit.transitions;
+    const [first] = edit.transitions;
     if (before === undefined) {
       if (
         first === undefined ||
-        rest.length > 0 ||
+        edit.transitions.length > 1 ||
         transitions.has(first) ||
         edit.through !== undefined
       ) {
