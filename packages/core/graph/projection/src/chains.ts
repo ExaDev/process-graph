@@ -1,3 +1,7 @@
+import {
+  buildDag,
+  stronglyConnectedComponents,
+} from "@exadev/process-graph-dag";
 import type { IdSpace, Model, Transition } from "@exadev/process-graph-schema";
 
 export type TransitionOf<I extends IdSpace> = Transition<I["transition"], I>;
@@ -19,137 +23,480 @@ export const outgoingMap = <I extends IdSpace>(
   return outgoing;
 };
 
-/**
- * Everything that leads from one transition to one element through folded elements: from a drawn element to the next drawn element, or, when the folded elements form a cycle, to the folded element the cycle returns to. Several routes from the same first transition to the same target are one chain.
- */
-export interface Chain<I extends IdSpace> {
-  /** Every transition on some route from the first transition to `target`, each once, in the order the walk first met them. The first transition comes first. */
-  readonly transitions: readonly TransitionOf<I>[];
-  /** Every folded element on some route to `target`, each once, in the order the walk first met them. Empty when the chain is a single transition. */
-  readonly through: readonly I["element"][];
-  readonly target: I["element"];
-  /** Whether more than one route leads to `target`, so `transitions` is a union of routes rather than one route in order. */
-  readonly merged: boolean;
+/** A value found on a route, with how deep in the route forest it was found and whether it came from the folded element itself (after the transition arriving at it) or from that transition. */
+interface Found<V> {
+  readonly value: V;
+  readonly depth: number;
+  readonly atElement: boolean;
+}
+
+/** A guard on a route, linked to the guards before it; shared between every route through the same elements. */
+interface GuardLink {
+  readonly guard: string;
+  readonly depth: number;
+  readonly previous: GuardLink | undefined;
 }
 
 /**
- * The chains that start with `first`: one for each element it leads to through folded elements, in the order the walk first reaches them.
- *
- * The walk is depth-first over each element's outgoing transitions in model order, with an explicit stack and a visited set, so each folded element is entered once and each transition leaving one is followed once, and `folded` is asked once per element reached. Routes through different folded elements that reach the same target are collapsed into one chain rather than enumerated, so the number of chains is at most the number of elements reached, whatever the number of routes. A transition that arrives back at a folded element still on the walk's stack closes a cycle; that element is then also a chain target, which no notation draws because it is folded.
- *
- * After the walk, each target's `transitions` and `through` are found by walking back from it over the transitions met, so building every chain takes at most the number of targets times the number of transitions met.
- * @param first - The transition the chains start with.
- * @param outgoing - The transitions leaving each element.
- * @param folded - Whether the notation folds an element away instead of drawing it.
- * @returns One chain per target, in the order the walk first reaches each target.
+ * Everything that leads from one transition to one drawn element through folded elements. Several routes from the same first transition to the same target are one chain. The lists are built only when read, so a projection that draws many chains sharing a long run of folded elements does not copy that run once per chain.
  */
-export const chainsFrom = <I extends IdSpace>(
-  first: TransitionOf<I>,
-  outgoing: ReadonlyMap<I["element"], readonly TransitionOf<I>[]>,
-  folded: (element: I["element"]) => boolean,
-): readonly Chain<I>[] => {
-  const isFolded = new Map<I["element"], boolean>();
-  const foldedOnce = (element: I["element"]): boolean => {
-    const known = isFolded.get(element);
-    if (known !== undefined) {
-      return known;
-    }
-    const answer = folded(element);
-    isFolded.set(element, answer);
+export interface Chain<I extends IdSpace> {
+  readonly first: TransitionOf<I>;
+  readonly target: I["element"];
+  /** Whether more than one route may lead to `target`: some folded element on the way, or `target` itself, is entered from more than one folded element, or the way passes a cycle of folded elements. */
+  readonly merged: boolean;
+  /** Every transition on some route to `target`, each once, in the order a depth-first walk in model order first meets them; the first transition comes first. Built when called. */
+  readonly transitions: () => readonly TransitionOf<I>[];
+  /** Every folded element on some route to `target`, each once, in the same order. Empty when `first` arrives at `target` directly. Built when called. */
+  readonly through: () => readonly I["element"][];
+  /** On a single route, its guards in order; on merged routes, none, since they belong to different routes. Built when called. */
+  readonly guards: () => readonly string[];
+  /** Whether `guards` is non-empty, known without building it. */
+  readonly guarded: boolean;
+  /** On a single route, the last trigger along it, counting each folded element's own event right after the transition arriving at it; `undefined` on merged routes. */
+  readonly trigger: I["event"] | undefined;
+  /** On a single route, the last effect along it; `undefined` on merged routes. */
+  readonly effect: I["action"] | undefined;
+}
 
-    return answer;
-  };
+/** What a notation folds away and what it draws. */
+export interface Folding<I extends IdSpace> {
+  /** Whether the notation folds an element away instead of drawing it. Asked once per element. */
+  readonly folded: (element: I["element"]) => boolean;
+  /** Whether a chain may end at an element the notation does not fold. */
+  readonly accepted: (element: I["element"]) => boolean;
+  /** The event a folded element contributes to a route, such as a message element's; asked once per folded element. */
+  readonly eventOf?: (element: I["element"]) => I["event"] | undefined;
+}
 
-  /** Folded elements entered, in order, and whether each is still on the stack (`open`) or finished. */
-  const state = new Map<I["element"], "open" | "done">();
-  const entered: I["element"][] = [];
-  const met: TransitionOf<I>[] = [];
-  const targets: I["element"][] = [];
-  const isTarget = new Set<I["element"]>();
-  const addTarget = (element: I["element"]): void => {
-    if (!isTarget.has(element)) {
-      isTarget.add(element);
-      targets.push(element);
-    }
-  };
-  const arrive = (transition: TransitionOf<I>): boolean => {
-    met.push(transition);
-    const { target } = transition;
-    if (!foldedOnce(target)) {
-      addTarget(target);
+/** Chains through one model's folded elements, built once and shared by every chain that starts with a transition of that model. */
+export interface ChainIndex<I extends IdSpace> {
+  /** The chains that start with `first`, one per accepted element it leads to, in the order a depth-first walk reaches them. */
+  readonly from: (first: TransitionOf<I>) => readonly Chain<I>[];
+  /** The transitions arriving at `element` from folded elements. */
+  readonly arriving: (element: I["element"]) => readonly TransitionOf<I>[];
+  /** The folded elements on some chain that starts with one of `firsts`. */
+  readonly carried: (
+    firsts: Readonly<Iterable<TransitionOf<I>>>,
+  ) => ReadonlySet<I["element"]>;
+}
 
-      return false;
-    }
-    const seen = state.get(target);
-    if (seen === "open") {
-      addTarget(target);
-    }
-    if (seen !== undefined) {
-      return false;
-    }
-    state.set(target, "open");
-    entered.push(target);
-
-    return true;
-  };
-
-  const stack: { readonly element: I["element"]; next: number }[] = [];
-  if (arrive(first)) {
-    stack.push({ element: first.target, next: 0 });
+/** Appends `value` to the list `map` holds under `key`. */
+const append = <Key, Value>(
+  map: Map<Key, Value[]>,
+  key: Key,
+  value: Value,
+): void => {
+  const list = map.get(key);
+  if (list === undefined) {
+    map.set(key, [value]);
+  } else {
+    list.push(value);
   }
-  for (let top = stack.at(-1); top !== undefined; top = stack.at(-1)) {
-    const transition = (outgoing.get(top.element) ?? [])[top.next];
-    if (transition === undefined) {
-      state.set(top.element, "done");
-      stack.pop();
+};
+
+/** A computation run once, on first call, and remembered. */
+export const once = <T>(compute: () => T): (() => T) => {
+  let memo: { readonly value: T } | undefined;
+
+  return () => {
+    memo ??= { value: compute() };
+
+    return memo.value;
+  };
+};
+
+/**
+ * Indexes a model's folded elements so chains can be read off for any first transition.
+ *
+ * The folded elements are condensed into strongly connected components in one pass, and each component's reachable accepted targets are found once, in reverse topological order: a component with no target of its own and one way on shares its successor's list, so a long run of folded elements holds one list, not one per element. Folded elements entered from exactly one folded element, outside any cycle, form a forest of routes; each records how deep it is and the last trigger, effect and guard on the way down to it, so a single-route chain's labels are found from its ends in constant time.
+ *
+ * Merged chains' lists, and every chain's lists, are built only when read.
+ */
+export const chainIndex = <I extends IdSpace>(
+  model: Model<I>,
+  folding: Folding<I>,
+): ChainIndex<I> => {
+  const outgoing = outgoingMap(model);
+  const isFolded = new Set<I["element"]>();
+  for (const element of model.elements) {
+    if (folding.folded(element.id)) {
+      isFolded.add(element.id);
+    }
+  }
+  const events = new Map<I["element"], I["event"]>();
+  for (const id of isFolded) {
+    const event = folding.eventOf?.(id);
+    if (event !== undefined) {
+      events.set(id, event);
+    }
+  }
+
+  const foldedIn = new Map<I["element"], TransitionOf<I>[]>();
+  const arrivingIn = new Map<I["element"], TransitionOf<I>[]>();
+  for (const transition of model.transitions) {
+    if (!isFolded.has(transition.source)) {
       continue;
     }
-    top.next += 1;
-    if (arrive(transition)) {
-      stack.push({ element: transition.target, next: 0 });
+    append(
+      isFolded.has(transition.target) ? foldedIn : arrivingIn,
+      transition.target,
+      transition,
+    );
+  }
+
+  const foldedIds = [...isFolded];
+  const components = stronglyConnectedComponents(
+    buildDag(foldedIds, (id) =>
+      (outgoing.get(id) ?? [])
+        .map((transition) => transition.target)
+        .filter((target) => isFolded.has(target)),
+    ),
+  );
+  const componentOf = new Map<I["element"], number>();
+  for (const [index, members] of components.entries()) {
+    for (const member of members) {
+      componentOf.set(member, index);
+    }
+  }
+  const cyclic = new Set<I["element"]>();
+  for (const members of components) {
+    const [only] = members;
+    const selfLoop =
+      only !== undefined &&
+      (outgoing.get(only) ?? []).some(
+        (transition) => transition.target === only,
+      );
+    if (members.length > 1 || selfLoop) {
+      for (const member of members) {
+        cyclic.add(member);
+      }
     }
   }
 
-  const incoming = new Map<I["element"], TransitionOf<I>[]>();
-  for (const transition of met) {
-    const into = incoming.get(transition.target);
-    if (into === undefined) {
-      incoming.set(transition.target, [transition]);
-    } else {
-      into.push(transition);
+  // Each component's accepted targets, in reverse topological order so every successor's list is ready; a list is shared, not copied, when nothing new would be added to it.
+  const targets: (readonly I["element"][])[] = [];
+  for (const [index, members] of components.entries()) {
+    const own: I["element"][] = [];
+    const next = new Set<readonly I["element"][]>();
+    const leaving = members.flatMap((member) => outgoing.get(member) ?? []);
+    for (const { target } of leaving) {
+      const successor = componentOf.get(target);
+      const list = successor === undefined ? undefined : targets[successor];
+      if (!isFolded.has(target) && folding.accepted(target)) {
+        own.push(target);
+      } else if (successor !== index && list !== undefined) {
+        next.add(list);
+      }
     }
+    const [only, ...others] = [...next];
+    if (own.length === 0 && only !== undefined && others.length === 0) {
+      targets[index] = only;
+      continue;
+    }
+    const merged = new Set<I["element"]>(own);
+    for (const list of next) {
+      for (const target of list) {
+        merged.add(target);
+      }
+    }
+    targets[index] = [...merged];
   }
 
-  return targets.map((target) => {
-    // The folded elements that lead to `target`, found by walking back over the transitions met; only folded elements are walked through, as the routes only pass through those.
+  // The route forest: a folded element outside every cycle entered from exactly one folded element that is also outside every cycle hangs below it.
+  const parentLink = new Map<I["element"], TransitionOf<I>>();
+  const children = new Map<I["element"], I["element"][]>();
+  for (const id of foldedIds) {
+    const into = foldedIn.get(id) ?? [];
+    const [link, ...rest] = into;
+    if (
+      link !== undefined &&
+      rest.length === 0 &&
+      !cyclic.has(id) &&
+      !cyclic.has(link.source)
+    ) {
+      parentLink.set(id, link);
+      append(children, link.source, id);
+    }
+  }
+  const depth = new Map<I["element"], number>();
+  const enter = new Map<I["element"], number>();
+  const leave = new Map<I["element"], number>();
+  const lastTrigger = new Map<I["element"], Found<I["event"]>>();
+  const lastEffect = new Map<I["element"], Found<I["action"]>>();
+  const guardsTo = new Map<I["element"], GuardLink>();
+  let clock = 0;
+  for (const root of foldedIds) {
+    if (parentLink.has(root)) {
+      continue;
+    }
+    const stack: { readonly id: I["element"]; next: number }[] = [
+      { id: root, next: 0 },
+    ];
+    const visit = (id: I["element"], level: number): void => {
+      depth.set(id, level);
+      enter.set(id, clock);
+      clock += 1;
+      const link = parentLink.get(id);
+      const parent = link?.source;
+      const event = events.get(id);
+      const trigger =
+        event !== undefined
+          ? { value: event, depth: level, atElement: true }
+          : link?.trigger !== undefined
+            ? { value: link.trigger, depth: level, atElement: false }
+            : parent === undefined
+              ? undefined
+              : lastTrigger.get(parent);
+      if (trigger !== undefined) {
+        lastTrigger.set(id, trigger);
+      }
+      const effect =
+        link?.effect !== undefined
+          ? { value: link.effect, depth: level, atElement: false }
+          : parent === undefined
+            ? undefined
+            : lastEffect.get(parent);
+      if (effect !== undefined) {
+        lastEffect.set(id, effect);
+      }
+      const above = parent === undefined ? undefined : guardsTo.get(parent);
+      const guards =
+        link?.guard !== undefined
+          ? { guard: link.guard, depth: level, previous: above }
+          : above;
+      if (guards !== undefined) {
+        guardsTo.set(id, guards);
+      }
+    };
+    visit(root, 0);
+    for (let top = stack.at(-1); top !== undefined; top = stack.at(-1)) {
+      const child = (children.get(top.id) ?? [])[top.next];
+      if (child === undefined) {
+        leave.set(top.id, clock);
+        stack.pop();
+        continue;
+      }
+      top.next += 1;
+      visit(child, (depth.get(top.id) ?? 0) + 1);
+      stack.push({ id: child, next: 0 });
+    }
+  }
+  /** Whether `ancestor` is `node` or above it in the route forest. */
+  const above = (ancestor: I["element"], node: I["element"]): boolean => {
+    const start = enter.get(ancestor);
+    const stop = leave.get(ancestor);
+    const at = enter.get(node);
+
+    return (
+      start !== undefined &&
+      stop !== undefined &&
+      at !== undefined &&
+      start <= at &&
+      at < stop
+    );
+  };
+
+  /** The union of every route from `start` to `target`, by a depth-first walk from `start` and a walk back from `target` over what it met. */
+  const union = (
+    first: TransitionOf<I>,
+    target: I["element"],
+  ): {
+    readonly transitions: readonly TransitionOf<I>[];
+    readonly through: readonly I["element"][];
+  } => {
+    const met: TransitionOf<I>[] = [first];
+    const entered: I["element"][] = [first.target];
+    const seen = new Set<I["element"]>([first.target]);
+    const stack: { readonly id: I["element"]; next: number }[] = [
+      { id: first.target, next: 0 },
+    ];
+    for (let top = stack.at(-1); top !== undefined; top = stack.at(-1)) {
+      const transition = (outgoing.get(top.id) ?? [])[top.next];
+      if (transition === undefined) {
+        stack.pop();
+        continue;
+      }
+      top.next += 1;
+      met.push(transition);
+      if (isFolded.has(transition.target) && !seen.has(transition.target)) {
+        seen.add(transition.target);
+        entered.push(transition.target);
+        stack.push({ id: transition.target, next: 0 });
+      }
+    }
+    const into = new Map<I["element"], TransitionOf<I>[]>();
+    for (const transition of met) {
+      append(into, transition.target, transition);
+    }
     const leading = new Set<I["element"]>([target]);
     const back: I["element"][] = [target];
     for (let at = back.pop(); at !== undefined; at = back.pop()) {
-      for (const transition of incoming.get(at) ?? []) {
-        if (state.has(transition.source) && !leading.has(transition.source)) {
+      for (const transition of into.get(at) ?? []) {
+        if (seen.has(transition.source) && !leading.has(transition.source)) {
           leading.add(transition.source);
           back.push(transition.source);
         }
       }
     }
-    const transitions = met.filter((transition) =>
-      leading.has(transition.target),
-    );
-    const through = entered.filter((element) => leading.has(element));
-    const leaving = new Map<I["element"], number>();
-    for (const transition of transitions) {
-      leaving.set(transition.source, (leaving.get(transition.source) ?? 0) + 1);
-    }
 
     return {
-      transitions,
-      through,
-      target,
-      merged:
-        transitions.length !== through.length + 1 ||
-        through.some(
-          (element) => element !== target && leaving.get(element) !== 1,
-        ),
+      transitions: met.filter((transition) => leading.has(transition.target)),
+      through: entered.filter((id) => leading.has(id)),
     };
-  });
+  };
+
+  const from = (first: TransitionOf<I>): readonly Chain<I>[] => {
+    const start = first.target;
+    if (!isFolded.has(start)) {
+      return folding.accepted(start)
+        ? [
+            {
+              first,
+              target: start,
+              merged: false,
+              transitions: () => [first],
+              through: () => [],
+              guards: () => (first.guard === undefined ? [] : [first.guard]),
+              guarded: first.guard !== undefined,
+              trigger: first.trigger,
+              effect: first.effect,
+            },
+          ]
+        : [];
+    }
+    const component = componentOf.get(start);
+    const reached = component === undefined ? [] : (targets[component] ?? []);
+    const level = depth.get(start);
+
+    return reached.map((target): Chain<I> => {
+      const [last, ...more] = arrivingIn.get(target) ?? [];
+      const source = last?.source;
+      const single =
+        last !== undefined &&
+        source !== undefined &&
+        more.length === 0 &&
+        level !== undefined &&
+        above(start, source);
+      const lists = once(() => union(first, target));
+      if (!single) {
+        return {
+          first,
+          target,
+          merged: true,
+          transitions: () => lists().transitions,
+          through: () => lists().through,
+          guards: () => [],
+          guarded: false,
+          trigger: undefined,
+          effect: undefined,
+        };
+      }
+      // Along the route, what lies strictly below `start` counts, and at `start` only its own event: the transition into `start` is not on the route.
+      const onRoute = (found: Found<unknown> | undefined): boolean =>
+        found !== undefined &&
+        (found.depth > level || (found.depth === level && found.atElement));
+      const triggerFound = lastTrigger.get(source);
+      const effectFound = lastEffect.get(source);
+      const guardsFound = guardsTo.get(source);
+      const routeGuards = once(() => {
+        const middle: string[] = [];
+        for (
+          let link = guardsFound;
+          link !== undefined && link.depth > level;
+          link = link.previous
+        ) {
+          middle.push(link.guard);
+        }
+
+        return [
+          ...(first.guard === undefined ? [] : [first.guard]),
+          ...middle.toReversed(),
+          ...(last.guard === undefined ? [] : [last.guard]),
+        ];
+      });
+      const route = once(() => {
+        const nodes: I["element"][] = [];
+        const links: TransitionOf<I>[] = [];
+        for (let at: I["element"] | undefined = source; at !== undefined;) {
+          nodes.push(at);
+          if (at === start) {
+            break;
+          }
+          const link = parentLink.get(at);
+          if (link !== undefined) {
+            links.push(link);
+          }
+          at = link?.source;
+        }
+
+        return {
+          through: nodes.toReversed(),
+          transitions: [first, ...links.toReversed(), last],
+        };
+      });
+
+      return {
+        first,
+        target,
+        merged: false,
+        transitions: () => route().transitions,
+        through: () => route().through,
+        guards: routeGuards,
+        guarded:
+          first.guard !== undefined ||
+          last.guard !== undefined ||
+          (guardsFound !== undefined && guardsFound.depth > level),
+        trigger:
+          last.trigger ??
+          (onRoute(triggerFound) ? triggerFound?.value : undefined) ??
+          first.trigger,
+        effect:
+          last.effect ??
+          (effectFound !== undefined && effectFound.depth > level
+            ? effectFound.value
+            : undefined) ??
+          first.effect,
+      };
+    });
+  };
+
+  const carried = (
+    firsts: Readonly<Iterable<TransitionOf<I>>>,
+  ): ReadonlySet<I["element"]> => {
+    const reached = new Set<I["element"]>();
+    const stack: I["element"][] = [];
+    for (const first of firsts) {
+      if (isFolded.has(first.target) && !reached.has(first.target)) {
+        reached.add(first.target);
+        stack.push(first.target);
+      }
+    }
+    for (let at = stack.pop(); at !== undefined; at = stack.pop()) {
+      for (const transition of outgoing.get(at) ?? []) {
+        if (
+          isFolded.has(transition.target) &&
+          !reached.has(transition.target)
+        ) {
+          reached.add(transition.target);
+          stack.push(transition.target);
+        }
+      }
+    }
+    const leading = new Set<I["element"]>();
+    for (const id of reached) {
+      const component = componentOf.get(id);
+      if (component !== undefined && (targets[component] ?? []).length > 0) {
+        leading.add(id);
+      }
+    }
+
+    return leading;
+  };
+
+  return {
+    from,
+    arriving: (element) => arrivingIn.get(element) ?? [],
+    carried,
+  };
 };

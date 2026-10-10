@@ -1,6 +1,12 @@
 import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import type { ElementOf } from "./actors.ts";
-import { chainsFrom, outgoingMap, type Chain } from "./chains.ts";
+import {
+  chainIndex,
+  once,
+  type Chain,
+  type ChainIndex,
+  type TransitionOf,
+} from "./chains.ts";
 import { commonLoss, unrepresentedLoss, type Loss } from "./loss.ts";
 
 export interface FlowNode<I extends IdSpace> {
@@ -62,62 +68,97 @@ const flowNode = <I extends IdSpace>(
  * What a flowchart-shaped projection drops: the common losses, then the elements the flowchart has no node for (`state` elements and `history` pseudo-states) and the transitions that touch them.
  * @param model - The model projected.
  * @param notation - The notation the result is for, `flowchart` or `swimlane`.
- * @param flow - The nodes and edges the projection drew; a message element an edge carries is shown.
+ * @param nodes - The nodes the projection drew.
+ * @param carried - The message elements some edge carries, which are shown.
  */
 export const flowchartLoss = <I extends IdSpace>(
   model: Model<I>,
   notation: "flowchart" | "swimlane",
-  flow: Readonly<Pick<Flowchart<I>, "nodes" | "edges">>,
+  nodes: readonly FlowNode<I>[],
+  carried: ReadonlySet<I["element"]>,
 ): readonly Loss<I>[] => [
-  ...commonLoss(model, notation, {
-    fragments: new Set(),
-    messages: new Set(flow.edges.flatMap((edge) => edge.through ?? [])),
-  }),
+  ...commonLoss(model, notation, { fragments: new Set(), messages: carried }),
   ...unrepresentedLoss(
     model,
     notation,
-    new Set<I["element"]>(flow.nodes.map((node) => node.id)),
+    new Set<I["element"]>(nodes.map((node) => node.id)),
   ),
 ];
 
-/** The edge a chain of transitions draws. On a single route its label is the route's guards joined with "and", or, when none is guarded, the carried messages' labels. Where several routes are merged the guards belong to different routes and cannot be joined, so the label is the carried messages' labels only. */
+/** Where a drawn edge comes from: the transition it starts with and the node it ends at. */
+export interface EdgeOrigin<I extends IdSpace> {
+  readonly first: TransitionOf<I>;
+  readonly target: I["element"];
+}
+
+/** A flowchart with what its inverse and the swimlane need beside it. */
+export interface FlowchartParts<I extends IdSpace> {
+  readonly flowchart: Flowchart<I>;
+  /** Each edge's origin, in edge order. */
+  readonly origins: readonly EdgeOrigin<I>[];
+  readonly index: ChainIndex<I>;
+  /** The message elements some edge carries. */
+  readonly carried: ReadonlySet<I["element"]>;
+}
+
+/**
+ * The edge a chain draws. On a single route its label is the route's guards joined with "and", or, when none is guarded, the labels of the messages on it; where several routes are merged the guards belong to different routes and cannot be joined, so the label is the carried messages' labels. An edge through messages builds its lists and label only when they are read, so edges sharing a long run of messages do not each copy it.
+ */
 const edgeOf = <I extends IdSpace>(
-  from: I["element"],
   chain: Chain<I>,
   messageLabels: ReadonlyMap<I["element"], string>,
 ): FlowEdge<I> => {
-  const guards = chain.transitions.flatMap((transition) =>
-    transition.guard === undefined ? [] : [transition.guard],
-  );
-  const carried = chain.through.flatMap((id) => {
-    const label = messageLabels.get(id);
+  const from = chain.first.source;
+  if (chain.first.target === chain.target) {
+    const { guard } = chain.first;
 
-    return label === undefined ? [] : [label];
+    return {
+      from,
+      to: chain.target,
+      ...(guard === undefined ? {} : { label: guard }),
+      transitions: [chain.first.id],
+    };
+  }
+  const ids = once(() =>
+    chain.transitions().map((transition) => transition.id),
+  );
+  const label = once(() => {
+    if (!chain.merged && chain.guarded) {
+      return chain.guards().join(" and ");
+    }
+
+    return chain
+      .through()
+      .flatMap((id) => {
+        const message = messageLabels.get(id);
+
+        return message === undefined ? [] : [message];
+      })
+      .join(", ");
   });
-  const label =
-    guards.length > 0 && !chain.merged
-      ? guards.join(" and ")
-      : carried.length > 0
-        ? carried.join(", ")
-        : undefined;
 
   return {
     from,
     to: chain.target,
-    ...(label === undefined ? {} : { label }),
-    transitions: chain.transitions.map((transition) => transition.id),
-    ...(chain.through.length === 0 ? {} : { through: chain.through }),
+    get label(): string {
+      return label();
+    },
+    get transitions(): readonly I["transition"][] {
+      return ids();
+    },
+    get through(): readonly I["element"][] {
+      return chain.through();
+    },
   };
 };
 
 /**
- * Activities, decisions and terminators, joined by the transitions between them. A `message` element is not a node: a transition into it continues through it, so the edge runs from the step before the message to the step after it and carries the message (`through`). There is one edge per transition leaving a node and drawn element it leads to, however many routes through message elements connect them. A message element no edge carries is reported as a `message-elements` loss. `state` elements and `history` pseudo-states have no flowchart shape and are reported as unrepresented, with the transitions that touch them.
+ * The flowchart and the parts its inverse needs.
  * @param model - The model to project.
- * @returns The nodes in model order, the edges in the order of the transitions they start with, and what was dropped.
  */
-export const toFlowchart = <I extends IdSpace>(
+export const flowchartParts = <I extends IdSpace>(
   model: Model<I>,
-): Flowchart<I> => {
+): FlowchartParts<I> => {
   const nodes: FlowNode<I>[] = [];
   const messageLabels = new Map<I["element"], string>();
   for (const element of model.elements) {
@@ -131,23 +172,39 @@ export const toFlowchart = <I extends IdSpace>(
   }
 
   const included = new Set<I["element"]>(nodes.map((node) => node.id));
-  const outgoing = outgoingMap(model);
-  const isMessage = (id: I["element"]): boolean => messageLabels.has(id);
+  const index = chainIndex(model, {
+    folded: (id) => messageLabels.has(id),
+    accepted: (id) => included.has(id),
+  });
+  const firsts = model.transitions.filter((transition) =>
+    included.has(transition.source),
+  );
   const edges: FlowEdge<I>[] = [];
-  for (const transition of model.transitions) {
-    if (!included.has(transition.source)) {
-      continue;
-    }
-    for (const chain of chainsFrom(transition, outgoing, isMessage)) {
-      if (included.has(chain.target)) {
-        edges.push(edgeOf(transition.source, chain, messageLabels));
-      }
+  const origins: EdgeOrigin<I>[] = [];
+  for (const first of firsts) {
+    for (const chain of index.from(first)) {
+      edges.push(edgeOf(chain, messageLabels));
+      origins.push({ first, target: chain.target });
     }
   }
+  const carried = index.carried(firsts);
 
   return {
-    nodes,
-    edges,
-    loss: flowchartLoss(model, "flowchart", { nodes, edges }),
+    flowchart: {
+      nodes,
+      edges,
+      loss: flowchartLoss(model, "flowchart", nodes, carried),
+    },
+    origins,
+    index,
+    carried,
   };
 };
+
+/**
+ * Activities, decisions and terminators, joined by the transitions between them. A `message` element is not a node: a transition into it continues through it, so the edge runs from the step before the message to the step after it and carries the message (`through`). There is one edge per transition leaving a node and node it leads to, however many routes through message elements connect them; such an edge's `transitions`, `through` and `label` are built when first read. A message element no edge carries is reported as a `message-elements` loss. `state` elements and `history` pseudo-states have no flowchart shape and are reported as unrepresented, with the transitions that touch them.
+ * @param model - The model to project.
+ * @returns The nodes in model order, the edges in the order of the transitions they start with, and what was dropped.
+ */
+export const toFlowchart = <I extends IdSpace>(model: Model<I>): Flowchart<I> =>
+  flowchartParts(model).flowchart;
