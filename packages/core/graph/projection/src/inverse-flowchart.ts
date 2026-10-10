@@ -9,10 +9,29 @@ import type { Swimlane } from "./swimlane.ts";
 const edgeKey = <I extends IdSpace>(edge: FlowEdge<I>): string =>
   JSON.stringify(edge.transitions);
 
+/** How many edited edges arrive at and leave each node, counted in one pass over the edges. */
+interface Degrees<I extends IdSpace> {
+  readonly in: ReadonlyMap<I["element"], number>;
+  readonly out: ReadonlyMap<I["element"], number>;
+}
+
+const degreesOf = <I extends IdSpace>(
+  edges: readonly FlowEdge<I>[],
+): Degrees<I> => {
+  const incoming = new Map<I["element"], number>();
+  const outgoing = new Map<I["element"], number>();
+  for (const edge of edges) {
+    incoming.set(edge.to, (incoming.get(edge.to) ?? 0) + 1);
+    outgoing.set(edge.from, (outgoing.get(edge.from) ?? 0) + 1);
+  }
+
+  return { in: incoming, out: outgoing };
+};
+
 /** What an added node becomes, with whether the inverse had to choose. A terminator is a start when nothing arrives at it and an end otherwise; a bar is a fork when it has more ways out than in and a join otherwise. */
 const addedElement = <I extends IdSpace>(
   node: FlowNode<I>,
-  edges: readonly FlowEdge<I>[],
+  degrees: Degrees<I>,
   actor: I["actor"] | undefined,
 ): ElementChange<I> => {
   const owned = actor === undefined ? {} : { actor };
@@ -36,13 +55,13 @@ const addedElement = <I extends IdSpace>(
       element: {
         kind: "pseudo",
         id: node.id,
-        role: edges.some((edge) => edge.to === node.id) ? "final" : "initial",
+        role: (degrees.in.get(node.id) ?? 0) > 0 ? "final" : "initial",
       },
       inferred: true,
     };
   }
-  const ins = edges.filter((edge) => edge.to === node.id).length;
-  const outs = edges.filter((edge) => edge.from === node.id).length;
+  const ins = degrees.in.get(node.id) ?? 0;
+  const outs = degrees.out.get(node.id) ?? 0;
 
   return {
     kind: "added",
@@ -74,6 +93,7 @@ const diffFlow = <I extends IdSpace>(
     original.nodes.map((node) => [node.id, node]),
   );
   const kept = new Set<I["element"]>(edited.nodes.map((node) => node.id));
+  const degrees = degreesOf(edited.edges);
 
   const elementChanges: ElementChange<I>[] = [];
   for (const node of original.nodes) {
@@ -93,7 +113,7 @@ const diffFlow = <I extends IdSpace>(
           `Node "${node.id}" is a model element the flowchart does not draw`,
         );
       }
-      elementChanges.push(addedElement(node, edited.edges, actorOf(node.id)));
+      elementChanges.push(addedElement(node, degrees, actorOf(node.id)));
       continue;
     }
     if (before.shape !== node.shape) {
