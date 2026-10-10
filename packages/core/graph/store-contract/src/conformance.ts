@@ -1,7 +1,16 @@
 import type { Model, OpenIds } from "@exadev/process-graph-schema";
 import { describe, expect, test } from "vitest";
 import type { GraphStoreClient } from "./contract.ts";
-import type { BoundItems, StoreChange } from "./schema.ts";
+import {
+  failureOf,
+  firstOf,
+  inSequence,
+  issueItems,
+  pairModel,
+  silentLosses,
+  takeUntil,
+} from "./conformance-support.ts";
+import { defaultSubscriptionCapacity } from "./feed.ts";
 
 /**
  * A model that uses every field the model schema has, each optional field present on some record and absent on another, so a store that drops, renames or reorders anything fails the round trip.
@@ -174,82 +183,6 @@ const withClient =
       await close();
     }
   };
-
-/** The settled error of a call that must fail, so its code and data can be asserted. */
-const failureOf = async (
-  call: Readonly<Promise<unknown>>,
-): Promise<unknown> => {
-  try {
-    await call;
-  } catch (error) {
-    return error;
-  }
-  throw new Error("expected the call to fail");
-};
-
-/** A two-step model whose only transition can be broken by an upsert. */
-const pairModel: Model<OpenIds> = {
-  participants: [{ id: "team", label: "Team", kind: "role" }],
-  events: [],
-  actions: [],
-  artefacts: [],
-  elements: [
-    { kind: "activity", id: "plan", label: "Plan", actor: "team" },
-    { kind: "activity", id: "build", label: "Build", actor: "team" },
-  ],
-  transitions: [{ id: "plan-build", source: "plan", target: "build" }],
-  fragments: [],
-  projections: [],
-};
-
-/** Items as a source would send them: one new repository participant, two issues, one replacing an existing activity, and a dependency. */
-const issueItems: BoundItems = {
-  participants: [
-    { id: "github:org/repo", label: "org/repo", kind: "system" },
-    { id: "team", label: "Platform team", kind: "role" },
-  ],
-  activities: [
-    {
-      kind: "activity",
-      id: "github:org/repo#1",
-      label: "Design the schema",
-      actor: "github:org/repo",
-      source: "github:org/repo#1",
-    },
-    {
-      kind: "activity",
-      id: "github:org/repo#2",
-      label: "Write the migration",
-      actor: "team",
-      source: "github:org/repo#2",
-    },
-  ],
-  transitions: [
-    { id: "dep-1-2", source: "github:org/repo#1", target: "github:org/repo#2" },
-  ],
-  overlay: { "github:org/repo#1": "done" },
-};
-
-/** Reads a subscription up to and including the first event `last` accepts, then stops it. */
-const takeUntil = async (
-  events: Readonly<AsyncIterable<StoreChange>>,
-  last: (change: StoreChange) => boolean,
-): Promise<readonly StoreChange[]> => {
-  const received: StoreChange[] = [];
-  for await (const event of events) {
-    received.push(event);
-    if (last(event)) {
-      break;
-    }
-  }
-
-  return received;
-};
-
-/** Reads the first event of a subscription, then stops it. */
-const firstOf = async (
-  events: Readonly<AsyncIterable<StoreChange>>,
-): Promise<readonly StoreChange[]> => takeUntil(events, () => true);
 
 /**
  * The behaviour every `GraphStore` adapter must show, as Vitest tests. Call it at the top level of a test file; every test runs through the oRPC client the options create, so the kit checks the port as consumers see it, transport included.
@@ -798,6 +731,37 @@ export const graphStoreConformance = (
             revision: deleted.deleted ? deleted.revision : undefined,
           },
         ]);
+      }),
+    );
+
+    test(
+      "a subscriber that stops reading under sustained writes is never left unaware of a change it lost",
+      withClient(options, async (client) => {
+        await client.v1.models.save({ modelId: "pair", model: pairModel });
+        const events = await client.v1.changes({ modelId: "pair" });
+        // More writes than a subscription holds by default, so a store that buffers per subscription has to overflow; the property checked holds for any capacity.
+        const burst = await inSequence(
+          Array.from(
+            {
+              length:
+                defaultSubscriptionCapacity + defaultSubscriptionCapacity + 1,
+            },
+            (_, write) => async () =>
+              (
+                await client.v1.overlay.set({
+                  modelId: "pair",
+                  overlay: { plan: write % 2 === 0 ? "done" : "open" },
+                })
+              ).revision,
+          ),
+        );
+        // Reading starts only now; the final write, the only save after subscribing, commits while the subscriber reads, so it must arrive. It is found by its kind because its event can arrive before the write's own reply does.
+        const received = takeUntil(events, ({ kind }) => kind === "saved");
+        const final = (
+          await client.v1.models.save({ modelId: "pair", model: pairModel })
+        ).revision;
+
+        expect(silentLosses(await received, [...burst, final])).toEqual([]);
       }),
     );
 

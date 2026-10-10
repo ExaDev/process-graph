@@ -42,7 +42,7 @@ const written = z.strictObject({ revision: revisionSchema }).readonly();
  * - `overlay.set` sets the run state of the elements it names.
  * - `items.upsert` merges items read from a source into a model by identifier, creating the model when it does not exist.
  * - `query.ready`, `query.blockedChain` and `query.impact` answer structural questions from the stored transitions and run state alone (see the package README for exactly what they read), so a store can answer them without loading the model or evaluating conditions.
- * - `changes` yields every later change to one model as an event iterator.
+ * - `changes` yields every later change to one model as an event iterator. A subscriber that falls behind by more than the store's subscription capacity gets one `missed` in place of the changes it let pile up, so a store's memory stays bounded and the subscriber knows to load the model again.
  *
  * Every write is atomic and checked: a change that would leave the model or overlay invalid (`validate`, `validateOverlay`) is rejected whole with `UNPROCESSABLE_CONTENT`. Every call takes the caller's abort signal through the oRPC client options; a call aborted before it writes leaves the store unchanged.
  */

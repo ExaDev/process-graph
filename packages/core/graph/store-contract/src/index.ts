@@ -26,7 +26,13 @@ export {
   type StoredModel,
 } from "./schema.ts";
 export { GraphStoreError, type GraphStoreFailure } from "./errors.ts";
-export { ChangeFeed, type ChangeSubscription } from "./feed.ts";
+export {
+  ChangeFeed,
+  defaultSubscriptionCapacity,
+  type ChangeFeedOptions,
+  type ChangeSubscription,
+  type SubscribeOptions,
+} from "./feed.ts";
 export type { ElementRequest, GraphStore, ModelRequest } from "./store.ts";
 export {
   checkStored,
