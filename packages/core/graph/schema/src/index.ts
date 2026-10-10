@@ -27,3 +27,5 @@ export type {
 } from "./declarations.ts";
 export { defineModel, type Model, type ModelParts } from "./model.ts";
 export { validate, type Issue, type IssueCode } from "./validate.ts";
+export { modelSchema } from "./schema.ts";
+export { ModelParseError, parseModel, type ModelIssue } from "./parse.ts";
