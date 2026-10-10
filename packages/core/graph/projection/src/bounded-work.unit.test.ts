@@ -3,8 +3,23 @@ import { describe, expect, it } from "vitest";
 import { sequenceObserved } from "./sequence.ts";
 import { workOf } from "./test-support/work.ts";
 import {
+  actors,
+  authoredRepeatsShape,
+  combShape,
+  diamondShape,
+  empty,
+  ids,
+  serialDiamondsShape,
+  sharedEndShape,
+  sourcesIntoRunShape,
+  wideForkShape,
+  type Shape,
+} from "./test-support/shapes.ts";
+
+import {
   applyModelDiff,
   diffFlowchart,
+  diffStateMachine,
   handoffs,
   toFlowchart,
   toSequence,
@@ -38,20 +53,6 @@ const counted = <T>(
   });
 
   return { items: proxy, reads: () => reads };
-};
-
-const ids = (count: number, prefix: string): string[] =>
-  Array.from({ length: count }, (_, index) => `${prefix}${String(index)}`);
-
-const empty: Model<OpenIds> = {
-  participants: [],
-  events: [],
-  actions: [],
-  artefacts: [],
-  elements: [],
-  transitions: [],
-  fragments: [],
-  projections: [],
 };
 
 /** Edge reads `diffFlowchart` makes for an edit adding `count` bars joined in a ring. */
@@ -500,167 +501,6 @@ describe("nested derived fragments", () => {
 /**
  * Every shape a review has found quadratic work in, at a size and its double, through every entry point that reads it. The work, counted by `workOf` over the collection operations the projections are built from, is measured per item of input and output: work linear in what goes in and comes out keeps that ratio level as the shape doubles, while work quadratic in either doubles it. Some outputs are themselves quadratic in their model, such as a state machine whose every state leads to every other through one folded decision; measuring against the output keeps those honest without hiding quadratic work behind a linear output. The bound sits midway, at `growthLimit` over `doubled`, because linear work with a fixed saving drifts slightly upwards. A newly found quadratic shape is a new row.
  */
-const actors = [
-  { id: "customer", label: "Customer", kind: "role" as const },
-  { id: "shop", label: "Shop", kind: "system" as const },
-  { id: "order", label: "Order", kind: "entity" as const },
-];
-const activity = (id: string, actor = "shop") => ({
-  kind: "activity" as const,
-  id,
-  label: id,
-  actor,
-});
-const messageElement = (id: string) => ({
-  kind: "message" as const,
-  id,
-  label: id,
-  from: "customer",
-  to: "shop",
-  mode: "async" as const,
-});
-
-interface Shape {
-  readonly model: Model<OpenIds>;
-  readonly path: readonly string[];
-}
-
-/** Messages in a line, each with its own exit, entered from one activity. */
-const combShape = (count: number): Shape => {
-  const teeth = ids(count, "m-");
-
-  return {
-    model: {
-      ...empty,
-      participants: actors,
-      elements: [
-        activity("s", "customer"),
-        ...teeth.map(messageElement),
-        ...teeth.map((id) => activity(`e-${id}`)),
-      ],
-      transitions: [
-        { id: "t-in", source: "s", target: "m-0" },
-        ...teeth.flatMap((id, index) => [
-          { id: `t-${id}-out`, source: id, target: `e-${id}` },
-          {
-            id: `t-${id}-on`,
-            source: id,
-            target: teeth[index + 1] ?? `e-${id}`,
-          },
-        ]),
-      ],
-    },
-    path: ["t-in", ...teeth.map((id) => `t-${id}-on`)],
-  };
-};
-
-/** Two combs from one message, joined at a last message, exiting to shared activities. */
-const diamondShape = (count: number): Shape => {
-  const shared = ids(count, "e-");
-  const arm = (side: string): string[] =>
-    shared.map((_, index) => `${side}-${String(index)}`);
-  const left = arm("l");
-  const right = arm("r");
-  const teeth = (side: readonly string[]) =>
-    side.flatMap((id, index) => [
-      { id: `t-${id}-out`, source: id, target: shared[index] ?? id },
-      { id: `t-${id}-on`, source: id, target: side[index + 1] ?? "join" },
-    ]);
-
-  return {
-    model: {
-      ...empty,
-      participants: actors,
-      elements: [
-        activity("s", "customer"),
-        ...["fork", ...left, ...right, "join"].map(messageElement),
-        ...shared.map((id) => activity(id)),
-        activity("last"),
-      ],
-      transitions: [
-        { id: "t-in", source: "s", target: "fork" },
-        { id: "t-left", source: "fork", target: left[0] ?? "join" },
-        { id: "t-right", source: "fork", target: right[0] ?? "join" },
-        ...teeth(left),
-        ...teeth(right),
-        { id: "t-last", source: "join", target: "last" },
-      ],
-    },
-    path: ["t-in", "t-left", ...left.map((id) => `t-${id}-on`), "t-last"],
-  };
-};
-
-/** Activities each entering their own message of one run, every message also leaving for the same end. */
-const sourcesIntoRunShape = (count: number): Shape => {
-  const run = ids(count, "m-");
-
-  return {
-    model: {
-      ...empty,
-      participants: actors,
-      elements: [
-        ...run.map((id) => activity(`s-${id}`, "customer")),
-        ...run.map(messageElement),
-        activity("end"),
-      ],
-      transitions: run.flatMap((id, index) => [
-        { id: `t-s-${id}`, source: `s-${id}`, target: id },
-        { id: `t-${id}-on`, source: id, target: run[index + 1] ?? "end" },
-        { id: `t-${id}-end`, source: id, target: "end" },
-      ]),
-    },
-    path: ["t-s-m-0", ...run.map((id) => `t-${id}-on`)],
-  };
-};
-
-/** One activity stepping round to itself, with that many authored fragments over it. */
-const authoredRepeatsShape = (count: number): Shape => ({
-  model: {
-    ...empty,
-    participants: actors,
-    elements: [activity("x")],
-    transitions: [{ id: "t-loop", source: "x", target: "x" }],
-    fragments: ids(count, "f-").map((id) => ({
-      id,
-      operator: "opt" as const,
-      operands: [{ body: ["x"] }],
-    })),
-  },
-  path: Array.from({ length: count }, () => "t-loop"),
-});
-
-/** A fork into that many branches, each one step, joined again, with the path taking every branch. */
-const wideForkShape = (count: number): Shape => {
-  const branches = ids(count, "b-");
-
-  return {
-    model: {
-      ...empty,
-      participants: actors,
-      elements: [
-        activity("start"),
-        { kind: "pseudo", id: "fork", role: "fork" },
-        ...branches.map((id) => activity(id)),
-        { kind: "pseudo", id: "join", role: "join" },
-        activity("end"),
-      ],
-      transitions: [
-        { id: "t-start", source: "start", target: "fork" },
-        ...branches.flatMap((id) => [
-          { id: `t-to-${id}`, source: "fork", target: id },
-          { id: `t-from-${id}`, source: id, target: "join" },
-        ]),
-        { id: "t-end", source: "join", target: "end" },
-      ],
-    },
-    path: [
-      "t-start",
-      ...branches.flatMap((id) => [`t-to-${id}`, `t-from-${id}`]),
-      "t-end",
-    ],
-  };
-};
-
 const withEntity = ({
   model,
   path,
@@ -693,6 +533,7 @@ const shapes: readonly (readonly [string, (count: number) => Shape])[] = [
   ],
   ["repeated steps under many authored fragments", authoredRepeatsShape],
   ["a wide fork", wideForkShape],
+  ["serial diamonds of messages", serialDiamondsShape],
   ["branches sharing one tail", (count) => withEntity(sharedTail(count))],
   ["a decision with many ways round", (count) => withEntity(manyLoops(count))],
 ];
@@ -782,6 +623,29 @@ const edits: readonly (readonly [string, (count: number) => () => unknown])[] =
         };
 
         return () => diffFlowchart(empty, edited);
+      },
+    ],
+    [
+      "diffFlowchart deleting every edge of sources whose messages share one end",
+      (count) => {
+        const { model } = sharedEndShape(count);
+        const { nodes } = toFlowchart(model);
+
+        return () => diffFlowchart(model, { nodes, edges: [] });
+      },
+    ],
+    [
+      "diffStateMachine deleting every transition of sources whose messages share one end",
+      (count) => {
+        const { model } = sharedEndShape(count);
+        const { states } = toStateMachine(model, "order");
+
+        return () =>
+          diffStateMachine(model, {
+            subject: "order",
+            states,
+            transitions: [],
+          });
       },
     ],
     [

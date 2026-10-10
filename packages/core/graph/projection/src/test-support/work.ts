@@ -1,5 +1,5 @@
 /**
- * Counts the work a call does through the collection operations every projection is built from: each `push`, `Set.add` and `Map.set` counts one, and each array scan (`filter`, `map`, `flatMap`, `some`, `every`, `find`, `findIndex`, `includes`, `indexOf`) counts the length of the array it scans, so a scan of a whole list per item shows as quadratic. The operations are wrapped only while `run` runs and restored afterwards, even when it throws.
+ * Counts the work a call does through the collection operations every projection is built from: each `push`, each set or map insertion and each set or map lookup counts one, so walks over linked structures that test membership as they go are counted too, and each array scan (`filter`, `map`, `flatMap`, `some`, `every`, `find`, `findIndex`, `includes`, `indexOf`) counts the length of the array it scans, so a scan of a whole list per item shows as quadratic. The operations are wrapped only while `run` runs and restored afterwards, even when it throws.
  * @param run - The call to measure.
  * @returns The work counted.
  */
@@ -53,7 +53,10 @@ export const workOf = (run: () => unknown): number => {
   }
   wrap(Array.prototype, "push", one);
   wrap(Set.prototype, "add", one);
+  wrap(Set.prototype, "has", one);
   wrap(Map.prototype, "set", one);
+  wrap(Map.prototype, "get", one);
+  wrap(Map.prototype, "has", one);
   try {
     run();
   } finally {
