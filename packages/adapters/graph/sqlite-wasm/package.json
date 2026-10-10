@@ -49,8 +49,6 @@
     "_test:coverage": "vitest run --project unit --coverage",
     "test:smoke": "turbo run _test:smoke",
     "_test:smoke": "vitest run --project smoke",
-    "test:mutation": "turbo run _test:mutation",
-    "_test:mutation": "stryker run stryker.config.ts",
     "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && publint && attw --pack --profile esm-only",
     "test:integration": "turbo run _test:integration",
     "_test:integration": "vitest run --project browser"
@@ -73,9 +71,6 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
-    "@stryker-mutator/core": "10.0.0",
-    "@stryker-mutator/typescript-checker": "10.0.0",
-    "@stryker-mutator/vitest-runner": "10.0.0",
     "@types/node": "26.6.4",
     "@vitest/browser-playwright": "5.0.3",
     "@vitest/coverage-v8": "5.0.3",
