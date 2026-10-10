@@ -1,0 +1,3 @@
+# Commits listed here are skipped by `git blame --ignore-revs-file .git-blame-ignore-revs`: each one is purely mechanical (a repo-wide formatter/autofix sweep, a bulk rename) and carries no change in meaning, so blame should keep pointing at the commit that last changed what a line actually does.
+#
+# Starts empty. Add an entry the day such a commit genuinely happens, not speculatively.
