@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-source-github-issues@1.0.0...@exadev/process-graph-source-github-issues@1.0.1) (2026-10-10)
+
+
+### Dependencies
+
+- Updated @exadev/process-graph-source-contract to 1.0.1
+
 ## 1.0.0 (2026-10-10)
 
 ### Features

@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-schema",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "The process model: typed identifier spaces, defineModel with compile-time reference checking, structural validation, and a Zod schema for the open runtime shape.",
   "type": "module",
   "repository": {

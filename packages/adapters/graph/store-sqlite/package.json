@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-store-sqlite",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "The GraphStore port on SQLite through Drizzle: one schema, committed drizzle-kit migrations applied the same way in every runtime, recursive SQL for the structural queries, written against Drizzle's async SQLite database so any driver plugs in.",
   "type": "module",
   "repository": {
@@ -57,9 +57,9 @@
     "orpc"
   ],
   "dependencies": {
-    "@exadev/process-graph-domain": "1.0.2",
-    "@exadev/process-graph-schema": "1.0.2",
-    "@exadev/process-graph-store-contract": "1.0.0",
+    "@exadev/process-graph-domain": "1.0.3",
+    "@exadev/process-graph-schema": "1.1.0",
+    "@exadev/process-graph-store-contract": "1.0.1",
     "@orpc/server": "2.0.0-beta.41",
     "drizzle-orm": "1.0.0-rc.4",
     "zod": "4.6.5"

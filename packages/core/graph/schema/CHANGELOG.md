@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-schema@1.0.2...@exadev/process-graph-schema@1.1.0) (2026-10-10)
+
+### Features
+
+* **schema:** export the vocabulary tuples and add elementKinds ([80eaec9](https://github.com/ExaDev/process-graph/commit/80eaec9db047a11218e64d0e7e77c20ae56ce165))
+
 ## [1.0.2](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-schema@1.0.1...@exadev/process-graph-schema@1.0.2) (2026-10-10)
 
 ### Build System

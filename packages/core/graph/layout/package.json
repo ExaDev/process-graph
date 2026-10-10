@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-layout",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Layered layout of a projected process view into positions keyed by element id, in the model's views shape.",
   "type": "module",
   "repository": {
@@ -69,8 +69,8 @@
     "vitest": "5.0.3"
   },
   "dependencies": {
-    "@exadev/process-graph-projection": "1.0.2",
-    "@exadev/process-graph-schema": "1.0.2",
+    "@exadev/process-graph-projection": "1.0.3",
+    "@exadev/process-graph-schema": "1.1.0",
     "elkjs": "0.12.0"
   }
 }

@@ -269,7 +269,7 @@ importers:
   packages/adapters/graph/source-github-issues:
     dependencies:
       '@exadev/process-graph-source-contract':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../../../core/graph/source-contract
       zod:
         specifier: 4.6.5
@@ -309,13 +309,13 @@ importers:
   packages/adapters/graph/store-sqlite:
     dependencies:
       '@exadev/process-graph-domain':
-        specifier: 1.0.2
+        specifier: 1.0.3
         version: link:../../../core/graph/domain
       '@exadev/process-graph-schema':
-        specifier: 1.0.2
+        specifier: 1.1.0
         version: link:../../../core/graph/schema
       '@exadev/process-graph-store-contract':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../../../core/graph/store-contract
       '@orpc/server':
         specifier: 2.0.0-beta.41
@@ -400,7 +400,7 @@ importers:
         specifier: 1.0.2
         version: link:../dag
       '@exadev/process-graph-schema':
-        specifier: 1.0.2
+        specifier: 1.1.0
         version: link:../schema
       trilean:
         specifier: 1.7.2
@@ -440,10 +440,10 @@ importers:
   packages/core/graph/layout:
     dependencies:
       '@exadev/process-graph-projection':
-        specifier: 1.0.2
+        specifier: 1.0.3
         version: link:../projection
       '@exadev/process-graph-schema':
-        specifier: 1.0.2
+        specifier: 1.1.0
         version: link:../schema
       elkjs:
         specifier: 0.12.0
@@ -483,7 +483,7 @@ importers:
   packages/core/graph/projection:
     dependencies:
       '@exadev/process-graph-schema':
-        specifier: 1.0.2
+        specifier: 1.1.0
         version: link:../schema
     devDependencies:
       '@arethetypeswrong/cli':
@@ -560,7 +560,7 @@ importers:
   packages/core/graph/source-contract:
     dependencies:
       '@exadev/process-graph-schema':
-        specifier: 1.0.2
+        specifier: 1.1.0
         version: link:../schema
       '@orpc/client':
         specifier: 2.0.0-beta.41
@@ -612,10 +612,10 @@ importers:
   packages/core/graph/store-contract:
     dependencies:
       '@exadev/process-graph-domain':
-        specifier: 1.0.2
+        specifier: 1.0.3
         version: link:../domain
       '@exadev/process-graph-schema':
-        specifier: 1.0.2
+        specifier: 1.1.0
         version: link:../schema
       '@orpc/contract':
         specifier: 2.0.0-beta.41
@@ -670,13 +670,13 @@ importers:
         specifier: 1.0.2
         version: link:../../core/graph/dag
       '@exadev/process-graph-domain':
-        specifier: 1.0.2
+        specifier: 1.0.3
         version: link:../../core/graph/domain
       '@exadev/process-graph-projection':
-        specifier: 1.0.2
+        specifier: 1.0.3
         version: link:../../core/graph/projection
       '@exadev/process-graph-schema':
-        specifier: 1.0.2
+        specifier: 1.1.0
         version: link:../../core/graph/schema
     devDependencies:
       '@arethetypeswrong/cli':

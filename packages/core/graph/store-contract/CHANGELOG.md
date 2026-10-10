@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-store-contract@1.0.0...@exadev/process-graph-store-contract@1.0.1) (2026-10-10)
+
+
+### Dependencies
+
+- Updated @exadev/process-graph-schema to 1.1.0
+- Updated @exadev/process-graph-domain to 1.0.3
+
 ## 1.0.0 (2026-10-10)
 
 ### Features
