@@ -60,9 +60,7 @@ const noteEntries = requireArray(
   "generateNotes.presetConfig.types",
 ).filter(isTypedEntry);
 
-const releasingTypes = commitTypes
-  .filter((entry) => entry.release !== false)
-  .map((entry) => entry.type);
+const releasingTypes = commitTypes.map((entry) => entry.type);
 
 describe("release-workspace.config.ts", () => {
   it("analyses and renders commits under the same preset", () => {
@@ -70,7 +68,7 @@ describe("release-workspace.config.ts", () => {
     expect(generateNotes.preset).toBe(analyzeCommits.preset);
   });
 
-  it("releases exactly the commit types commit-types.ts marks as releasing", () => {
+  it("releases every commit type commit-types.ts lists", () => {
     expect(releaseRules.map((rule) => rule.type).sort()).toStrictEqual(
       [...releasingTypes].sort(),
     );
@@ -78,9 +76,6 @@ describe("release-workspace.config.ts", () => {
 
   it("releases each type at the level commit-types.ts names", () => {
     for (const { type, release } of commitTypes) {
-      if (release === false) {
-        continue;
-      }
       expect(releaseRules.find((rule) => rule.type === type)?.release).toBe(
         release,
       );
@@ -107,8 +102,8 @@ describe("release-workspace.config.ts", () => {
     }
   });
 
-  it("hides no type that earns a release from the notes", () => {
-    // The preset hides docs, style, chore, refactor, test, build and ci by default; a type that releases must never inherit that, or its release would publish empty notes.
+  it("hides no type from the notes", () => {
+    // The preset hides docs, style, chore, refactor, test, build and ci by default; every type releases, so none may inherit that, or its release would publish empty notes.
     for (const type of releasingTypes) {
       expect(
         noteEntries.find((entry) => entry.type === type)?.hidden,

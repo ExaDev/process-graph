@@ -12,22 +12,23 @@ import { commitTypes } from "./commit-types.ts";
  */
 
 /**
- * commit-analyzer only falls back to its default rules, which include "a breaking change is a major release", when no custom rule matches a commit. A breaking `feat` matches `feat -> minor` here, so without this rule it would release as a minor version.
+ * Every commit type releases, at the level `commit-types.ts` names, and appears in the notes under its own section. commit-analyzer only falls back to its default rules, which include "a breaking change is a major release", when no custom rule matches a commit. A breaking `feat` matches `feat -> minor` here, so without this rule it would release as a minor version.
  */
 const releaseRules = [
   { breaking: true, release: "major" },
-  ...commitTypes
-    .filter((entry) => entry.release !== false)
-    .map((entry) => ({ type: entry.type, release: entry.release })),
+  ...commitTypes.map((entry) => ({
+    type: entry.type,
+    release: entry.release,
+  })),
 ];
 
 /**
- * Every commit type gets its section name. A type that earns no release is hidden from the notes, which is the conventionalcommits preset's own default for those types, stated here so that a type earning a release can never be hidden by omission.
+ * Every commit type gets its section name and is shown. The conventionalcommits preset hides docs, style, refactor, test, build, ci and chore by default, so `hidden: false` is stated for each type rather than left to that default: a release must never publish empty notes.
  */
 const noteTypes = commitTypes.map((entry) => ({
   type: entry.type,
   section: entry.section,
-  hidden: entry.release === false,
+  hidden: false,
 }));
 
 const config: Pick<
