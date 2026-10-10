@@ -31,3 +31,4 @@ minimumReleaseAgeExclude:
   - "@exadev/process-graph-*"
   - cosmiconfig-extends
   - trilean
+  - trilean-regex

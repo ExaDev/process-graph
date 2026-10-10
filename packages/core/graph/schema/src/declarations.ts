@@ -1,3 +1,4 @@
+import type { PredicateNode } from "trilean";
 import type { IdSpace } from "./ids.ts";
 import type {
   FragmentOperator,
@@ -101,7 +102,12 @@ export interface Transition<Id extends string, R extends IdSpace> {
   readonly source: R["element"];
   readonly target: R["element"];
   readonly trigger?: R["event"];
+  /** The human-readable label of the branch. It is never evaluated; `condition` is. */
   readonly guard?: string;
+  /**
+   * A three-valued predicate tree that decides whether this branch is taken, as a trilean `PredicateNode`. Its references are opaque keys for the evaluator's resolvers, not identifiers of this model, so it is not parameterised by the identifier spaces.
+   */
+  readonly condition?: PredicateNode;
   readonly effect?: R["action"];
 }
 

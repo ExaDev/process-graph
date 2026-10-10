@@ -142,6 +142,62 @@ describe("parseModel", () => {
     expect(parseModel(fromJson(input))).toEqual(input);
   });
 
+  it("round-trips a transition's trilean condition beside its guard", () => {
+    const input = {
+      ...order,
+      transitions: [
+        {
+          id: "t1",
+          source: "d-authorised",
+          target: "a-pack",
+          guard: "authorised",
+          condition: {
+            kind: "and",
+            left: {
+              kind: "compare",
+              op: "gt",
+              left: { kind: "reference", key: "amount" },
+              right: { kind: "numberLiteral", value: 0 },
+            },
+            right: {
+              kind: "not",
+              operand: {
+                kind: "textCompare",
+                op: "equals",
+                left: { kind: "reference", key: "status" },
+                right: { kind: "textLiteral", value: "declined" },
+              },
+            },
+          },
+        },
+      ],
+      projections: [],
+    };
+
+    expect(parseModel(fromJson(input))).toEqual(input);
+  });
+
+  it("locates a malformed condition by JSON pointer", () => {
+    const issues = issuesOf({
+      ...order,
+      transitions: [
+        {
+          id: "t1",
+          source: "d-authorised",
+          target: "a-pack",
+          condition: { kind: "maybe" },
+        },
+      ],
+      projections: [],
+    });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
+      source: "schema",
+      pointer: "/transitions/0/condition/kind",
+    });
+  });
+
   it("names every problem in the error message", () => {
     const error = new ModelParseError([
       { source: "schema", pointer: "/a", message: "bad" },

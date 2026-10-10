@@ -70,6 +70,7 @@
     "vitest": "4.1.11"
   },
   "dependencies": {
+    "trilean": "1.7.2",
     "zod": "4.6.5"
   }
 }
