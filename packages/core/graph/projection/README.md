@@ -10,7 +10,7 @@ Projections of the process model from `@exadev/process-graph-schema` into each n
 | `toFlowchart(model)`             | none                     | Nodes (process, decision, terminator, bar) and guarded edges.   |
 | `toSwimlane(model)`              | none                     | The flowchart plus lanes by actor, unassigned nodes, hand-offs. |
 | `toStateMachine(model, subject)` | a subject entity         | States and transitions with decisions folded into guards.       |
-| `toSequence(model, scenario)`    | a path of transition ids | Lifelines in order of first appearance and messages.            |
+| `toSequence(model, scenario)`    | a path of transition ids | Lifelines in order of first appearance, messages and fragments. |
 
 ```ts
 import { handoffs, toSequence } from "@exadev/process-graph-projection";
@@ -21,7 +21,13 @@ toSequence(model, ["t1", "t2"]);
 
 ## Hand-offs are derived
 
-A transition between two elements with different actors is a hand-off, never stored. Elements without an actor never produce one.
+A transition between two elements with different actors is a hand-off, never stored. Elements without an actor never produce one. A transition into a `message` element continues through it to the step after it, so a message between two steps is part of the hand-off it carries (listed in `through`), not an end of it.
+
+## Message elements
+
+A `message` element is read by every projection. A sequence step arriving at one draws it with its own `from`, `to`, `label` and `mode`, naming it in `element`, and the step leaving it continues the same message. A flowchart or swimlane has no node for it: the edge from the step before it to the step after it carries it (`through`), labelled with the message unless a step on it is guarded. A state machine folds it the way it folds a decision, and its `event` triggers the transition that carries it. Only a message element that nothing carries is reported as a `message-elements` loss.
+
+Flowchart edges and state machine transitions list the model `transitions` they stand for, and the elements folded into them in `through`, so an edit to them maps back to the model.
 
 ## Swimlane lanes
 
@@ -33,11 +39,26 @@ A transition between two elements with different actors is a hand-off, never sto
 
 When no activity in the model declares `affects`, the model carries no such information and every activity is kept. Once any activity declares it, an activity without `affects` is not kept (an empty list is a declaration that it affects nothing).
 
+## Sequence messages
+
+A step between two elements with actors is a message, labelled by its trigger's event name, or else by its target's label. An element with no actor that the scenario passes through, such as a fork or join, passes on whoever reached it, so the step leaving it is sent by the actor of the step that arrived. A step that still has no sender, or arrives at an element with no actor, draws nothing and is reported as a skipped step.
+
 ## Sequence fragments
 
-`toSequence` returns `messages`, the flat list in scenario order, and `items`, the same messages with the authored `fragments` wrapped around the ones that fall inside them. An item is a `message` or a `fragment` carrying its `operator` and the `operands` the scenario takes, each with its guard and its own items. Fragments are never invented: every one drawn is authored.
+`toSequence` returns `messages`, the flat list in scenario order, and `items`, the same messages with fragments wrapped around the ones that fall inside them. An item is a `message` or a `fragment` carrying its `operator` and the `operands` the scenario takes, each with its guard and its own items. An authored fragment names itself in `fragment`; a derived one names the decision or fork it comes from in `element`.
 
-A message belongs to an operand when it arrives at an element in that operand's body. A fragment is drawn when at least one operand has a body wholly on the scenario path and receives a message, and its messages are consecutive in the scenario. An operand the scenario does not take is not drawn (an `alt` shows the branch taken, and the other branch is among the `unshown-branches`). A fragment nests inside another when all its messages lie within one of that fragment's operands. One that cannot be drawn faithfully, being interleaved with messages outside it, off the path or overlapping another without nesting, is left out and reported as a `fragments` loss.
+Fragments are derived from the model's structure, restricted to the scenario path:
+
+| Structure                                                                   | Fragment | Operands                                |
+| --------------------------------------------------------------------------- | -------- | --------------------------------------- |
+| A decision's transition whose target can reach the decision again           | `loop`   | One, guarded by that transition's guard |
+| A decision's other (forward) branches, when there are at least two          | `alt`    | One per branch, guarded by the branch   |
+| Exactly two forward branches, one of them going straight to where they meet | `opt`    | The branch that does something          |
+| A fork pseudo-state's branches                                              | `par`    | One per branch                          |
+
+A loop transition is the same one `graph-domain` treats as a legal cycle. A loop's body is every element on a cycle through it; a branch's body is what it reaches, over forward transitions, that not every branch reaches (what every branch reaches lies after they meet). A derived fragment holding exactly the messages of an authored one is not drawn: the authored fragment is the author's notation for the same structure.
+
+A message belongs to an operand when it arrives at an element in that operand's body. A fragment is drawn when at least one operand has a body wholly on the scenario path and receives a message, and its messages are consecutive in the scenario. An operand the scenario does not take is not drawn (an `alt` shows the branch taken, and the other branch is among the `unshown-branches`). A fragment nests inside another when all its messages lie within one of that fragment's operands. One that cannot be drawn faithfully, being interleaved with messages outside it, off the path or overlapping another without nesting, is left out, and an authored one left out is reported as a `fragments` loss.
 
 ## Loss reports
 
@@ -47,7 +68,7 @@ Every projection result carries `loss`, what it did not carry over from the mode
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
 | `layout`                 | Positions recorded in `views` for this projection's own notation.                                                                            | every projection                              |
 | `extensions`             | Notation-only `extensions` on elements, which no projection shows.                                                                           | every projection                              |
-| `message-elements`       | `message` elements, which no projection draws.                                                                                               | every projection                              |
+| `message-elements`       | `message` elements the projection neither draws nor folds into an edge or transition.                                                        | every projection                              |
 | `fragments`              | Authored fragments the projection does not draw.                                                                                             | every projection                              |
 | `unrepresented-elements` | Elements the notation has no way to draw (`state`, `history`, and in a state machine `fork` and `join`), with the transitions touching them. | `toFlowchart`, `toSwimlane`, `toStateMachine` |
 | `subject`                | Activities left out because they do not affect the state machine's subject.                                                                  | `toStateMachine`                              |
@@ -56,6 +77,35 @@ Every projection result carries `loss`, what it did not carry over from the mode
 | `skipped-steps`          | Scenario steps that touch an element with no actor and so draw no message.                                                                   | `toSequence`                                  |
 
 Decisions a state machine folds into guards are by design and not a loss. A flowchart drops ownership, a state machine needs its subject recorded, and a sequence diagram follows one path, so one model yields a different diagram per scenario.
+
+## Inverses and view edits
+
+Each view has an inverse that takes the view after an edit and returns a `ModelDiff`: the element, transition and event changes the edit implies, matched by identifier. An edit that introduces identifiers the model does not declare works in the open identifier space (`OpenIds`).
+
+| Function                                | Reads                                                       |
+| --------------------------------------- | ----------------------------------------------------------- |
+| `diffFlowchart(model, edited)`          | Nodes and edges.                                            |
+| `diffSwimlane(model, edited)`           | Nodes, edges and which lane each node is in.                |
+| `diffStateMachine(model, edited)`       | States and transitions, for the projection's `subject`.     |
+| `diffSequence(model, scenario, edited)` | Messages, matched by transition occurrence on the scenario. |
+
+Element changes are `added`, `removed`, `renamed`, `relaned` (another actor's lane) and `readdressed` (a message element between other actors); transition changes are `added`, `removed`, `rewired` (other ends) and `changed` (its `guard`, `trigger` or `effect`); an event can be `renamed`. Every change carries `inferred`, which is true when the view did not determine it and the inverse chose: a new terminator's or bar's role, an edit to a state machine transition that stands for a chain through a folded decision (its later steps are shared with other chains), and almost everything a sequence diagram implies, since it shows one path and not who owns which step. A new sequence message names the element it arrives at in `element`, a new activity owned by its receiver unless that element exists, and leaves from where the latest earlier message to its sender arrived.
+
+`confirmChanges(diff, accept)` marks the inferred changes `accept` chooses as confirmed. `applyModelDiff(model, diff)` returns the changed model and throws `UnconfirmedChangeError` while any change is still inferred; removing an element also takes it out of fragment bodies and recorded positions, and removing a transition takes it out of every scenario. An edit the model cannot express, such as a changed node shape, a relabelled terminator or a lane for an entity, throws instead of being dropped.
+
+```ts
+import {
+  applyModelDiff,
+  confirmChanges,
+  diffSequence,
+} from "@exadev/process-graph-projection";
+
+const diff = diffSequence(model, scenario, editedDiagram);
+const next = applyModelDiff(
+  model,
+  confirmChanges(diff, () => true),
+);
+```
 
 ## Commands
 
