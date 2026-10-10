@@ -3,7 +3,7 @@ import type { Direction } from "./engine.ts";
 /**
  * The unit every dimension below is a multiple of, so nodes of different shapes and lanes align on one grid and a renderer that snaps to a grid snaps to the same points.
  */
-export const GRID = 8;
+const GRID = 8;
 
 /** The room a node of each kind of shape takes, in the coordinate space of the layout. */
 export interface Size {
