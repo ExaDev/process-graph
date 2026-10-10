@@ -30,7 +30,9 @@
     "provenance": true,
     "registry": "https://registry.npmjs.org/"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/bin.js"
+  ],
   "license": "MIT",
   "scripts": {
     "build": "turbo run _build",
