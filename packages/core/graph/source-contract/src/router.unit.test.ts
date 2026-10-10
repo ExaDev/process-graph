@@ -8,10 +8,7 @@ import {
   type PageRequest,
 } from "./router.ts";
 import { fakeOptions } from "./test-support/pages.ts";
-import {
-  inProcessClient,
-  messagePortClient,
-} from "./test-support/transports.ts";
+import { inProcessClient, messagePortClient } from "./conformance.ts";
 
 const scope = ["fake:acme/alpha", "fake:acme/beta"];
 const fake = createFakeGraphSource(fakeOptions);
