@@ -36,6 +36,7 @@ export {
   type PageRequest,
 } from "./router.ts";
 export { assembleSync, type AssembledSync } from "./assemble.ts";
+export { paginate } from "./paginate.ts";
 export {
   createFakeGraphSource,
   type FakeGraphSourceOptions,
