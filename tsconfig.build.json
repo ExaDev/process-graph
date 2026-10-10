@@ -1,4 +1,8 @@
 {
   "files": [],
-  "references": []
+  "references": [
+    {
+      "path": "packages/core/graph/dag/tsconfig.build.json"
+    }
+  ]
 }
