@@ -22,9 +22,6 @@ const config: KnipConfig = {
     },
   },
   ignoreDependencies: [
-    // Resolved by Stryker via its own config string, not a static import knip can see.
-    "@stryker-mutator/typescript-checker",
-    "@stryker-mutator/vitest-runner",
     // Resolved by semantic-release via the plugin-name strings in release.config.ts's own plugins array, not a static import knip can see.
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
