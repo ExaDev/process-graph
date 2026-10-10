@@ -197,14 +197,26 @@ const deriveCandidates = <I extends IdSpace>(
     });
   }
 
-  const forwardCount = new Map<I["element"], readonly TransitionOf<I>[]>();
+  /** Each branching element's forward branch count, where they meet, and, for a decision, whether it draws an `opt`: found once per element, not once per step that leaves it. */
+  const shapes = new Map<
+    I["element"],
+    {
+      readonly branches: number;
+      readonly meet: I["element"] | undefined;
+      readonly operator: "alt" | "opt";
+    }
+  >();
   for (const element of branching) {
-    forwardCount.set(
-      element.id,
-      (outgoing.get(element.id) ?? []).filter(
-        (transition) => !loops.has(transition.id),
-      ),
+    const forward = (outgoing.get(element.id) ?? []).filter(
+      (transition) => !loops.has(transition.id),
     );
+    const meet = meetOf(element.id);
+    const direct = forward.filter((branch) => branch.target === meet).length;
+    shapes.set(element.id, {
+      branches: forward.length,
+      meet,
+      operator: forward.length === minBranches && direct === 1 ? "opt" : "alt",
+    });
   }
   const decisions = new Set<I["element"]>(
     branching.flatMap((element) =>
@@ -279,22 +291,19 @@ const deriveCandidates = <I extends IdSpace>(
     const drawn = steps[index + 1]?.before ?? entries.length;
     const position = drawn > step.before ? step.before : undefined;
     const source = transition.source;
-    const forward = forwardCount.get(source);
+    const shape = shapes.get(source);
 
     if (
       decisions.has(source) &&
-      forward !== undefined &&
-      forward.length >= minBranches &&
+      shape !== undefined &&
+      shape.branches >= minBranches &&
       !loops.has(transition.id)
     ) {
       const earlier = openAt.get(source);
       if (earlier !== undefined) {
         close(earlier, step.before);
       }
-      const meet = meetOf(source);
-      const direct = forward.filter((branch) => branch.target === meet);
-      const operator =
-        forward.length === minBranches && direct.length === 1 ? "opt" : "alt";
+      const { meet, operator } = shape;
       if (!(operator === "opt" && transition.target === meet)) {
         const occurrence: Occurrence = {
           element: source,
@@ -312,14 +321,14 @@ const deriveCandidates = <I extends IdSpace>(
     let label = labels.get(source);
     if (
       !decisions.has(source) &&
-      forward !== undefined &&
-      forward.length >= minBranches
+      shape !== undefined &&
+      shape.branches >= minBranches
     ) {
       let parallel = openParallel.get(source);
       if (parallel === undefined || parallel.taken.has(transition.id)) {
         parallel = {
           element: source,
-          meet: meetOf(source),
+          meet: shape.meet,
           outer: label,
           operands: [],
           taken: new Set(),
