@@ -31,6 +31,12 @@ A transition between two elements with different actors is a hand-off, never sto
 
 When no activity in the model declares `affects`, the model carries no such information and every activity is kept. Once any activity declares it, an activity without `affects` is not kept (an empty list is a declaration that it affects nothing).
 
+## Sequence fragments
+
+`toSequence` returns `messages`, the flat list in scenario order, and `items`, the same messages with the authored `fragments` wrapped around the ones that fall inside them. An item is a `message` or a `fragment` carrying its `operator` and the `operands` the scenario takes, each with its guard and its own items. Fragments are never invented: every one drawn is authored.
+
+A message belongs to an operand when it arrives at an element in that operand's body. A fragment is drawn when at least one operand has a body wholly on the scenario path and receives a message, and its messages are consecutive in the scenario. An operand the scenario does not take is not drawn (an `alt` shows the branch taken, and the other branch is among the `unshown-branches`). A fragment nests inside another when all its messages lie within one of that fragment's operands. One that cannot be drawn faithfully, being interleaved with messages outside it, off the path or overlapping another without nesting, is left out and reported as a `fragments` loss.
+
 ## Loss reports
 
 Every projection result carries `loss`, what it did not carry over from the model. Each `Loss` is a discriminated union on `kind`, reported only when something was actually dropped, in this order:

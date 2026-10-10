@@ -92,12 +92,14 @@ describe("loss reports", () => {
     ]);
   });
 
-  it("reports what a sequence scenario leaves out", () => {
-    expect(toSequence(rich, ["t2"]).loss).toEqual([
+  it("reports what a sequence scenario leaves out, and not a fragment it draws", () => {
+    const diagram = toSequence(rich, ["t2"]);
+
+    expect(diagram.items.map((item) => item.kind)).toEqual(["fragment"]);
+    expect(diagram.loss).toEqual([
       { kind: "layout", elements: ["end"] },
       { kind: "extensions", elements: ["a-place"] },
       { kind: "message-elements", elements: ["m-ack"] },
-      { kind: "fragments", fragments: ["f1"] },
       { kind: "scenario", elements: ["start", "m-ack", "end"] },
       { kind: "unshown-branches", transitions: ["t3"] },
     ]);

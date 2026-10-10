@@ -19,5 +19,7 @@ export {
 export {
   toSequence,
   type SequenceDiagram,
+  type SequenceItem,
   type SequenceMessage,
+  type SequenceOperand,
 } from "./sequence.ts";
