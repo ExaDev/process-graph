@@ -1,0 +1,15 @@
+node_modules
+dist
+coverage
+.turbo
+.eslintcache
+*.tsbuildinfo
+.env
+.stryker-tmp
+reports
+
+# Un-ignore AGENTS.md/CLAUDE.md against a machine-wide global gitignore that excludes them everywhere by default. README.md symlinked to AGENTS.md and CLAUDE.md is this repository's deliberate "one instruction file" pattern, so these symlinks must be tracked.
+!AGENTS.md
+!CLAUDE.md
+!**/AGENTS.md
+!**/CLAUDE.md

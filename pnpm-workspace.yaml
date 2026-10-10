@@ -1,0 +1,33 @@
+packages:
+  - "packages/core/*/*"
+  - "packages/adapters/*/*"
+  - "packages/ui/*/*"
+  - "packages/targets/*"
+
+# Four groups, each its own glob at its own real depth, ranked in eslint.shared.ts's workspaceArchitectureConfig call:
+# - core/<domain>/<package>: the process model, its analysis and the ports; no knowledge of any adapter, UI or target.
+# - adapters/<domain>/<package>: implementations of a core port against one external system.
+# - ui/<domain>/<package>: components that render the model.
+# - targets/<package>: deployable entry points, deliberately flat.
+
+linkWorkspacePackages: true
+
+# Sibling dependencies are declared as plain exact versions, never with the `workspace:` protocol: a published manifest must stay installable from the registry, and linkWorkspacePackages above still symlinks a sibling locally whenever the workspace version satisfies the range. pnpm's default writes `workspace:^` on `pnpm add <sibling>`; false writes the plain version, pinned exact by saveExact below.
+saveWorkspaceProtocol: false
+
+saveExact: true
+
+# A decision recorded, not merely a permission granted: each entry names why that package's install script is safe to run.
+allowBuilds:
+  esbuild: true # ships a prebuilt native binary; a transitive dependency of vite and vitest
+
+# Seven days, in minutes, matching the user-level install-age control. CI never reads the user-level config, so the workspace carries its own copy; never lower it.
+minimumReleaseAge: 10080
+
+# ExaDev's own published packages: the age gate guards against a compromised third-party maintainer publishing a malicious version before it is noticed, a threat model that does not apply to packages this organisation publishes itself through reviewed release pipelines.
+minimumReleaseAgeExclude:
+  - "@exadev/eslint-config"
+  - "@exadev/json-compose"
+  - "@exadev/process-graph-*"
+  - cosmiconfig-extends
+  - trilean

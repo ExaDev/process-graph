@@ -1,0 +1,95 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "agentGuidance": false,
+  "globalDependencies": [
+    "pnpm-lock.yaml",
+    ".tool-versions",
+    "prettier.config.ts",
+    "tsconfig.base.json",
+    "knip.config.ts",
+    "syncpack.config.ts"
+  ],
+  "tasks": {
+    "_build": {
+      "dependsOn": ["^_build"],
+      "inputs": ["src/**", "tsconfig.build.json", "package.json"],
+      "outputs": ["dist/**"]
+    },
+    "_typecheck": {
+      "dependsOn": ["^_build", "_build"],
+      "outputs": []
+    },
+    "_dev": {
+      "dependsOn": ["^_build", "_build"],
+      "cache": false,
+      "persistent": true
+    },
+    "_typecheck:attw": {
+      "dependsOn": ["_build"],
+      "outputs": []
+    },
+    "_lint": {
+      "dependsOn": ["^_build", "_build"],
+      "outputs": [".eslintcache"]
+    },
+    "_lint:fix": {
+      "dependsOn": ["^_build", "_build"],
+      "cache": false
+    },
+    "_test": {
+      "dependsOn": ["^_build"],
+      "outputs": []
+    },
+    "_test:coverage": {
+      "dependsOn": ["^_build"],
+      "outputs": ["coverage/**"]
+    },
+    "_test:integration": {
+      "dependsOn": ["^_build"],
+      "outputs": []
+    },
+    "_test:smoke": {
+      "dependsOn": ["_build", "^_build", "^_test:smoke"],
+      "outputs": []
+    },
+    "_test:mutation": {
+      "dependsOn": ["_build", "^_build"],
+      "outputs": ["reports/**"],
+      "cache": false
+    },
+    "_prepush": {
+      "dependsOn": [
+        "_lint",
+        "_typecheck",
+        "_typecheck:attw",
+        "_test",
+        "_test:integration",
+        "_test:smoke"
+      ]
+    },
+    "_lint-all": {
+      "dependsOn": ["//#_lint", "_lint"]
+    },
+    "_lint:fix-all": {
+      "dependsOn": ["//#_lint:fix", "_lint:fix"]
+    },
+    "_typecheck-all": {
+      "dependsOn": ["//#_typecheck", "_typecheck"]
+    },
+    "_test-all": {
+      "dependsOn": ["//#_test", "_test"]
+    },
+    "//#_lint": {
+      "outputs": [".eslintcache"]
+    },
+    "//#_lint:fix": {
+      "cache": false
+    },
+    "//#_typecheck": {
+      "outputs": []
+    },
+    "//#_test": {
+      "outputs": []
+    }
+  }
+}

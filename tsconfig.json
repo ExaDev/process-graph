@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024"],
+    "types": ["node"]
+  },
+  "include": [
+    "*.config.ts",
+    "commit-types.ts",
+    "release.config.ts",
+    "eslint.shared.ts",
+    ".github/scripts/**/*.ts"
+  ]
+}
