@@ -65,7 +65,7 @@ export const reachSchema = z
 export const changeKinds = ["saved", "overlay", "items", "deleted"] as const;
 
 /**
- * A change to a model. `revision` is the revision the change took. `missed` is sent only at the start of a subscription that names a revision the model is no longer at: the subscriber missed one or more changes, or the model has gone, and should load it again.
+ * A change to a model. `revision` is the revision the change took. `missed` says the subscriber missed one or more changes and should load the model again: it is sent at the start of a subscription that names a revision the model is no longer at (the model changed, or has gone), and in place of the changes a subscriber that reads too slowly has let pile up beyond its subscription's capacity.
  */
 export const storeChangeSchema = z.union([
   z

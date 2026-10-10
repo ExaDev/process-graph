@@ -119,7 +119,7 @@ export const createGraphStoreRouter = (store: GraphStore): GraphStoreRouter =>
       },
       changes: os.v1.changes.handler(async ({ input, signal, errors }) => {
         // Subscribe before anything is awaited and before the iterator is returned: a caller that has the iterator in hand is already subscribed, over any transport, so a write it makes next is never missed.
-        const subscription = store.feed.subscribe(input.modelId, signal);
+        const subscription = store.feed.subscribe(input.modelId, { signal });
         let missed = false;
         try {
           if (input.since !== undefined) {
