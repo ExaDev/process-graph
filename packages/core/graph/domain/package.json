@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-domain",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Reasoning over the process model and a run overlay: control graph, illegal cycles, three-valued status, decision evaluation, ready set, blocked-by, impact, what-if and critical path.",
   "type": "module",
   "repository": {
@@ -68,8 +68,8 @@
     "vitest": "4.1.11"
   },
   "dependencies": {
-    "@exadev/process-graph-dag": "0.0.0",
-    "@exadev/process-graph-schema": "0.0.0",
+    "@exadev/process-graph-dag": "1.0.0",
+    "@exadev/process-graph-schema": "1.0.0",
     "trilean": "1.7.2"
   }
 }
