@@ -26,11 +26,6 @@ const config: KnipConfig = {
     },
   },
   ignoreDependencies: [
-    // Resolved by semantic-release via the plugin-name strings in release.config.ts's own plugins array, not a static import knip can see.
-    "@semantic-release/commit-analyzer",
-    "@semantic-release/release-notes-generator",
-    "@semantic-release/npm",
-    "@semantic-release/github",
     // Resolved by name via each semantic-release plugin's own `preset: "conventionalcommits"` option string.
     "conventional-changelog-conventionalcommits",
   ],

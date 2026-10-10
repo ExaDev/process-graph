@@ -1,5 +1,5 @@
 /**
- * The single source of truth for which Conventional Commit types this workspace accepts, and which release level (if any) each one triggers. Both `commitlint.config.ts` and `release.config.ts` import this file so a commit type can never trigger a release without also passing commit-message validation, or the reverse. One definition, not two that could drift apart.
+ * The single source of truth for which Conventional Commit types this workspace accepts, and which release level (if any) each one triggers. Both `commitlint.config.ts` and `release-workspace.config.ts` import this file so a commit type can never trigger a release without also passing commit-message validation, or the reverse. One definition, not two that could drift apart.
  */
 export interface CommitTypeDefinition {
   readonly type: string;
