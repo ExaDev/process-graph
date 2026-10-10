@@ -15,9 +15,9 @@ export interface StateMachineTransition<I extends IdSpace> {
   readonly event?: I["event"];
   readonly guard?: string;
   readonly effect?: I["action"];
-  /** The model transitions this transition stands for, in order. An edit to it maps back to the model through these. */
+  /** The model transitions this transition stands for: one, or every transition on some route through the elements folded into it, each once, in the order they were met. An edit to it maps back to the model through these. */
   readonly transitions: readonly I["transition"][];
-  /** The elements folded into it, in order: decisions, activities that do not affect the subject, and `message` elements. */
+  /** The elements folded into it, each once, in the order they were met: decisions, activities that do not affect the subject, and `message` elements. */
   readonly through?: readonly I["element"][];
 }
 
@@ -60,7 +60,7 @@ const stateOf = <I extends IdSpace>(
  *
  * A `message` element is folded the same way, and its `event`, when it has one, triggers the transition that carries it. A message element no drawn transition carries is reported as a `message-elements` loss.
  *
- * Each drawn transition lists the model `transitions` it stands for and the elements folded into it (`through`), so an edit to it maps back to the model.
+ * Each drawn transition lists the model `transitions` it stands for and the elements folded into it (`through`), so an edit to it maps back to the model. Several routes through folded elements from the same transition to the same state are one drawn transition whose `transitions` and `through` are the union over the routes, each once in the order met; it carries no event or guard, which differ by route, and its effect is only the target's entry action.
  *
  * Decisions are folded into guards by design and are not a loss. Fork, join and history pseudo-states have no state of their own here and are reported as unrepresented, together with the transitions that touch them, which are left out rather than pointing at a state that is not drawn.
  *
@@ -105,7 +105,7 @@ export const toStateMachine = <I extends IdSpace>(
     return element !== undefined && isTransparent(element);
   };
 
-  /** The transition a chain draws. The event is the last trigger along it, counting a folded message's own event at its place in the chain; guards are joined in order; the effect is the entry action of the target activity, or else the last effect along the chain. */
+  /** The transition a chain draws. On a single route, the event is the last trigger along it, counting a folded message's own event right after the transition that arrives at it; guards are joined in order; the effect is the entry action of the target activity, or else the last effect along the route. Where several routes are merged their triggers, guards and effects belong to different routes, so only the target's entry action is kept. */
   const transitionOf = (
     source: I["element"],
     chain: Chain<I>,
@@ -113,7 +113,7 @@ export const toStateMachine = <I extends IdSpace>(
     const triggers: I["event"][] = [];
     const guards: string[] = [];
     const effects: I["action"][] = [];
-    for (const [index, transition] of chain.transitions.entries()) {
+    for (const transition of chain.merged ? [] : chain.transitions) {
       if (transition.trigger !== undefined) {
         triggers.push(transition.trigger);
       }
@@ -123,11 +123,13 @@ export const toStateMachine = <I extends IdSpace>(
       if (transition.effect !== undefined) {
         effects.push(transition.effect);
       }
-      // `through[index]` is the folded element this transition arrives at; the last transition arrives at the target instead.
-      const passed = chain.through[index];
-      const folded = passed === undefined ? undefined : elements.get(passed);
-      if (folded?.kind === "message" && folded.event !== undefined) {
-        triggers.push(folded.event);
+      const arrived = elements.get(transition.target);
+      if (
+        transition.target !== chain.target &&
+        arrived?.kind === "message" &&
+        arrived.event !== undefined
+      ) {
+        triggers.push(arrived.event);
       }
     }
     const target = elements.get(chain.target);

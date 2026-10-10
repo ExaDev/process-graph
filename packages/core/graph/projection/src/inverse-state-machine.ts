@@ -1,5 +1,6 @@
 import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import type { ElementOf } from "./actors.ts";
+import type { TransitionOf } from "./chains.ts";
 import type { ElementChange, ModelDiff, TransitionChange } from "./diff.ts";
 import {
   toStateMachine,
@@ -30,7 +31,7 @@ const addedState = <I extends IdSpace>(
  *
  * A state not in the projection is an added element: a `state` element for a plain state, or an initial or final pseudo-state. A projected state missing from the edit is removed, and a changed label renames the activity or state behind it.
  *
- * A drawn transition is matched by the model transitions it stands for. One that stands for a single transition maps straight back: moved ends rewire it, and a changed event, guard or effect changes that transition's trigger, guard or effect. One that stands for a chain through folded elements (decisions, activities that do not affect the subject, messages) shares its later steps with every other chain through the same elements, so the inverse has to choose: moving its source rewires the first step and is certain, but moving its target, changing its labels or removing it acts on the last step and is marked `inferred`. A new transition must carry one new transition id and is added with its event, guard and effect.
+ * A drawn transition is matched by the model transitions it stands for. One that stands for a single transition maps straight back: moved ends rewire it, and a changed event, guard or effect changes that transition's trigger, guard or effect. One that stands for a chain through folded elements (decisions, activities that do not affect the subject, messages) shares its later steps with every other chain through the same elements, so the inverse has to choose: moving its source rewires the first step and is certain, but moving its target, changing its labels or removing it acts on each step that arrives at its target (one per route) and is marked `inferred`. A new transition must carry one new transition id and is added with its event, guard and effect.
  * @param model - The model the machine was projected from.
  * @param edited - The projected machine after editing; `subject` says which projection it was. Its `loss` is not read.
  * @returns The changes, with no event changes, since a state machine names events by id.
@@ -102,14 +103,24 @@ export const diffStateMachine = <I extends IdSpace>(
   );
   const editedKeys = new Set<string>(edited.transitions.map(transitionKey));
   const transitionChanges: TransitionChange<I>[] = [];
+  /** The model transitions of a drawn transition that arrive at its target state: its one transition, or the last step of each route through the elements folded into it. */
+  const arriving = (
+    drawnTransition: StateMachineTransition<I>,
+  ): TransitionOf<I>[] =>
+    drawnTransition.transitions.flatMap((id) => {
+      const transition = transitions.get(id);
+
+      return transition?.target === drawnTransition.target ? [transition] : [];
+    });
   for (const drawnTransition of original.transitions) {
-    const last = drawnTransition.transitions.at(-1);
-    if (last !== undefined && !editedKeys.has(transitionKey(drawnTransition))) {
-      transitionChanges.push({
-        kind: "removed",
-        transition: last,
-        inferred: drawnTransition.transitions.length > 1,
-      });
+    if (!editedKeys.has(transitionKey(drawnTransition))) {
+      for (const tail of arriving(drawnTransition)) {
+        transitionChanges.push({
+          kind: "removed",
+          transition: tail.id,
+          inferred: drawnTransition.transitions.length > 1,
+        });
+      }
     }
   }
   for (const edit of edited.transitions) {
@@ -141,11 +152,10 @@ export const diffStateMachine = <I extends IdSpace>(
       continue;
     }
     const head = first === undefined ? undefined : transitions.get(first);
-    const lastId = edit.transitions.at(-1);
-    const tail = lastId === undefined ? undefined : transitions.get(lastId);
-    if (head === undefined || tail === undefined) {
+    if (head === undefined) {
       continue;
     }
+    const tails = arriving(before);
     const chain = edit.transitions.length > 1;
     if (
       !chain &&
@@ -169,16 +179,18 @@ export const diffStateMachine = <I extends IdSpace>(
         });
       }
       if (before.target !== edit.target) {
-        transitionChanges.push({
-          kind: "rewired",
-          transition: tail.id,
-          from: { source: tail.source, target: tail.target },
-          to: { source: tail.source, target: edit.target },
-          inferred: true,
-        });
+        for (const tail of tails) {
+          transitionChanges.push({
+            kind: "rewired",
+            transition: tail.id,
+            from: { source: tail.source, target: tail.target },
+            to: { source: tail.source, target: edit.target },
+            inferred: true,
+          });
+        }
       }
     }
-    if (before.event !== edit.event) {
+    for (const tail of before.event === edit.event ? [] : tails) {
       transitionChanges.push({
         kind: "changed",
         field: "trigger",
@@ -188,7 +200,7 @@ export const diffStateMachine = <I extends IdSpace>(
         inferred: chain,
       });
     }
-    if (before.guard !== edit.guard) {
+    for (const tail of before.guard === edit.guard ? [] : tails) {
       transitionChanges.push({
         kind: "changed",
         field: "guard",
@@ -205,14 +217,16 @@ export const diffStateMachine = <I extends IdSpace>(
           `The effect of ${transitionKey(edit)} is the action of "${target.id}"; change that activity's action instead`,
         );
       }
-      transitionChanges.push({
-        kind: "changed",
-        field: "effect",
-        transition: tail.id,
-        from: tail.effect,
-        to: edit.effect,
-        inferred: chain,
-      });
+      for (const tail of tails) {
+        transitionChanges.push({
+          kind: "changed",
+          field: "effect",
+          transition: tail.id,
+          from: tail.effect,
+          to: edit.effect,
+          inferred: chain,
+        });
+      }
     }
   }
 
