@@ -43,10 +43,11 @@ Configuration lives at exactly one of two levels: in the package (`eslint.config
 
 ## Packages
 
-| Package                                                | What it is                                                                                                                                                         |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`graph-dag`](packages/core/graph/dag/README.md)       | Model-independent dependency-graph primitives over a node set and a `needs` accessor: layers, ancestors, descendants, cycles, transitive reduction, critical path. |
-| [`graph-schema`](packages/core/graph/schema/README.md) | The process model: typed identifier spaces, `defineModel` with compile-time reference checking, structural validation.                                             |
+| Package                                                        | What it is                                                                                                                                                         |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`graph-dag`](packages/core/graph/dag/README.md)               | Model-independent dependency-graph primitives over a node set and a `needs` accessor: layers, ancestors, descendants, cycles, transitive reduction, critical path. |
+| [`graph-schema`](packages/core/graph/schema/README.md)         | The process model: typed identifier spaces, `defineModel` with compile-time reference checking, structural validation.                                             |
+| [`graph-projection`](packages/core/graph/projection/README.md) | Projections of the model into a flowchart, swimlane, state machine and sequence diagram, plus derived hand-offs.                                                   |
 
 ## Conventions
 

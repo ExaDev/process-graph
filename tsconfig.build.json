@@ -6,6 +6,9 @@
     },
     {
       "path": "packages/core/graph/schema/tsconfig.build.json"
+    },
+    {
+      "path": "packages/core/graph/projection/tsconfig.build.json"
     }
   ]
 }
