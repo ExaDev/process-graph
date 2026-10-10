@@ -40,3 +40,13 @@ export const notations = [
   "sequence",
 ] as const;
 export type Notation = (typeof notations)[number];
+
+/** The kinds of element a model declares, one per variant of `Element`. */
+export const elementKinds = [
+  "activity",
+  "decision",
+  "state",
+  "pseudo",
+  "message",
+] as const;
+export type ElementKind = (typeof elementKinds)[number];

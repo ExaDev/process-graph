@@ -6,12 +6,20 @@
  * Participants are split further by their declared kind. An `actor` (who performs a step, or sends or receives a message) must be a role or a system. A state machine `subject` must be an entity. Naming a participant of the wrong kind is a compile error too.
  */
 export type { IdSpace, OpenIds } from "./ids.ts";
-export type {
-  FragmentOperator,
-  MessageMode,
-  Notation,
-  ParticipantKind,
-  PseudoRole,
+export {
+  elementKinds,
+  fragmentOperators,
+  messageModes,
+  notations,
+  overlayStatuses,
+  participantKinds,
+  pseudoRoles,
+  type ElementKind,
+  type FragmentOperator,
+  type MessageMode,
+  type Notation,
+  type ParticipantKind,
+  type PseudoRole,
 } from "./vocabulary.ts";
 export type {
   ActionDef,
