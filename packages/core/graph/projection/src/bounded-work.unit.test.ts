@@ -13,6 +13,7 @@ import {
   serialDiamondsShape,
   sharedEndShape,
   sourcesIntoRunShape,
+  twoBranchesShape,
   wideForkShape,
   type Shape,
 } from "./test-support/shapes.ts";
@@ -541,6 +542,8 @@ const shapes: readonly (
   ["serial diamonds of messages", serialDiamondsShape],
   // Each path into the end once read the whole list of steps arriving at it; that list grows with the paths, but only overtakes the per-path work at the larger size.
   ["many paths converging on one end", sharedEndShape, size],
+  // Every edge into the activities is a merged chain over the same two branches; reading their lists once walked those branches again per edge, which shows at the larger size.
+  ["two branches leading to many common ends", twoBranchesShape, size],
   [
     "an authored fragment over the path with one inside it per step",
     authoredNestingShape,
@@ -557,6 +560,22 @@ const entries: readonly (readonly [string, (shape: Shape) => number])[] = [
       const flow = toFlowchart(model);
 
       return flow.nodes.length + flow.edges.length;
+    },
+  ],
+  [
+    "toFlowchart, reading every edge's lists and label",
+    ({ model }) => {
+      const flow = toFlowchart(model);
+      let read = flow.nodes.length;
+      for (const edge of flow.edges) {
+        read +=
+          1 +
+          edge.transitions.length +
+          (edge.through?.length ?? 0) +
+          (edge.label?.length ?? 0);
+      }
+
+      return read;
     },
   ],
   [
@@ -657,6 +676,15 @@ const edits: readonly (readonly [string, (count: number) => () => unknown])[] =
             states,
             transitions: [],
           });
+      },
+    ],
+    [
+      "diffFlowchart reading an unchanged flowchart of merged edges over two branches",
+      (count) => {
+        const { model } = twoBranchesShape(count);
+        const flow = toFlowchart(model);
+
+        return () => diffFlowchart(model, flow);
       },
     ],
     [

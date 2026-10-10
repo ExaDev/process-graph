@@ -277,3 +277,30 @@ export const authoredNestingShape = (count: number): Shape => {
     path: steps.slice(1).map((id) => `t-${id}`),
   };
 };
+
+/** One message splitting into two messages that both lead to every one of many activities, so every edge into those activities is a merged chain over the same branches. */
+export const twoBranchesShape = (count: number): Shape => {
+  const ends = ids(count, "e-");
+
+  return {
+    model: {
+      ...empty,
+      participants: actors,
+      elements: [
+        activity("s", "customer"),
+        ...["split", "left", "right"].map(messageElement),
+        ...ends.map((id) => activity(id)),
+      ],
+      transitions: [
+        { id: "t-in", source: "s", target: "split" },
+        { id: "t-left", source: "split", target: "left" },
+        { id: "t-right", source: "split", target: "right" },
+        ...ends.flatMap((id) => [
+          { id: `t-left-${id}`, source: "left", target: id },
+          { id: `t-right-${id}`, source: "right", target: id },
+        ]),
+      ],
+    },
+    path: [],
+  };
+};
