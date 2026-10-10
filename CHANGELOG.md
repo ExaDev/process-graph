@@ -1,3 +1,9 @@
+## [1.4.0](https://github.com/ExaDev/process-graph/compare/v1.3.0...v1.4.0) (2026-10-10)
+
+* add process-graph entry point package ([530c3e6](https://github.com/ExaDev/process-graph/commit/530c3e60b271c5afeed0912add8c686b99bdb654))
+* document the entry point package ([b37375d](https://github.com/ExaDev/process-graph/commit/b37375d71ea4e33246cc82de448ee7c7eadc79c1))
+* guard the entry point's export surface ([dc24012](https://github.com/ExaDev/process-graph/commit/dc2401275083792290f074fff29c8c8a004a4b3b))
+
 ## [1.3.0](https://github.com/ExaDev/process-graph/compare/v1.2.0...v1.3.0) (2026-10-10)
 
 * add domain package ([d531846](https://github.com/ExaDev/process-graph/commit/d531846a6127fd79c2e95a5b5c2792695e5acfae))
