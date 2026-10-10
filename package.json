@@ -1,7 +1,7 @@
 {
   "name": "process-graph",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Workspace root for process-graph: a process and dependency graph model, reasoning, CLI and React UI over multiple task sources. Never published; the unscoped process-graph package is a separate workspace package.",
   "type": "module",
   "license": "MIT",

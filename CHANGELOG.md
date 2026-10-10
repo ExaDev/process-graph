@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/ExaDev/process-graph/compare/v1.1.0...v1.2.0) (2026-10-10)
+
+* **projection:** export the unrepresented element types ([966e2aa](https://github.com/ExaDev/process-graph/commit/966e2aa8457aad7860cb9dcec14e7b372d38ebb4))
+* **projection:** report elements and steps a projection drops ([88b1721](https://github.com/ExaDev/process-graph/commit/88b1721f45af14a7853c9fdbadc3b2398e3c66db))
+* **schema:** validate an overlay against its model ([f21c026](https://github.com/ExaDev/process-graph/commit/f21c026d8ddd11009604b43ee392c015dbd56582))
+
 ## [1.1.0](https://github.com/ExaDev/process-graph/compare/v1.0.0...v1.1.0) (2026-10-10)
 
 * add projection package ([b449b22](https://github.com/ExaDev/process-graph/commit/b449b2240336c35de9f848ba43b315b12adf4adf))
