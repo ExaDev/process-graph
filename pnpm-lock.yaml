@@ -580,6 +580,9 @@ importers:
 
   packages/core/graph/projection:
     dependencies:
+      '@exadev/process-graph-dag':
+        specifier: 1.0.2
+        version: link:../dag
       '@exadev/process-graph-schema':
         specifier: 1.1.0
         version: link:../schema

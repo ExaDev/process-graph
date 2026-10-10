@@ -49,16 +49,16 @@ A step between two elements with actors is a message, labelled by its trigger's 
 
 `toSequence` returns `messages`, the flat list in scenario order, and `items`, the same messages with fragments wrapped around the ones that fall inside them. An item is a `message` or a `fragment` carrying its `operator` and the `operands` the scenario takes, each with its guard and its own items. An authored fragment names itself in `fragment`; a derived one names the decision or fork it comes from in `element`.
 
-Fragments are derived from the model's structure, restricted to the scenario path:
+Fragments are derived from the model's structure at the decisions and forks the scenario passes, restricted to the scenario path:
 
-| Structure                                                                   | Fragment | Operands                                |
-| --------------------------------------------------------------------------- | -------- | --------------------------------------- |
-| A decision's transition whose target can reach the decision again           | `loop`   | One, guarded by that transition's guard |
-| A decision's other (forward) branches, when there are at least two          | `alt`    | One per branch, guarded by the branch   |
-| Exactly two forward branches, one of them going straight to where they meet | `opt`    | The branch that does something          |
-| A fork pseudo-state's branches                                              | `par`    | One per branch                          |
+| Structure                                                                   | Fragment | Operands                                                   |
+| --------------------------------------------------------------------------- | -------- | ---------------------------------------------------------- |
+| A decision's transitions whose target can reach the decision again          | `loop`   | One, guarded by those transitions' guards joined with "or" |
+| A decision's other (forward) branches, when there are at least two          | `alt`    | One per branch, guarded by the branch                      |
+| Exactly two forward branches, one of them going straight to where they meet | `opt`    | The branch that does something                             |
+| A fork pseudo-state's branches                                              | `par`    | One per branch                                             |
 
-A loop transition is the same one `graph-domain` treats as a legal cycle. A loop's body is every element on a cycle through it; a branch's body is what it reaches, over forward transitions, that not every branch reaches (what every branch reaches lies after they meet). A derived fragment holding exactly the messages of an authored one is not drawn: the authored fragment is the author's notation for the same structure.
+A loop transition is the same one `graph-domain` treats as a legal cycle: its target is in the decision's strongly connected component, which one pass of Tarjan's algorithm finds for every element. A decision draws one loop however many ways round it has, and its body is that whole component, every element on a cycle through the decision; a branch's body is what it reaches, over forward transitions, that not every branch reaches (what every branch reaches lies after they meet). A derived fragment holding exactly the messages of an authored one is not drawn: the authored fragment is the author's notation for the same structure.
 
 A message belongs to an operand when it arrives at an element in that operand's body. A fragment is drawn when at least one operand has a body wholly on the scenario path and receives a message, and its messages are consecutive in the scenario. An operand the scenario does not take is not drawn (an `alt` shows the branch taken, and the other branch is among the `unshown-branches`). A fragment nests inside another when all its messages lie within one of that fragment's operands. One that cannot be drawn faithfully, being interleaved with messages outside it, off the path or overlapping another without nesting, is left out, and an authored one left out is reported as a `fragments` loss.
 

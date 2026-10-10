@@ -68,6 +68,8 @@ interface Entry<I extends IdSpace> {
 interface TakenOperand<I extends IdSpace> {
   readonly guard: string | undefined;
   readonly entries: readonly Entry<I>[];
+  /** The scenario positions of `entries`, for constant-time membership. */
+  readonly indices: ReadonlySet<number>;
 }
 
 /** A place fragments are drawn into: the top level, or one operand of another fragment. */
@@ -128,9 +130,9 @@ const wrapFragments = <I extends IdSpace>(
       ) {
         continue;
       }
+      const body = new Set<I["element"]>(operand.body);
       const inside = entries.filter(
-        (entry) =>
-          operand.body.includes(entry.target) && !claimed.has(entry.index),
+        (entry) => body.has(entry.target) && !claimed.has(entry.index),
       );
       if (inside.length === 0) {
         continue;
@@ -138,10 +140,19 @@ const wrapFragments = <I extends IdSpace>(
       for (const entry of inside) {
         claimed.add(entry.index);
       }
-      operands.push({ guard: operand.guard, entries: inside });
+      operands.push({
+        guard: operand.guard,
+        entries: inside,
+        indices: new Set(inside.map((entry) => entry.index)),
+      });
     }
-    const first = Math.min(...claimed);
-    const last = Math.max(...claimed);
+    // A fold rather than a spread into Math.min and Math.max, which would pass every position as an argument.
+    let first = Number.POSITIVE_INFINITY;
+    let last = Number.NEGATIVE_INFINITY;
+    for (const index of claimed) {
+      first = Math.min(first, index);
+      last = Math.max(last, index);
+    }
     const duplicate =
       fragment.authored === undefined &&
       candidates.some(
@@ -166,30 +177,29 @@ const wrapFragments = <I extends IdSpace>(
   // Largest first, so a fragment nests inside any larger one that holds all its messages.
   const bySize = candidates.toSorted((a, b) => b.indices.size - a.indices.size);
   const top: Container<I> = { children: [] };
-  const place = (node: Placed<I>, container: Container<I>): void => {
-    for (const sibling of container.children) {
-      const shared = [...node.indices].filter((index) =>
-        sibling.indices.has(index),
+  // Descends into the operand of the first overlapping fragment that holds all of `node`'s messages; an overlap no operand holds is not drawn.
+  const place = (node: Placed<I>): void => {
+    const positions = [...node.indices];
+    for (
+      let container: Container<I> | undefined = top;
+      container !== undefined;
+    ) {
+      const sibling: Placed<I> | undefined = container.children.find((child) =>
+        positions.some((index) => child.indices.has(index)),
       );
-      if (shared.length === 0) {
-        continue;
-      }
-      const slot = sibling.operands.findIndex((operand) =>
-        [...node.indices].every((index) =>
-          operand.entries.some((entry) => entry.index === index),
-        ),
-      );
-      const inner = slot === -1 ? undefined : sibling.nested[slot];
-      if (inner !== undefined) {
-        place(node, inner);
-      }
+      if (sibling === undefined) {
+        container.children.push(node);
 
-      return;
+        return;
+      }
+      const slot: number = sibling.operands.findIndex((operand) =>
+        positions.every((index) => operand.indices.has(index)),
+      );
+      container = slot === -1 ? undefined : sibling.nested[slot];
     }
-    container.children.push(node);
   };
   for (const node of bySize) {
-    place(node, top);
+    place(node);
   }
 
   const drawn = new Set<I["fragment"]>();
@@ -263,6 +273,7 @@ export const toSequence = <I extends IdSpace>(
 
   const skipped: I["transition"][] = [];
   const lifelines: I["actor"][] = [];
+  const onLifeline = new Set<I["actor"]>();
   const messages: SequenceMessage<I>[] = [];
   const entries: Entry<I>[] = [];
   const shownMessages = new Set<I["element"]>();
@@ -271,7 +282,8 @@ export const toSequence = <I extends IdSpace>(
   let arrivedAt: I["element"] | undefined;
   const draw = (message: SequenceMessage<I>, target: I["element"]): void => {
     for (const participant of [message.from, message.to]) {
-      if (!lifelines.includes(participant)) {
+      if (!onLifeline.has(participant)) {
+        onLifeline.add(participant);
         lifelines.push(participant);
       }
     }
