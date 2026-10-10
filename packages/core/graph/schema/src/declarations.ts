@@ -41,6 +41,15 @@ export interface ActionDef<Id extends string> {
   readonly name: string;
 }
 
+/**
+ * Something activities consume or produce: data, a document, a deliverable. An artefact nothing produces is an input to the process; one flagged `deliverable` is an output of it.
+ */
+export interface ArtefactDef<Id extends string> {
+  readonly id: Id;
+  readonly name: string;
+  readonly deliverable?: boolean;
+}
+
 export type Element<Id extends string, R extends IdSpace> =
   | {
       readonly kind: "activity";
@@ -52,6 +61,10 @@ export type Element<Id extends string, R extends IdSpace> =
        * The external record this activity stands for, as a source-qualified identifier such as `github:org/repo#12`. It is the activity's identity in its source and unique across the model's activities.
        */
       readonly source?: string;
+      /** Artefacts this activity needs before it can run. */
+      readonly consumes?: readonly R["artefact"][];
+      /** Artefacts this activity makes. An artefact has at most one producing activity. */
+      readonly produces?: readonly R["artefact"][];
     }
   | {
       readonly kind: "decision";

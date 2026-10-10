@@ -8,7 +8,8 @@ export type IssueCode =
   | "multiple-initial"
   | "subject-not-entity"
   | "actor-is-entity"
-  | "duplicate-source";
+  | "duplicate-source"
+  | "multiple-producers";
 
 export interface Issue {
   readonly code: IssueCode;
@@ -40,12 +41,14 @@ export const validate = <I extends IdSpace>(
   const eventIds = new Set<string>(model.events.map((e) => e.id));
   const actionIds = new Set<string>(model.actions.map((a) => a.id));
   const elementIds = new Set<string>(model.elements.map((e) => e.id));
+  const artefactIds = new Set<string>(model.artefacts.map((a) => a.id));
   const transitionIds = new Set<string>(model.transitions.map((t) => t.id));
 
   const spaces: readonly (readonly [string, readonly string[]])[] = [
     ["participant", model.participants.map((p) => p.id)],
     ["event", model.events.map((e) => e.id)],
     ["action", model.actions.map((a) => a.id)],
+    ["artefact", model.artefacts.map((a) => a.id)],
     ["element", model.elements.map((e) => e.id)],
     ["transition", model.transitions.map((t) => t.id)],
     ["fragment", model.fragments.map((f) => f.id)],
@@ -92,6 +95,12 @@ export const validate = <I extends IdSpace>(
       case "activity":
         requireActor(element.actor, `activity "${element.id}" actor`);
         require(actionIds, element.action, `activity "${element.id}" action`);
+        for (const id of element.consumes ?? []) {
+          require(artefactIds, id, `activity "${element.id}" consumes`);
+        }
+        for (const id of element.produces ?? []) {
+          require(artefactIds, id, `activity "${element.id}" produces`);
+        }
         break;
       case "decision":
         requireActor(element.actor, `decision "${element.id}" actor`);
@@ -125,6 +134,23 @@ export const validate = <I extends IdSpace>(
       for (const id of operand.body) {
         require(elementIds, id, `fragment "${fragment.id}" body`);
       }
+    }
+  }
+
+  const producers = new Map<string, string[]>();
+  for (const element of model.elements) {
+    if (element.kind === "activity") {
+      for (const id of new Set(element.produces ?? [])) {
+        producers.set(id, [...(producers.get(id) ?? []), element.id]);
+      }
+    }
+  }
+  for (const [artefact, activities] of producers) {
+    if (activities.length > 1) {
+      issues.push({
+        code: "multiple-producers",
+        message: `Artefact "${artefact}" is produced by more than one activity: ${activities.join(", ")}`,
+      });
     }
   }
 

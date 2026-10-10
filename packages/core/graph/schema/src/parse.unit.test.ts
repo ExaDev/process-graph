@@ -119,6 +119,29 @@ describe("parseModel", () => {
     expect(model.elements).toEqual([activity]);
   });
 
+  it("round-trips artefacts and an activity's consumes and produces", () => {
+    const input = {
+      ...order,
+      artefacts: [
+        { id: "spec", name: "Specification" },
+        { id: "release", name: "Release", deliverable: true },
+      ],
+      elements: [
+        {
+          kind: "activity",
+          id: "a",
+          label: "A",
+          consumes: ["spec"],
+          produces: ["release"],
+        },
+      ],
+      transitions: [],
+      projections: [],
+    };
+
+    expect(parseModel(fromJson(input))).toEqual(input);
+  });
+
   it("names every problem in the error message", () => {
     const error = new ModelParseError([
       { source: "schema", pointer: "/a", message: "bad" },

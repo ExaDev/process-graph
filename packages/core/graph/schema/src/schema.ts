@@ -18,6 +18,7 @@ const eventRef = z.string();
 const actionRef = z.string();
 const transitionRef = z.string();
 const entityRef = z.string();
+const artefactRef = z.string();
 
 const participantSchema = record({
   id,
@@ -33,6 +34,12 @@ const eventSchema = record({
 
 const actionSchema = record({ id, name: z.string() });
 
+const artefactSchema = record({
+  id,
+  name: z.string(),
+  deliverable: z.boolean().exactOptional(),
+});
+
 const elementSchema = z.discriminatedUnion("kind", [
   record({
     kind: z.literal("activity"),
@@ -41,6 +48,8 @@ const elementSchema = z.discriminatedUnion("kind", [
     actor: actorRef.exactOptional(),
     action: actionRef.exactOptional(),
     source: z.string().exactOptional(),
+    consumes: z.array(artefactRef).readonly().exactOptional(),
+    produces: z.array(artefactRef).readonly().exactOptional(),
   }),
   record({
     kind: z.literal("decision"),
@@ -128,6 +137,7 @@ export const modelSchema = record({
   participants: z.array(participantSchema).readonly(),
   events: z.array(eventSchema).readonly(),
   actions: z.array(actionSchema).readonly(),
+  artefacts: z.array(artefactSchema).readonly(),
   elements: z.array(elementSchema).readonly(),
   transitions: z.array(transitionSchema).readonly(),
   fragments: z.array(fragmentSchema).readonly(),

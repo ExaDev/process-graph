@@ -1,6 +1,7 @@
 import type {
   AnyParticipants,
   ActionDef,
+  ArtefactDef,
   Element,
   EventDef,
   Fragment,
@@ -20,6 +21,7 @@ export interface ModelParts<
   readonly participants: Ps;
   readonly events: readonly EventDef<D["event"]>[];
   readonly actions: readonly ActionDef<D["action"]>[];
+  readonly artefacts: readonly ArtefactDef<D["artefact"]>[];
   readonly elements: readonly Element<D["element"], R>[];
   readonly transitions: readonly Transition<D["transition"], R>[];
   readonly fragments: readonly Fragment<D["fragment"], R>[];
@@ -41,6 +43,7 @@ export const defineModel = <
   const El extends string,
   const Tr extends string,
   const Fr extends string,
+  const Ar extends string,
 >(
   model: ModelParts<
     {
@@ -52,6 +55,7 @@ export const defineModel = <
       readonly element: El;
       readonly transition: Tr;
       readonly fragment: Fr;
+      readonly artefact: Ar;
     },
     {
       readonly participant: NoInfer<Ps[number]["id"]>;
@@ -62,6 +66,7 @@ export const defineModel = <
       readonly element: NoInfer<El>;
       readonly transition: NoInfer<Tr>;
       readonly fragment: NoInfer<Fr>;
+      readonly artefact: NoInfer<Ar>;
     },
     Ps
   >,
@@ -74,4 +79,5 @@ export const defineModel = <
   readonly element: El;
   readonly transition: Tr;
   readonly fragment: Fr;
+  readonly artefact: Ar;
 }> => model;
