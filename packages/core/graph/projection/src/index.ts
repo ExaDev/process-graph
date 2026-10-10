@@ -1,7 +1,7 @@
 /**
  * Projections of the process model into each notation: hand-offs, flowchart, swimlane, state machine and sequence diagram. Each is a pure function of the model plus the extra input its notation needs (none, a subject entity, or a scenario of transition ids).
  */
-export type { Loss } from "./loss.ts";
+export type { Loss, UnrepresentedElement, UnrepresentedKind } from "./loss.ts";
 export { handoffs, type Handoff } from "./handoffs.ts";
 export {
   toFlowchart,
