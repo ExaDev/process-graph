@@ -6,6 +6,7 @@
     ".tool-versions",
     "prettier.config.ts",
     "tsconfig.base.json",
+    "stryker.shared.ts",
     "knip.config.ts",
     "syncpack.config.ts"
   ],
