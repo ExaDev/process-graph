@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-projection",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Projections of the process model into a flowchart, swimlane, state machine and sequence diagram, plus the derived hand-offs.",
   "type": "module",
   "repository": {
@@ -69,6 +69,6 @@
     "vitest": "5.0.3"
   },
   "dependencies": {
-    "@exadev/process-graph-schema": "1.0.1"
+    "@exadev/process-graph-schema": "1.0.2"
   }
 }

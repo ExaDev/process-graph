@@ -1,3 +1,9 @@
+## [1.0.2](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-dag@1.0.1...@exadev/process-graph-dag@1.0.2) (2026-10-10)
+
+### Build System
+
+* **deps-dev:** bump vitest and @vitest/coverage-v8 together ([0e60e69](https://github.com/ExaDev/process-graph/commit/0e60e698576dd5c2179d2297675673bc504376c7))
+
 ## [1.0.1](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-dag@1.0.0...@exadev/process-graph-dag@1.0.1) (2026-10-10)
 
 ### Documentation
