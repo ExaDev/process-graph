@@ -99,6 +99,7 @@ It checks that paging and streaming agree; that a stream closed after any page r
 | `GraphSourceClient`              | The client type for the contract, over any transport.                                       |
 | `createGraphSourceRouter(pager)` | The implemented router over a pager.                                                        |
 | `assembleSync(pages)`            | Merges a sync's pages into one model, overlay, relation list and gap list; later pages win. |
+| `paginate(first, read)`          | An async iterable over a cursor-linked sequence, reading each page only as it is pulled.    |
 | `createFakeGraphSource(options)` | The reference in-memory pager.                                                              |
 | `GraphSourceError`               | What a pager throws to end a call with a typed failure.                                     |
 
