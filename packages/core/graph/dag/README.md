@@ -48,6 +48,7 @@ Nothing is absorbed silently:
 | `descendantsOf(dag, id)`           | Transitive dependents, in node order                                                                | Includes `id` itself when it is on a cycle.                                            |
 | `findCycles(dag)`                  | One closed path per cyclic strongly connected component                                             | Not applicable; this is the report.                                                    |
 | `stronglyConnectedComponents(dag)` | Every strongly connected component, each node in exactly one, a component before those that need it | Not applicable; a cycle is a component of several nodes or of one node needing itself. |
+| `immediateDominators(dag, root)`   | Each node reachable from `root` along `needs` mapped to its immediate dominator                     | Allowed; dominance is defined on any graph.                                            |
 | `transitiveReduction(dag)`         | A `Dag` without redundant edges                                                                     | Throws `CycleError`: with a cycle the reduction is not unique.                         |
 | `criticalPath(dag, weight)`        | `{ path, weight }`, the heaviest chain                                                              | Throws `CycleError`: a chain through a cycle has no greatest weight.                   |
 
