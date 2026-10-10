@@ -61,6 +61,12 @@ Configuration lives at exactly one of two levels: in the package (`eslint.config
 - **Evergreen content.** Docs and comments state what things are and why, never counts, sizes or today's data shape.
 - **Commits.** Conventional commits, types from `commit-types.ts` (the single source for commitlint and release rules), bodies wrapped at 100 columns, staged by file name.
 
+## Releases
+
+Each package versions and publishes independently through [`@exadev/semantic-release-workspace`](https://github.com/ExaDev/semantic-release-workspace), configured in `release-workspace.config.ts` and run by the `release` job in CI. A package releases when commits touch its own directory, or when a sibling it depends on releases; packages release in dependency order, so the entry point follows the packages it re-exports. Tags are `<name>@<version>`, and each package keeps its own `CHANGELOG.md`.
+
+A new package name must be reserved on npm, and its trusted publisher registered, by a person before its first CI publish; the steps are in CONTRIBUTING.md.
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for adding a package and for the release strategy.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for adding a package, the release strategy and bootstrapping a package name.
