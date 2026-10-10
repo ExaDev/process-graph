@@ -3,6 +3,9 @@
   "references": [
     {
       "path": "packages/core/graph/dag/tsconfig.build.json"
+    },
+    {
+      "path": "packages/core/graph/schema/tsconfig.build.json"
     }
   ]
 }
