@@ -59,6 +59,17 @@ export interface Chain<I extends IdSpace> {
   readonly effect: I["action"] | undefined;
 }
 
+/** A cell of a list shared by every list that ends with it. */
+interface Cell<T> {
+  readonly value: T;
+  readonly next: Cell<T> | undefined;
+}
+
+/** A component's reachable targets: a list of cells, possibly shared with the components after it, or its own targets and the structures of the components it leads to, read with duplicates removed. */
+type Reach<T> =
+  | { readonly head: Cell<T> | undefined }
+  | { readonly own: readonly T[]; readonly parts: readonly Reach<T>[] };
+
 /** What a notation folds away and what it draws. */
 export interface Folding<I extends IdSpace> {
   /** Whether the notation folds an element away instead of drawing it. Asked once per element. */
@@ -67,6 +78,8 @@ export interface Folding<I extends IdSpace> {
   readonly accepted: (element: I["element"]) => boolean;
   /** The event a folded element contributes to a route, such as a message element's; asked once per folded element. */
   readonly eventOf?: (element: I["element"]) => I["event"] | undefined;
+  /** Told how many references the index stores whenever it stores target structure, so a caller can measure its size. */
+  readonly observe?: (references: number) => void;
 }
 
 /** Chains through one model's folded elements, built once and shared by every chain that starts with a transition of that model. */
@@ -109,7 +122,7 @@ export const once = <T>(compute: () => T): (() => T) => {
 /**
  * Indexes a model's folded elements so chains can be read off for any first transition.
  *
- * The folded elements are condensed into strongly connected components in one pass, and each component's reachable accepted targets are found once, in reverse topological order: a component with no target of its own and one way on shares its successor's list, so a long run of folded elements holds one list, not one per element. Folded elements entered from exactly one folded element, outside any cycle, form a forest of routes; each records how deep it is and the last trigger, effect and guard on the way down to it, so a single-route chain's labels are found from its ends in constant time.
+ * The folded elements are condensed into strongly connected components in one pass. Each component's reachable accepted targets are held as a shared structure, never as a list per component: a component whose only way on leads to a list nothing else extends takes that list over and prepends its own targets as cells, and any other component points at its own targets and its successors' structures. The structure stores one reference per target cell, own target and successor, so its size is linear in the elements and transitions; duplicates are removed when a component's targets are first read, and that read is remembered. Folded elements entered from exactly one folded element, outside any cycle, form a forest of routes; each records how deep it is and the last trigger, effect and guard on the way down to it, so a single-route chain's labels are found from its ends in constant time.
  *
  * Merged chains' lists, and every chain's lists, are built only when read.
  */
@@ -174,34 +187,149 @@ export const chainIndex = <I extends IdSpace>(
     }
   }
 
-  // Each component's accepted targets, in reverse topological order so every successor's list is ready; a list is shared, not copied, when nothing new would be added to it.
-  const targets: (readonly I["element"][])[] = [];
+  // Each component's accepted targets as a shared structure, built in reverse topological order so every successor's is ready. Nothing is copied: a list grows by prepending cells onto its successor's, and a merge only points at its parts.
+  const observe = folding.observe;
+  const successorsOf: number[][] = components.map(() => []);
+  const predecessors = components.map(() => 0);
+  for (const [index, members] of components.entries()) {
+    const seen = new Set<number>();
+    for (const member of members) {
+      for (const { target } of outgoing.get(member) ?? []) {
+        const successor = componentOf.get(target);
+        if (
+          successor !== undefined &&
+          successor !== index &&
+          !seen.has(successor)
+        ) {
+          seen.add(successor);
+          successorsOf[index]?.push(successor);
+          predecessors[successor] = (predecessors[successor] ?? 0) + 1;
+        }
+      }
+    }
+  }
+  const reaches: Reach<I["element"]>[] = [];
+  // The set of a list's targets, for removing duplicates while building, held only by the one component still allowed to extend that list.
+  const owned = new Map<number, Set<I["element"]>>();
+  const leads: boolean[] = [];
   for (const [index, members] of components.entries()) {
     const own: I["element"][] = [];
-    const next = new Set<readonly I["element"][]>();
-    const leaving = members.flatMap((member) => outgoing.get(member) ?? []);
-    for (const { target } of leaving) {
-      const successor = componentOf.get(target);
-      const list = successor === undefined ? undefined : targets[successor];
-      if (!isFolded.has(target) && folding.accepted(target)) {
-        own.push(target);
-      } else if (successor !== index && list !== undefined) {
-        next.add(list);
+    const ownSet = new Set<I["element"]>();
+    for (const member of members) {
+      for (const { target } of outgoing.get(member) ?? []) {
+        if (
+          !isFolded.has(target) &&
+          folding.accepted(target) &&
+          !ownSet.has(target)
+        ) {
+          ownSet.add(target);
+          own.push(target);
+        }
       }
     }
-    const [only, ...others] = [...next];
-    if (own.length === 0 && only !== undefined && others.length === 0) {
-      targets[index] = only;
-      continue;
-    }
-    const merged = new Set<I["element"]>(own);
-    for (const list of next) {
-      for (const target of list) {
-        merged.add(target);
+    const parts = (successorsOf[index] ?? []).filter(
+      (successor) => leads[successor] === true,
+    );
+    leads[index] = own.length > 0 || parts.length > 0;
+    const [only, ...others] = parts;
+    const onlyReach = only === undefined ? undefined : reaches[only];
+    const takeable =
+      only === undefined
+        ? undefined
+        : predecessors[only] === 1
+          ? owned.get(only)
+          : undefined;
+    if (only === undefined) {
+      // A component with nowhere further to go starts a list of its own targets.
+      let head: Cell<I["element"]> | undefined;
+      for (const target of own.toReversed()) {
+        observe?.(1);
+        head = { value: target, next: head };
       }
+      owned.set(index, ownSet);
+      observe?.(ownSet.size);
+      reaches[index] = { head };
+    } else if (
+      others.length === 0 &&
+      takeable !== undefined &&
+      onlyReach !== undefined &&
+      "head" in onlyReach &&
+      own.every((target) => !takeable.has(target))
+    ) {
+      // The only way on leads to a list nothing else extends and that holds none of this component's own targets: take it over and prepend them, so they come first as they would in a merge.
+      owned.delete(only);
+      let head = onlyReach.head;
+      for (const target of own.toReversed()) {
+        observe?.(1);
+        takeable.add(target);
+        head = { value: target, next: head };
+      }
+      owned.set(index, takeable);
+      reaches[index] = { head };
+    } else if (
+      others.length === 0 &&
+      own.length === 0 &&
+      onlyReach !== undefined
+    ) {
+      reaches[index] = onlyReach;
+    } else {
+      observe?.(own.length + parts.length);
+      reaches[index] = {
+        own,
+        parts: parts.flatMap((part) => {
+          const reach = reaches[part];
+
+          return reach === undefined ? [] : [reach];
+        }),
+      };
     }
-    targets[index] = [...merged];
   }
+  // Read once per component asked about: the targets in order, own before successors', each once, walking every shared cell and part only once.
+  const readTargets = new Map<number, readonly I["element"][]>();
+  const targetsOf = (component: number): readonly I["element"][] => {
+    const known = readTargets.get(component);
+    if (known !== undefined) {
+      return known;
+    }
+    const start = reaches[component];
+    const found: I["element"][] = [];
+    const listed = new Set<I["element"]>();
+    const visited = new Set<Reach<I["element"]> | Cell<I["element"]>>();
+    const stack: Reach<I["element"]>[] = start === undefined ? [] : [start];
+    for (let next = stack.pop(); next !== undefined; next = stack.pop()) {
+      if (visited.has(next)) {
+        continue;
+      }
+      visited.add(next);
+      if ("head" in next) {
+        for (
+          let cell = next.head;
+          cell !== undefined && !visited.has(cell);
+          cell = cell.next
+        ) {
+          visited.add(cell);
+          if (!listed.has(cell.value)) {
+            listed.add(cell.value);
+            found.push(cell.value);
+          }
+        }
+        continue;
+      }
+      for (const target of next.own) {
+        if (!listed.has(target)) {
+          listed.add(target);
+          found.push(target);
+        }
+      }
+      for (const part of next.parts.toReversed()) {
+        stack.push(part);
+      }
+    }
+    observe?.(found.length);
+    readTargets.set(component, found);
+
+    return found;
+  };
 
   // The route forest: a folded element outside every cycle entered from exactly one folded element that is also outside every cycle hangs below it.
   const parentLink = new Map<I["element"], TransitionOf<I>>();
@@ -366,7 +494,7 @@ export const chainIndex = <I extends IdSpace>(
         : [];
     }
     const component = componentOf.get(start);
-    const reached = component === undefined ? [] : (targets[component] ?? []);
+    const reached = component === undefined ? [] : targetsOf(component);
     const level = depth.get(start);
 
     return reached.map((target): Chain<I> => {
@@ -486,7 +614,7 @@ export const chainIndex = <I extends IdSpace>(
     const leading = new Set<I["element"]>();
     for (const id of reached) {
       const component = componentOf.get(id);
-      if (component !== undefined && (targets[component] ?? []).length > 0) {
+      if (component !== undefined && leads[component] === true) {
         leading.add(id);
       }
     }
