@@ -35,11 +35,21 @@ type Held =
       readonly from: number;
       readonly to: number;
       readonly positions?: never;
+      readonly elements?: never;
     }
   | {
       readonly positions: readonly number[];
       readonly from?: never;
-      readonly to?: never;
+      readonly elements?: never;
+    }
+  | {
+      /** The elements whose messages the operand holds, each with the ascending positions of the messages arriving at it; the lists are shared by every operand holding the same element, never copied. */
+      readonly elements: readonly {
+        readonly element: string;
+        readonly positions: readonly number[];
+      }[];
+      readonly from?: never;
+      readonly positions?: never;
     };
 
 type Operand = { readonly guard: string | undefined } & Held;
@@ -391,7 +401,7 @@ const deriveCandidates = <I extends IdSpace>({
 };
 
 /**
- * The authored fragments as candidates. An operand counts when its body is non-empty and wholly on the path; it holds the messages arriving at an element of its body that no earlier operand of the same fragment holds. Bodies are indexed by element once, so each message is matched only against the operands whose body holds the element it arrives at.
+ * The authored fragments as candidates. An operand counts when its body is non-empty and wholly on the path; it holds the messages arriving at an element of its body that no earlier operand of the same fragment holds. The positions arriving at each element are found once and shared by every operand holding that element, so an operand is its elements and their shared lists, and matching costs the messages plus the bodies, never a message once per fragment.
  */
 const authoredCandidates = <I extends IdSpace>(
   fragments: readonly Fragment<I["fragment"], I>[],
@@ -399,59 +409,52 @@ const authoredCandidates = <I extends IdSpace>(
   onPath: ReadonlySet<I["element"]>,
   observe: Observe | undefined,
 ): Candidate<I>[] => {
-  const operands = fragments.map((fragment) =>
-    fragment.operands.map(
-      (
-        operand,
-      ): {
-        readonly guard: string | undefined;
-        readonly positions: number[];
-        readonly counts: boolean;
-      } => ({
-        guard: operand.guard,
-        positions: [],
-        counts:
-          operand.body.length > 0 && operand.body.every((id) => onPath.has(id)),
-      }),
-    ),
-  );
-  const holders = new Map<
-    I["element"],
-    { readonly fragment: number; readonly operand: number }[]
-  >();
-  for (const [fragment, { operands: authored }] of fragments.entries()) {
-    for (const [operand, { body }] of authored.entries()) {
-      if (operands[fragment]?.[operand]?.counts !== true) {
-        continue;
-      }
-      for (const id of new Set(body)) {
-        append(holders, id, { fragment, operand });
-      }
-    }
-  }
+  // The positions of the messages arriving at each element, found once and shared by every operand whose body holds the element.
+  const arrivals = new Map<I["element"], number[]>();
   for (const entry of entries) {
-    let previous = -1;
-    for (const { fragment, operand } of holders.get(entry.target) ?? []) {
-      if (fragment !== previous) {
-        previous = fragment;
-        observe?.(1);
-        operands[fragment]?.[operand]?.positions.push(entry.index);
-      }
-    }
+    observe?.(1);
+    append(arrivals, entry.target, entry.index);
   }
 
-  return fragments.map(({ id, operator }, fragment) => ({
-    authored: id,
-    operands: (operands[fragment] ?? []).filter(
-      ({ positions }) => positions.length > 0,
-    ),
-    item: (drawn): SequenceItem<I> => ({
-      kind: "fragment",
-      fragment: id,
-      operator,
-      operands: drawn,
-    }),
-  }));
+  return fragments.map(({ id, operator, operands }) => {
+    // An element belongs to the first operand of the fragment whose body holds it, so a message is held by that operand only.
+    const taken = new Set<I["element"]>();
+    const held: Operand[] = [];
+    for (const operand of operands) {
+      if (
+        operand.body.length === 0 ||
+        !operand.body.every((element) => onPath.has(element))
+      ) {
+        continue;
+      }
+      const elements: {
+        readonly element: string;
+        readonly positions: readonly number[];
+      }[] = [];
+      for (const element of operand.body) {
+        observe?.(1);
+        const positions = arrivals.get(element);
+        if (!taken.has(element) && positions !== undefined) {
+          elements.push({ element, positions });
+        }
+        taken.add(element);
+      }
+      if (elements.length > 0) {
+        held.push({ guard: operand.guard, elements });
+      }
+    }
+
+    return {
+      authored: id,
+      operands: held,
+      item: (drawn): SequenceItem<I> => ({
+        kind: "fragment",
+        fragment: id,
+        operator,
+        operands: drawn,
+      }),
+    };
+  });
 };
 
 /** A fragment placed in the diagram: its candidate, where its messages run, which operand holds each, and the operand of the fragment it sits in. */
@@ -495,6 +498,18 @@ const extentOf = (
 ):
   | { readonly first: number; readonly last: number; readonly count: number }
   | undefined => {
+  if (held.elements !== undefined) {
+    let first = Number.POSITIVE_INFINITY;
+    let last = Number.NEGATIVE_INFINITY;
+    let count = 0;
+    for (const { positions } of held.elements) {
+      count += positions.length;
+      first = Math.min(first, positions[0] ?? first);
+      last = Math.max(last, positions.at(-1) ?? last);
+    }
+
+    return count === 0 ? undefined : { first, last, count };
+  }
   if (held.positions === undefined) {
     return held.to < held.from
       ? undefined
@@ -509,28 +524,47 @@ const extentOf = (
 };
 
 /** Whether an operand holds every position from `first` to `last`. */
-const holdsAll = (held: Held, first: number, last: number): boolean =>
-  held.positions === undefined
+const holdsAll = (held: Held, first: number, last: number): boolean => {
+  if (held.elements !== undefined) {
+    let count = 0;
+    for (const { positions } of held.elements) {
+      count += countBetween(positions, first, last);
+    }
+
+    return count === last - first + 1;
+  }
+
+  return held.positions === undefined
     ? held.from <= first && last <= held.to
     : countBetween(held.positions, first, last) === last - first + 1;
+};
 
 /**
  * Which of a fragment's operands holds a position: listed positions are looked up in a map built from the lists, which together hold no more positions than the fragment does, and runs are found by a binary search over their starts. No run is expanded.
  */
 const slotIndex = (
   operands: readonly Operand[],
+  elementAt: (position: number) => string | undefined,
   observe: Observe | undefined,
 ): ((position: number) => number) => {
   if (operands.length === 1) {
     return () => 0;
   }
   const listed = new Map<number, number>();
+  const byElement = new Map<string, number>();
   const runs: {
     readonly from: number;
     readonly to: number;
     readonly slot: number;
   }[] = [];
   for (const [slot, operand] of operands.entries()) {
+    if (operand.elements !== undefined) {
+      for (const { element } of operand.elements) {
+        observe?.(1);
+        byElement.set(element, slot);
+      }
+      continue;
+    }
     if (operand.positions === undefined) {
       runs.push({ from: operand.from, to: operand.to, slot });
       continue;
@@ -543,7 +577,10 @@ const slotIndex = (
   runs.sort((a, b) => a.from - b.from);
 
   return (position) => {
-    const found = listed.get(position);
+    const element = elementAt(position);
+    const found =
+      listed.get(position) ??
+      (element === undefined ? undefined : byElement.get(element));
     if (found !== undefined) {
       return found;
     }
@@ -688,7 +725,11 @@ export const wrapFragments = <I extends IdSpace>(
       candidate,
       first,
       last,
-      slotOf: slotIndex(candidate.operands, observe),
+      slotOf: slotIndex(
+        candidate.operands,
+        (position) => entries[position]?.target,
+        observe,
+      ),
       parent,
       order,
     };
