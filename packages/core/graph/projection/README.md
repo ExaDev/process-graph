@@ -31,9 +31,21 @@ A transition between two elements with different actors is a hand-off, never sto
 
 When no activity in the model declares `affects`, the model carries no such information and every activity is kept. Once any activity declares it, an activity without `affects` is not kept (an empty list is a declaration that it affects nothing).
 
-## Lossy directions
+## Loss reports
 
-A flowchart drops ownership, a state machine needs its subject recorded, and a sequence diagram follows one path, so one model yields a different diagram per scenario. Branches off the scenario are not drawn.
+Every projection result carries `loss`, what it did not carry over from the model. Each `Loss` is a discriminated union on `kind`, reported only when something was actually dropped, in this order:
+
+| `kind`             | Dropped                                                                         | Reported by      |
+| ------------------ | ------------------------------------------------------------------------------- | ---------------- |
+| `layout`           | Positions recorded in `views` for this projection's own notation.               | every projection |
+| `extensions`       | Notation-only `extensions` on elements, which no projection shows.              | every projection |
+| `message-elements` | `message` elements, which no projection draws.                                  | every projection |
+| `fragments`        | Authored fragments the projection does not draw.                                | every projection |
+| `subject`          | Activities left out because they do not affect the state machine's subject.     | `toStateMachine` |
+| `scenario`         | Elements of the model that are not on the scenario.                             | `toSequence`     |
+| `unshown-branches` | Transitions leaving an element on the scenario that the scenario does not take. | `toSequence`     |
+
+A flowchart drops ownership, a state machine needs its subject recorded, and a sequence diagram follows one path, so one model yields a different diagram per scenario.
 
 ## Commands
 

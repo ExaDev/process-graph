@@ -1,5 +1,6 @@
 import type { IdSpace, Model, Transition } from "@exadev/process-graph-schema";
 import type { ElementOf } from "./actors.ts";
+import { commonLoss, type Loss } from "./loss.ts";
 
 export interface StateMachineState<I extends IdSpace> {
   readonly id: I["element"];
@@ -19,6 +20,8 @@ export interface StateMachine<I extends IdSpace> {
   readonly subject: I["entity"];
   readonly states: readonly StateMachineState<I>[];
   readonly transitions: readonly StateMachineTransition<I>[];
+  /** What the projection dropped from the model. */
+  readonly loss: readonly Loss<I>[];
 }
 
 const stateOf = <I extends IdSpace>(
@@ -164,5 +167,17 @@ export const toStateMachine = <I extends IdSpace>(
     }
   }
 
-  return { subject, states, transitions };
+  const folded = model.elements.filter(
+    (element) => element.kind === "activity" && isTransparent(element),
+  );
+  const loss: Loss<I>[] = [...commonLoss(model, "stateMachine")];
+  if (folded.length > 0) {
+    loss.push({
+      kind: "subject",
+      subject,
+      elements: folded.map((element) => element.id),
+    });
+  }
+
+  return { subject, states, transitions, loss };
 };

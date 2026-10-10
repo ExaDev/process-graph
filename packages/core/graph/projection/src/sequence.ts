@@ -1,5 +1,6 @@
 import type { IdSpace, Model, Transition } from "@exadev/process-graph-schema";
 import { actorMap } from "./actors.ts";
+import { commonLoss, type Loss } from "./loss.ts";
 
 export interface SequenceMessage<I extends IdSpace> {
   readonly transition: I["transition"];
@@ -13,6 +14,8 @@ export interface SequenceDiagram<I extends IdSpace> {
   /** Actors in order of first appearance. */
   readonly lifelines: readonly I["actor"][];
   readonly messages: readonly SequenceMessage<I>[];
+  /** What the projection dropped from the model. */
+  readonly loss: readonly Loss<I>[];
 }
 
 /**
@@ -65,5 +68,33 @@ export const toSequence = <I extends IdSpace>(
     });
   }
 
-  return { lifelines, messages };
+  const onPath = new Set<I["element"]>();
+  const taken = new Set<I["transition"]>(scenario);
+  for (const id of taken) {
+    const transition = transitions.get(id);
+    if (transition !== undefined) {
+      onPath.add(transition.source);
+      onPath.add(transition.target);
+    }
+  }
+  const offPath = model.elements.filter((element) => !onPath.has(element.id));
+  const unshown = model.transitions.filter(
+    (transition) => !taken.has(transition.id) && onPath.has(transition.source),
+  );
+
+  const loss: Loss<I>[] = [...commonLoss(model, "sequence")];
+  if (offPath.length > 0) {
+    loss.push({
+      kind: "scenario",
+      elements: offPath.map((element) => element.id),
+    });
+  }
+  if (unshown.length > 0) {
+    loss.push({
+      kind: "unshown-branches",
+      transitions: unshown.map((transition) => transition.id),
+    });
+  }
+
+  return { lifelines, messages, loss };
 };
