@@ -1,9 +1,14 @@
 import { validate, validateOverlay } from "@exadev/process-graph-schema";
-import { describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test } from "vitest";
 import { assembleSync } from "./assemble.ts";
 import type { GraphSourceClient } from "./contract.ts";
 import { paginate } from "./paginate.ts";
 import type { SyncPage } from "./schema.ts";
+import { createORPCClient } from "@orpc/client";
+import { RPCLink } from "@orpc/client/message-port";
+import { createRouterClient } from "@orpc/server";
+import { RPCHandler } from "@orpc/server/message-port";
+import type { GraphSourceRouter } from "./router.ts";
 
 /** What the conformance kit needs from an adapter's test. */
 export interface GraphSourceConformanceOptions {
@@ -231,4 +236,31 @@ export const graphSourceConformance = (
       ).rejects.toThrow();
     });
   });
+};
+
+/**
+ * A client that calls the router in the same process, with no serialisation.
+ * @param router - The router to call.
+ * @returns The client.
+ */
+export const inProcessClient = (router: GraphSourceRouter): GraphSourceClient =>
+  createRouterClient(router);
+
+/**
+ * A client that reaches the router across a `MessageChannel`, serialising every call and event as a worker transport does. Each client gets its own channel, closed after the calling test file's tests, so call it from within a test file.
+ * @param router - The router to serve on the channel.
+ * @returns The client.
+ */
+export const messagePortClient = (
+  router: GraphSourceRouter,
+): GraphSourceClient => {
+  const { port1, port2 } = new MessageChannel();
+  new RPCHandler(router).upgrade(port1);
+  port2.start();
+  afterAll(() => {
+    port1.close();
+    port2.close();
+  });
+
+  return createORPCClient<GraphSourceClient>(new RPCLink({ port: port2 }));
 };

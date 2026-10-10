@@ -3,10 +3,7 @@ import { graphSourceConformance } from "./conformance.ts";
 import { createFakeGraphSource } from "./fake.ts";
 import { createGraphSourceRouter } from "./router.ts";
 import { fakeOptions } from "./test-support/pages.ts";
-import {
-  inProcessClient,
-  messagePortClient,
-} from "./test-support/transports.ts";
+import { inProcessClient, messagePortClient } from "./conformance.ts";
 
 const router = createGraphSourceRouter(createFakeGraphSource(fakeOptions));
 const scope = ["fake:acme/alpha", "fake:acme/beta"];

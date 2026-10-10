@@ -78,16 +78,21 @@ const pager: GraphSourcePager = {
 `@exadev/process-graph-source-contract/conformance` exports `graphSourceConformance`, a set of Vitest tests (Vitest is an optional peer dependency, needed only for this entry point). Call it from the adapter's own tests, once per transport; the tests talk only to the oRPC client.
 
 ```ts
-import { graphSourceConformance } from "@exadev/process-graph-source-contract/conformance";
+import {
+  graphSourceConformance,
+  inProcessClient,
+} from "@exadev/process-graph-source-contract/conformance";
 
 graphSourceConformance({
   name: "my adapter, in process",
-  createClient: () => createRouterClient(createGraphSourceRouter(pager)),
+  createClient: () => inProcessClient(createGraphSourceRouter(pager)),
   scope: ["linear:team-a"], // must span at least two pages
   missingScope: "linear:no-such-team",
   malformedScope: "team-a",
 });
 ```
+
+The entry point also exports `inProcessClient(router)` and `messagePortClient(router)`, the two transports this package's own tests run the kit over; a `messagePortClient` closes its channel after the test file.
 
 It checks that paging and streaming agree; that a stream closed after any page resumes from that page's `next` with exactly the pages that follow; that a cursor never repeats; that a sync is deterministic; that the assembled model and overlay pass the schema's validation and every identifier carries the source prefix; that relations name what the sync returned; that an unknown scope is a gap beside the rest; that malformed scopes and foreign cursors are typed errors; and that an aborted signal ends both procedures.
 
