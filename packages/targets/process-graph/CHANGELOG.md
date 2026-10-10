@@ -4,6 +4,12 @@
 
 * add process-graph entry point package ([530c3e6](https://github.com/ExaDev/process-graph/commit/530c3e60b271c5afeed0912add8c686b99bdb654))
 
+## 1.0.0 (2026-10-10)
+
+### Features
+
+* add process-graph entry point package ([530c3e6](https://github.com/ExaDev/process-graph/commit/530c3e60b271c5afeed0912add8c686b99bdb654))
+
 
 ### Dependencies
 
