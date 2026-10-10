@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-store-contract",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "The persistence port for process models and run overlays as an oRPC contract: versioned procedures with Zod inputs and outputs, an in-memory fake and a conformance kit every store adapter runs.",
   "type": "module",
   "repository": {
