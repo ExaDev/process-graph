@@ -65,6 +65,8 @@ Configuration lives at exactly one of two levels: in the package (`eslint.config
 
 Each package versions and publishes independently through [`@exadev/semantic-release-workspace`](https://github.com/ExaDev/semantic-release-workspace), configured in `release-workspace.config.ts` and run by the `release` job in CI. A package releases when commits touch its own directory, or when a sibling it depends on releases; packages release in dependency order, so the entry point follows the packages it re-exports. Tags are `<name>@<version>`, and each package keeps its own `CHANGELOG.md`.
 
+The release commit and tags are pushed to the protected `main` with a repository deploy key (the `RELEASE_DEPLOY_KEY` secret) over SSH, because `GITHUB_TOKEN` cannot bypass a ruleset; the `main` ruleset lists that deploy key as a bypass actor. `GITHUB_TOKEN` is still used for the GitHub API calls that create releases and comment on issues and pull requests.
+
 A new package name must be reserved on npm, and its trusted publisher registered, by a person before its first CI publish; the steps are in CONTRIBUTING.md.
 
 ## Contributing
