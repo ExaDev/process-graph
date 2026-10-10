@@ -62,6 +62,10 @@ Control flow says what follows what; artefacts say what a step needs and makes. 
 - An artefact flagged `deliverable` is an **output**: what the process exists to deliver. `outputsOf(model)` lists them.
 - An artefact has at most one producer (`multiple-producers`), so "what produces this" has one answer.
 
+## Conditions
+
+`guard` is the human label of a branch and is never evaluated. A transition's optional `condition` is the evaluable form: a three-valued predicate tree, the [`trilean`](https://www.npmjs.com/package/trilean) `PredicateNode`, so a decision can evaluate to true, false or unknown. The tree's references are opaque keys for the evaluator's resolvers, not identifiers of this model, so `validate` does not check them and `condition` is not parameterised by the identifier spaces. The open schema embeds trilean's own schema, so a loaded condition is validated structurally and a malformed one is located by JSON pointer.
+
 ## Loading a model
 
 `parseModel(input)` loads a model from untrusted input such as parsed JSON and returns a `Model<OpenIds>`. It checks the shape with `modelSchema` first, so every shape problem is reported with the JSON pointer of the offending value, then runs `validate`. A bad input throws `ModelParseError`, whose `issues` are either `{ source: "schema", pointer, message }` or `{ source: "validate", code, message }`.

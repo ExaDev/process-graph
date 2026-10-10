@@ -335,6 +335,9 @@ importers:
 
   packages/core/graph/schema:
     dependencies:
+      trilean:
+        specifier: 1.7.2
+        version: 1.7.2
       zod:
         specifier: 4.6.5
         version: 4.6.5
@@ -3756,6 +3759,14 @@ packages:
   tree-kill@1.2.2:
     resolution: {integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==}
     hasBin: true
+
+  trilean-regex@1.0.4:
+    resolution: {integrity: sha512-uUjHS0KKuqqcUwWZjhYS9WOlt0BAYwNztiJMfpXPkQfRCXAv3kIkvdY0NbXUGRuV/o/z+JpnRfbVA9hzBvZjMA==}
+    engines: {node: '>=20'}
+
+  trilean@1.7.2:
+    resolution: {integrity: sha512-9LCIhYxQWeCaSHWH0ygv8bquw72co01Zs/0b1t1faKxdOEzQQCDt4FDoQdaS893218y+rURk6m04KgSxJdgmUA==}
+    engines: {node: '>=20'}
 
   ts-api-utils@2.5.0:
     resolution: {integrity: sha512-OJ/ibxhPlqrMM0UiNHJ/0CKQkoKF243/AEmplt3qpRgkW8VG7IfOS41h7V8TjITqdByHzrjcS/2si+y4lIh8NA==}
@@ -7663,6 +7674,13 @@ snapshots:
   traverse@0.6.8: {}
 
   tree-kill@1.2.2: {}
+
+  trilean-regex@1.0.4: {}
+
+  trilean@1.7.2:
+    dependencies:
+      trilean-regex: 1.0.4
+      zod: 4.6.5
 
   ts-api-utils@2.5.0(typescript@6.0.3):
     dependencies:

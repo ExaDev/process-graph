@@ -1,3 +1,4 @@
+import { PredicateNodeSchema } from "trilean";
 import { z } from "zod";
 import {
   fragmentOperators,
@@ -88,6 +89,7 @@ const transitionSchema = record({
   target: elementRef,
   trigger: eventRef.exactOptional(),
   guard: z.string().exactOptional(),
+  condition: PredicateNodeSchema.exactOptional(),
   effect: actionRef.exactOptional(),
 });
 
