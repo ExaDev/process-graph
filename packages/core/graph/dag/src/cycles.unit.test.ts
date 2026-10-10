@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { assertAcyclic, findCycles } from "./cycles.ts";
+import {
+  assertAcyclic,
+  findCycles,
+  stronglyConnectedComponents,
+} from "./cycles.ts";
 import { CycleError } from "./errors.ts";
 import { dagOf } from "./test-support/dag-of.ts";
 
@@ -128,5 +132,36 @@ describe("assertAcyclic", () => {
       ["a", "b", "a"],
       ["c", "c"],
     ]);
+  });
+});
+
+describe("stronglyConnectedComponents", () => {
+  it("puts every node in exactly one component, mutually reachable nodes together", () => {
+    const components = stronglyConnectedComponents(
+      dagOf({ p: ["q"], q: ["p"], m: [], r: ["s"], s: ["r", "t"], t: ["t"] }),
+    );
+
+    const sorted = components
+      .map((component) => component.toSorted((a, b) => a.localeCompare(b)))
+      .toSorted((a, b) => a.join().localeCompare(b.join()));
+
+    expect(sorted).toEqual([["m"], ["p", "q"], ["r", "s"], ["t"]]);
+  });
+
+  it("lists a component before every component that needs it", () => {
+    expect(
+      stronglyConnectedComponents(dagOf({ a: [], b: ["a"], c: ["b"] })),
+    ).toEqual([["a"], ["b"], ["c"]]);
+  });
+
+  it("partitions a ring deeper than any call stack without recursing", () => {
+    const ring = Object.fromEntries(
+      Array.from({ length: deepRingLength }, (_, index) => [
+        `n${String(index)}`,
+        [`n${String((index + 1) % deepRingLength)}`],
+      ]),
+    );
+
+    expect(stronglyConnectedComponents(dagOf(ring))).toHaveLength(1);
   });
 });
