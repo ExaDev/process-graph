@@ -56,8 +56,8 @@
     "drizzle"
   ],
   "dependencies": {
-    "@exadev/process-graph-store-contract": "0.0.0",
-    "@exadev/process-graph-store-sqlite": "0.0.0",
+    "@exadev/process-graph-store-contract": "1.0.1",
+    "@exadev/process-graph-store-sqlite": "1.0.0",
     "drizzle-orm": "1.0.0-rc.4"
   },
   "devDependencies": {
