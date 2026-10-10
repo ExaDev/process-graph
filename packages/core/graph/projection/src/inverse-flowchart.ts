@@ -1,6 +1,5 @@
 import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import type { ElementOf } from "./actors.ts";
-import type { TransitionOf } from "./chains.ts";
 import type { ElementChange, ModelDiff, TransitionChange } from "./diff.ts";
 import {
   flowchartParts,
@@ -172,29 +171,38 @@ const diffFlow = <I extends IdSpace>(
     return undefined;
   };
   const editedKeys = new Set<string | undefined>(edited.edges.map(editedKey));
-  /** The transitions arriving at an edge's end: its one transition, or every step from a message into its end. */
-  const arriving = (origin: EdgeOrigin<I>): readonly TransitionOf<I>[] =>
-    origin.first.target === origin.target
-      ? [origin.first]
-      : parts.index.arriving(origin.target);
+  // Omitted edges are grouped by how they end before anything is removed: an edge that is one transition removes it; edges that carry messages share their steps into an end, so each such end has its arriving steps removed once, however many of its edges were omitted, and which of them is a choice: inferred.
   const removed = new Set<I["transition"]>();
+  const endsLeft = new Set<I["element"]>();
   for (const [key, { origin }] of originals) {
     if (editedKeys.has(key)) {
       continue;
     }
-    // An edge that carries messages shares its earlier steps with every other edge through the same messages, so only the steps arriving at its end are removed, and which of them is a choice: inferred.
-    for (const transition of arriving(origin)) {
+    if (origin.first.target !== origin.target) {
+      endsLeft.add(origin.target);
+    } else if (!removed.has(origin.first.id)) {
+      removed.add(origin.first.id);
+      transitionChanges.push({
+        kind: "removed",
+        transition: origin.first.id,
+        inferred: false,
+      });
+    }
+  }
+  for (const end of endsLeft) {
+    for (const transition of parts.index.arriving(end)) {
       if (!removed.has(transition.id)) {
         removed.add(transition.id);
         transitionChanges.push({
           kind: "removed",
           transition: transition.id,
-          inferred: origin.first.target !== origin.target,
+          inferred: true,
         });
       }
     }
   }
-  const retargeted = new Map<I["transition"], I["element"]>();
+  // Where the edges into each end that carry messages were moved to, so the shared steps into that end are rewired once.
+  const movedEnds = new Map<I["element"], I["element"]>();
   for (const edge of edited.edges) {
     const key = editedKey(edge);
     const before = key === undefined ? undefined : originals.get(key);
@@ -264,18 +272,18 @@ const diffFlow = <I extends IdSpace>(
     if (origin.target === edge.to) {
       continue;
     }
-    // The arriving steps are shared with every other edge through the same messages, so moving them is a choice: inferred, and made once however many of those edges moved.
-    for (const tail of arriving(origin)) {
-      const already = retargeted.get(tail.id);
-      if (already === edge.to) {
-        continue;
-      }
-      if (already !== undefined) {
-        throw new Error(
-          `Edges ending at "${origin.target}" through the same steps were moved to different ends, "${already}" and "${edge.to}"`,
-        );
-      }
-      retargeted.set(tail.id, edge.to);
+    // The arriving steps are shared with every other edge through the same messages, so moving them is a choice: inferred, and made once per end however many of its edges moved.
+    const already = movedEnds.get(origin.target);
+    if (already === edge.to) {
+      continue;
+    }
+    if (already !== undefined) {
+      throw new Error(
+        `Edges ending at "${origin.target}" through the same steps were moved to different ends, "${already}" and "${edge.to}"`,
+      );
+    }
+    movedEnds.set(origin.target, edge.to);
+    for (const tail of parts.index.arriving(origin.target)) {
       transitionChanges.push({
         kind: "rewired",
         transition: tail.id,
