@@ -31,7 +31,7 @@
     "test:mutation": "turbo run _test:mutation",
     "deps:lint": "syncpack lint",
     "deps:fix": "syncpack fix",
-    "release": "semantic-release",
+    "release": "semantic-release-workspace release --config release-workspace.config.ts",
     "prepare": "husky",
     "_lint": "eslint . --cache --max-warnings 0",
     "_lint:fix": "eslint . --fix --cache --max-warnings 0",

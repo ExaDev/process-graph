@@ -7,7 +7,8 @@
   "include": [
     "*.config.ts",
     "commit-types.ts",
-    "release.config.ts",
+    "release-workspace.config.ts",
+    "release-workspace.config.unit.test.ts",
     "eslint.shared.ts",
     "stryker.shared.ts",
     ".github/scripts/**/*.ts"
