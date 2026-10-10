@@ -10,7 +10,8 @@ export type IssueCode =
   | "actor-is-entity"
   | "duplicate-source"
   | "multiple-producers"
-  | "affects-not-entity";
+  | "affects-not-entity"
+  | "overlay-unknown-element";
 
 export interface Issue {
   readonly code: IssueCode;

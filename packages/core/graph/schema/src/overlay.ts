@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { IdSpace, OpenIds } from "./ids.ts";
+import type { Model } from "./model.ts";
 import { toPointer } from "./pointer.ts";
+import type { Issue } from "./validate.ts";
 import { overlayStatuses, type OverlayStatus } from "./vocabulary.ts";
 
 /**
@@ -45,6 +47,26 @@ export class OverlayParseError extends Error {
     this.issues = issues;
   }
 }
+
+/**
+ * Checks an overlay against the model it is laid over. `parseOverlay` is model-independent, so this is where an element identifier that the model does not declare is found.
+ * @param model - The model the overlay is for.
+ * @param overlay - The overlay to check.
+ * @returns One `overlay-unknown-element` issue per entry whose key is not an element of the model, in the overlay's key order. Empty when every entry names a declared element.
+ */
+export const validateOverlay = <I extends IdSpace>(
+  model: Model<I>,
+  overlay: Readonly<Partial<Record<string, OverlayStatus>>>,
+): readonly Issue[] => {
+  const elementIds = new Set<string>(model.elements.map((e) => e.id));
+
+  return Object.keys(overlay)
+    .filter((id) => !elementIds.has(id))
+    .map((id) => ({
+      code: "overlay-unknown-element",
+      message: `overlay refers to unknown element id "${id}"`,
+    }));
+};
 
 /**
  * Loads an overlay from untrusted input, such as parsed JSON.

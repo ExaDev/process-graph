@@ -48,7 +48,7 @@ An activity's actor and a message's ends must be actors; a state machine project
 
 ## What the types cannot say
 
-`validate(model)` returns the issues a runtime model can still have: `duplicate-id`, `unknown-reference`, `multiple-initial`, `subject-not-entity`, `actor-is-entity` and `duplicate-source`, `multiple-producers` and `affects-not-entity`. An authored model is already reference-safe at compile time; `validate` is for models loaded from JSON and for the rules the type system cannot state.
+`validate(model)` returns the issues a runtime model can still have: `duplicate-id`, `unknown-reference`, `multiple-initial`, `subject-not-entity`, `actor-is-entity`, `duplicate-source`, `multiple-producers` and `affects-not-entity`. `validateOverlay` returns `Issue`s too, with the code `overlay-unknown-element`. An authored model is already reference-safe at compile time; `validate` is for models loaded from JSON and for the rules the type system cannot state.
 
 ## Source binding
 
@@ -89,7 +89,7 @@ Some concepts belong to one notation and have no meaning in the model: an activa
 
 ## Overlay
 
-Run state is never part of the model. An `Overlay<I>` maps element identifiers to `"done"`, `"open"` or `"unknown"`, and is supplied by a source or by a person alongside the model, the same rule as layout: the model describes a process, an overlay describes one run of it, and many overlays can sit over one model. An element with no entry has no recorded state, which is distinct from the explicit `"unknown"`. `parseOverlay` loads one from untrusted input and reports problems by JSON pointer in an `OverlayParseError`.
+Run state is never part of the model. An `Overlay<I>` maps element identifiers to `"done"`, `"open"` or `"unknown"`, and is supplied by a source or by a person alongside the model, the same rule as layout: the model describes a process, an overlay describes one run of it, and many overlays can sit over one model. An element with no entry has no recorded state, which is distinct from the explicit `"unknown"`. `parseOverlay` loads one from untrusted input and reports problems by JSON pointer in an `OverlayParseError`. It does not know the model, so an entry naming an element the model never declared loads fine; `validateOverlay(model, overlay)` returns an `overlay-unknown-element` issue for each one.
 
 ## Layout
 
