@@ -1,6 +1,7 @@
 import type { Model, OpenIds } from "@exadev/process-graph-schema";
 import { describe, expect, it } from "vitest";
 import { sequenceObserved } from "./sequence.ts";
+import { workOf } from "./test-support/work.ts";
 import {
   applyModelDiff,
   diffFlowchart,
@@ -493,5 +494,343 @@ describe("nested derived fragments", () => {
         },
       },
     ]);
+  });
+});
+
+/**
+ * Every shape a review has found quadratic work in, at a size and its double, through every entry point that reads it. The work, counted by `workOf` over the collection operations the projections are built from, is measured per item of input and output: work linear in what goes in and comes out keeps that ratio level as the shape doubles, while work quadratic in either doubles it. Some outputs are themselves quadratic in their model, such as a state machine whose every state leads to every other through one folded decision; measuring against the output keeps those honest without hiding quadratic work behind a linear output. The bound sits midway, at `growthLimit` over `doubled`, because linear work with a fixed saving drifts slightly upwards. A newly found quadratic shape is a new row.
+ */
+const actors = [
+  { id: "customer", label: "Customer", kind: "role" as const },
+  { id: "shop", label: "Shop", kind: "system" as const },
+  { id: "order", label: "Order", kind: "entity" as const },
+];
+const activity = (id: string, actor = "shop") => ({
+  kind: "activity" as const,
+  id,
+  label: id,
+  actor,
+});
+const messageElement = (id: string) => ({
+  kind: "message" as const,
+  id,
+  label: id,
+  from: "customer",
+  to: "shop",
+  mode: "async" as const,
+});
+
+interface Shape {
+  readonly model: Model<OpenIds>;
+  readonly path: readonly string[];
+}
+
+/** Messages in a line, each with its own exit, entered from one activity. */
+const combShape = (count: number): Shape => {
+  const teeth = ids(count, "m-");
+
+  return {
+    model: {
+      ...empty,
+      participants: actors,
+      elements: [
+        activity("s", "customer"),
+        ...teeth.map(messageElement),
+        ...teeth.map((id) => activity(`e-${id}`)),
+      ],
+      transitions: [
+        { id: "t-in", source: "s", target: "m-0" },
+        ...teeth.flatMap((id, index) => [
+          { id: `t-${id}-out`, source: id, target: `e-${id}` },
+          {
+            id: `t-${id}-on`,
+            source: id,
+            target: teeth[index + 1] ?? `e-${id}`,
+          },
+        ]),
+      ],
+    },
+    path: ["t-in", ...teeth.map((id) => `t-${id}-on`)],
+  };
+};
+
+/** Two combs from one message, joined at a last message, exiting to shared activities. */
+const diamondShape = (count: number): Shape => {
+  const shared = ids(count, "e-");
+  const arm = (side: string): string[] =>
+    shared.map((_, index) => `${side}-${String(index)}`);
+  const left = arm("l");
+  const right = arm("r");
+  const teeth = (side: readonly string[]) =>
+    side.flatMap((id, index) => [
+      { id: `t-${id}-out`, source: id, target: shared[index] ?? id },
+      { id: `t-${id}-on`, source: id, target: side[index + 1] ?? "join" },
+    ]);
+
+  return {
+    model: {
+      ...empty,
+      participants: actors,
+      elements: [
+        activity("s", "customer"),
+        ...["fork", ...left, ...right, "join"].map(messageElement),
+        ...shared.map((id) => activity(id)),
+        activity("last"),
+      ],
+      transitions: [
+        { id: "t-in", source: "s", target: "fork" },
+        { id: "t-left", source: "fork", target: left[0] ?? "join" },
+        { id: "t-right", source: "fork", target: right[0] ?? "join" },
+        ...teeth(left),
+        ...teeth(right),
+        { id: "t-last", source: "join", target: "last" },
+      ],
+    },
+    path: ["t-in", "t-left", ...left.map((id) => `t-${id}-on`), "t-last"],
+  };
+};
+
+/** Activities each entering their own message of one run, every message also leaving for the same end. */
+const sourcesIntoRunShape = (count: number): Shape => {
+  const run = ids(count, "m-");
+
+  return {
+    model: {
+      ...empty,
+      participants: actors,
+      elements: [
+        ...run.map((id) => activity(`s-${id}`, "customer")),
+        ...run.map(messageElement),
+        activity("end"),
+      ],
+      transitions: run.flatMap((id, index) => [
+        { id: `t-s-${id}`, source: `s-${id}`, target: id },
+        { id: `t-${id}-on`, source: id, target: run[index + 1] ?? "end" },
+        { id: `t-${id}-end`, source: id, target: "end" },
+      ]),
+    },
+    path: ["t-s-m-0", ...run.map((id) => `t-${id}-on`)],
+  };
+};
+
+/** One activity stepping round to itself, with that many authored fragments over it. */
+const authoredRepeatsShape = (count: number): Shape => ({
+  model: {
+    ...empty,
+    participants: actors,
+    elements: [activity("x")],
+    transitions: [{ id: "t-loop", source: "x", target: "x" }],
+    fragments: ids(count, "f-").map((id) => ({
+      id,
+      operator: "opt" as const,
+      operands: [{ body: ["x"] }],
+    })),
+  },
+  path: Array.from({ length: count }, () => "t-loop"),
+});
+
+/** A fork into that many branches, each one step, joined again, with the path taking every branch. */
+const wideForkShape = (count: number): Shape => {
+  const branches = ids(count, "b-");
+
+  return {
+    model: {
+      ...empty,
+      participants: actors,
+      elements: [
+        activity("start"),
+        { kind: "pseudo", id: "fork", role: "fork" },
+        ...branches.map((id) => activity(id)),
+        { kind: "pseudo", id: "join", role: "join" },
+        activity("end"),
+      ],
+      transitions: [
+        { id: "t-start", source: "start", target: "fork" },
+        ...branches.flatMap((id) => [
+          { id: `t-to-${id}`, source: "fork", target: id },
+          { id: `t-from-${id}`, source: id, target: "join" },
+        ]),
+        { id: "t-end", source: "join", target: "end" },
+      ],
+    },
+    path: [
+      "t-start",
+      ...branches.flatMap((id) => [`t-to-${id}`, `t-from-${id}`]),
+      "t-end",
+    ],
+  };
+};
+
+const withEntity = ({
+  model,
+  path,
+}: {
+  readonly model: Model<OpenIds>;
+  readonly path: readonly string[];
+}): Shape => ({
+  model: { ...model, participants: actors },
+  path,
+});
+
+const shapes: readonly (readonly [string, (count: number) => Shape])[] = [
+  ["a comb of messages", combShape],
+  ["a diamond of combs", diamondShape],
+  ["decisions nested to one meet", (count) => withEntity(nestedSkips(count))],
+  ["many sources into one run", sourcesIntoRunShape],
+  [
+    "a run fanning out to many ends",
+    (count) => ({
+      model: { ...messageRun(count, 1, count), participants: actors },
+      path: [],
+    }),
+  ],
+  [
+    "many sources into one shared run",
+    (count) => ({
+      model: { ...messageRun(count, count, 1), participants: actors },
+      path: [],
+    }),
+  ],
+  ["repeated steps under many authored fragments", authoredRepeatsShape],
+  ["a wide fork", wideForkShape],
+  ["branches sharing one tail", (count) => withEntity(sharedTail(count))],
+  ["a decision with many ways round", (count) => withEntity(manyLoops(count))],
+];
+
+/** Each entry point, returning how many items its result holds, so work can be measured against what it had to produce. */
+const entries: readonly (readonly [string, (shape: Shape) => number])[] = [
+  [
+    "toFlowchart",
+    ({ model }) => {
+      const flow = toFlowchart(model);
+
+      return flow.nodes.length + flow.edges.length;
+    },
+  ],
+  [
+    "toSwimlane",
+    ({ model }) => {
+      const lanes = toSwimlane(model);
+
+      return (
+        lanes.nodes.length +
+        lanes.edges.length +
+        lanes.lanes.length +
+        lanes.handoffs.length
+      );
+    },
+  ],
+  ["handoffs", ({ model }) => handoffs(model).length],
+  [
+    "toStateMachine",
+    ({ model }) => {
+      const machine = toStateMachine(model, "order");
+
+      return machine.states.length + machine.transitions.length;
+    },
+  ],
+  [
+    "toSequence",
+    ({ model, path }) => {
+      const diagram = toSequence(model, path);
+
+      return diagram.messages.length + diagram.items.length;
+    },
+  ],
+];
+
+/** The size of a shape as input: its elements, transitions, fragment bodies and path. */
+const inputSize = ({ model, path }: Shape): number =>
+  model.elements.length +
+  model.transitions.length +
+  model.fragments.reduce(
+    (total, fragment) =>
+      total +
+      fragment.operands.reduce((sum, operand) => sum + operand.body.length, 0),
+    0,
+  ) +
+  path.length;
+
+/** Work per item of input and output for one shape through one entry point. */
+const workPerItem = (shape: Shape, enter: (shape: Shape) => number): number => {
+  let produced = 0;
+  const work = workOf(() => {
+    produced = enter(shape);
+  });
+
+  return work / (inputSize(shape) + produced);
+};
+
+/** The edit-list shapes, measured through the inverses that read them. */
+const edits: readonly (readonly [string, (count: number) => () => unknown])[] =
+  [
+    [
+      "diffFlowchart adding a ring of bars",
+      (count) => {
+        const bars = ids(count, "bar-");
+        const edited = {
+          nodes: bars.map((id) => ({
+            id,
+            label: "Fork",
+            shape: "bar" as const,
+          })),
+          edges: bars.map((id, index) => ({
+            from: id,
+            to: bars[(index + 1) % count] ?? id,
+            transitions: [`t-${id}`],
+          })),
+        };
+
+        return () => diffFlowchart(empty, edited);
+      },
+    ],
+    [
+      "applyModelDiff renaming every activity",
+      (count) => {
+        const activities = ids(count, "a-");
+        const model: Model<OpenIds> = {
+          ...empty,
+          elements: activities.map((id) => ({
+            kind: "activity",
+            id,
+            label: id,
+          })),
+        };
+        const diff: ModelDiff<OpenIds> = {
+          elements: activities.map((id) => ({
+            kind: "renamed",
+            element: id,
+            from: id,
+            to: `${id}!`,
+            inferred: false,
+          })),
+          transitions: [],
+          events: [],
+        };
+
+        return () => applyModelDiff(model, diff);
+      },
+    ],
+  ];
+
+const doubled = 2;
+
+describe("work at most doubles when a reported shape doubles", () => {
+  describe.each(shapes)("%s", (_shape, build) => {
+    const small = build(size);
+    const large = build(doubled * size);
+
+    it.each(entries)("through %s", (_entry, enter) => {
+      expect(workPerItem(large, enter)).toBeLessThan(
+        (growthLimit / doubled) * workPerItem(small, enter),
+      );
+    });
+  });
+
+  it.each(edits)("%s", (_edit, prepare) => {
+    const small = prepare(size);
+    const large = prepare(doubled * size);
+
+    expect(workOf(large)).toBeLessThan(growthLimit * workOf(small));
   });
 });
