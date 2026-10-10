@@ -59,23 +59,18 @@ export interface Chain<I extends IdSpace> {
   readonly effect: I["action"] | undefined;
 }
 
-/** A cell of a list shared by every list that ends with it. */
-interface Cell<T> {
-  readonly value: T;
-  readonly next: Cell<T> | undefined;
+/** A component's reachable targets, stored in reverse of the order they are read in, so a reader is extended by pushing; `members` is kept only while some later component may still take the array over. */
+interface Targets<T> {
+  readonly reversed: T[];
+  members: Set<T> | undefined;
+  /** Whether a start reads this array or more than one component builds on it, so it must never be extended in place. */
+  pinned: boolean;
 }
 
-/** A layer of a set of targets over the set it extends. */
-interface Layer<T> {
-  readonly extra: Set<T>;
-  readonly base: Layer<T> | undefined;
-}
-
-/** A component's reachable targets: the head of its list of cells, which holds each target once, and the layered set of the same targets. */
-interface Reached<T> {
-  readonly head: Cell<T> | undefined;
-  readonly set: Layer<T>;
-}
+/** One part of what a component's targets are made of, in reading order: targets of a component it holds itself, or the array of a component built on its own. */
+type Piece<T> =
+  | { readonly own: readonly T[]; readonly component?: never }
+  | { readonly component: number; readonly own?: never };
 
 /** What a notation folds away and what it draws. */
 export interface Folding<I extends IdSpace> {
@@ -129,7 +124,7 @@ export const once = <T>(compute: () => T): (() => T) => {
 /**
  * Indexes a model's folded elements so chains can be read off for any first transition.
  *
- * The folded elements are condensed into strongly connected components in one pass. Each component's reachable accepted targets are a list of cells holding each target once, shared with the components after it, and a layered set of the same targets used only while building: a component that is the sole way into its one way on extends that set in place and prepends the targets it adds, any other component lays a thin set of its own targets over its way on's, and a merge prepends onto the last way on's list the targets of the others it lacks. Nothing is copied, so the index stores one reference per cell, set entry and layer, linear in the elements and transitions, and reading a component's targets walks exactly its own list, however many starts read the same suffix. Folded elements entered from exactly one folded element, outside any cycle, form a forest of routes; each records how deep it is and the last trigger, effect and guard on the way down to it, so a single-route chain's labels are found from its ends in constant time.
+ * The folded elements are condensed into strongly connected components in one pass, and the condensed graph is read in reverse topological order. A component gets a flat array of its accepted targets only when something reads it on its own: it is entered from an element that is not folded, or from two or more components. Every other component has at most one component before it and is read as part of that one, so it is visited once in all. Arrays are built on demand and remembered, so a region no start reaches costs nothing; a generation stamp per target removes duplicates in constant time, a component with nothing of its own to add shares the one array it reads, and the only builder of an array nothing else reads extends it in place instead of copying it. The total work is linear in the elements and transitions plus the sizes of the arrays that must be copied, which is where two or more starts, or two or more components, read the same targets. Folded elements entered from exactly one folded element, outside any cycle, form a forest of routes; each records how deep it is and the last trigger, effect and guard on the way down to it, so a single-route chain's labels are found from its ends in constant time.
  *
  * Merged chains' lists, and every chain's lists, are built only when read.
  */
@@ -194,7 +189,6 @@ export const chainIndex = <I extends IdSpace>(
     }
   }
 
-  // Each component's accepted targets as a shared structure, built in reverse topological order so every successor's is ready. Nothing is copied: a list grows by prepending cells onto its successor's, and a merge only points at its parts.
   const observe = folding.observe;
   const successorsOf: number[][] = components.map(() => []);
   const predecessors = components.map(() => 0);
@@ -215,109 +209,195 @@ export const chainIndex = <I extends IdSpace>(
       }
     }
   }
-  // Each component's targets as a list of cells free of duplicates, shared with the components after it, and a layered set of the same targets for removing duplicates while building. A layer is extended in place only by the one component that is the sole way into its owner; any other component adds a thin layer of its own over it, so nothing is copied.
-  const byComponent: Reached<I["element"]>[] = [];
-  const has = (
-    set: Layer<I["element"]> | undefined,
-    target: I["element"],
-  ): boolean => {
-    for (let layer = set; layer !== undefined; layer = layer.base) {
-      if (layer.extra.has(target)) {
-        return true;
-      }
+  // Each component's targets are a flat array, built only for the components something reads on its own: a start (entered from an element that is not folded) or a component entered from two or more components. Every other component has at most one component before it and is read as part of that one, so it is visited once in all. Arrays are built on demand and remembered, so a region no start reaches costs nothing.
+  const enteredFromOutside = new Set<number>();
+  for (const transition of model.transitions) {
+    const component = componentOf.get(transition.target);
+    if (component !== undefined && !isFolded.has(transition.source)) {
+      enteredFromOutside.add(component);
     }
-
-    return false;
-  };
-  const prepend = (
-    targets: readonly I["element"][],
-    tail: Cell<I["element"]> | undefined,
-  ): Cell<I["element"]> | undefined => {
-    let head = tail;
-    for (const target of targets.toReversed()) {
-      observe?.(1);
-      head = { value: target, next: head };
-    }
-
-    return head;
-  };
-  const leads: boolean[] = [];
-  for (const [index, members] of components.entries()) {
+  }
+  const standalone = (component: number): boolean =>
+    enteredFromOutside.has(component) || (predecessors[component] ?? 0) > 1;
+  const ownOf = (component: number): I["element"][] => {
     const own: I["element"][] = [];
-    const ownSet = new Set<I["element"]>();
-    for (const member of members) {
+    for (const member of components[component] ?? []) {
       for (const { target } of outgoing.get(member) ?? []) {
-        if (
-          !isFolded.has(target) &&
-          folding.accepted(target) &&
-          !ownSet.has(target)
-        ) {
-          ownSet.add(target);
+        if (!isFolded.has(target) && folding.accepted(target)) {
           own.push(target);
         }
       }
     }
-    const parts = (successorsOf[index] ?? []).flatMap((successor) => {
-      const part = byComponent[successor];
 
-      return leads[successor] === true && part !== undefined
-        ? [{ successor, part }]
-        : [];
-    });
-    leads[index] = own.length > 0 || parts.length > 0;
-    const last = parts.at(-1);
-    if (last === undefined) {
-      observe?.(own.length);
-      byComponent[index] = {
-        head: prepend(own, undefined),
-        set: { extra: ownSet, base: undefined },
-      };
+    return own;
+  };
+  /** What a standalone component's targets are made of, in reading order: its own targets, then each way on's in order, reading through components that stand only on it and stopping at the next standalone ones. */
+  const piecesOf = (component: number): Piece<I["element"]>[] => {
+    const found: Piece<I["element"]>[] = [];
+    // Visit a component standing on the one before it, or record a standalone one met at this point in reading order.
+    const stack: { readonly component: number; readonly visit: boolean }[] = [
+      { component, visit: true },
+    ];
+    for (let next = stack.pop(); next !== undefined; next = stack.pop()) {
+      if (!next.visit) {
+        observe?.(1);
+        found.push({ component: next.component });
+        continue;
+      }
+      const own = ownOf(next.component);
+      if (own.length > 0) {
+        observe?.(own.length);
+        found.push({ own });
+      }
+      for (const successor of (
+        successorsOf[next.component] ?? []
+      ).toReversed()) {
+        stack.push({ component: successor, visit: !standalone(successor) });
+      }
+    }
+
+    return found;
+  };
+  const piecesFor = new Map<number, Piece<I["element"]>[]>();
+  const pieces = (component: number): Piece<I["element"]>[] => {
+    const known = piecesFor.get(component);
+    if (known !== undefined) {
+      return known;
+    }
+    const found = piecesOf(component);
+    piecesFor.set(component, found);
+
+    return found;
+  };
+  // How many standalone components build directly on each standalone one, counted once each, so an array read by one builder alone can be extended in place by it.
+  const builders = new Map<number, number>();
+  for (const [index] of components.entries()) {
+    if (!standalone(index)) {
       continue;
     }
-    // Targets of the ways on other than the last that the last does not reach, in order; the last way on's list is the shared tail.
-    const added = new Set<I["element"]>();
-    const fresh: I["element"][] = [];
-    for (const { part } of parts.slice(0, -1)) {
-      for (let cell = part.head; cell !== undefined; cell = cell.next) {
-        if (!has(last.part.set, cell.value) && !added.has(cell.value)) {
-          added.add(cell.value);
-          fresh.push(cell.value);
-        }
-      }
-    }
-    const ownFresh = own.filter(
-      (target) => !has(last.part.set, target) && !added.has(target),
+    const readFrom = new Set(
+      pieces(index).flatMap((piece) =>
+        piece.component === undefined ? [] : [piece.component],
+      ),
     );
-    const additions = [...ownFresh, ...fresh];
-    const head = prepend(additions, last.part.head);
-    if (parts.length === 1 && predecessors[last.successor] === 1) {
-      // The sole way into the last way on: extend its set in place.
-      for (const target of additions) {
-        observe?.(1);
-        last.part.set.extra.add(target);
-      }
-      byComponent[index] = { head, set: last.part.set };
-    } else {
-      observe?.(additions.length);
-      byComponent[index] = {
-        head,
-        set: { extra: new Set(additions), base: last.part.set },
-      };
+    for (const read of readFrom) {
+      builders.set(read, (builders.get(read) ?? 0) + 1);
     }
   }
-  /** A component's targets in order: walking its cells, which hold each target once. */
-  const targetsOf = (component: number): readonly I["element"][] => {
-    const listed: I["element"][] = [];
-    for (
-      let cell = byComponent[component]?.head;
-      cell !== undefined;
-      cell = cell.next
-    ) {
-      listed.push(cell.value);
+  const pinnedFor = (component: number): boolean =>
+    enteredFromOutside.has(component) || (builders.get(component) ?? 0) > 1;
+
+  const arrays = new Map<number, Targets<I["element"]>>();
+  // A generation stamp per target for removing duplicates while one array is built: a target is already in the array when its stamp is the current generation.
+  const stamp = new Map<I["element"], number>();
+  let generation = 0;
+  const build = (component: number): Targets<I["element"]> => {
+    const parts = pieces(component);
+    const [only, ...more] = parts;
+    const onlyArray =
+      only?.component === undefined ? undefined : arrays.get(only.component);
+    if (onlyArray !== undefined && more.length === 0) {
+      // Nothing of its own to add to the one array it reads: share it.
+      onlyArray.pinned ||= pinnedFor(component);
+
+      return onlyArray;
+    }
+    // Reading order keeps each target at its last place: the own targets nothing further on reaches come first. Built backwards, that is each target's first place, so pieces are taken last to first and each piece from its end.
+    const last = parts.at(-1);
+    const lastArray =
+      last?.component === undefined ? undefined : arrays.get(last.component);
+    const takeOver =
+      lastArray !== undefined &&
+      !lastArray.pinned &&
+      lastArray.members !== undefined;
+    const target: Targets<I["element"]> = takeOver
+      ? lastArray
+      : { reversed: [], members: undefined, pinned: pinnedFor(component) };
+    target.pinned = pinnedFor(component);
+    generation += 1;
+    const members = target.members;
+    const present = (value: I["element"]): boolean =>
+      members === undefined
+        ? stamp.get(value) === generation
+        : members.has(value);
+    const add = (value: I["element"]): void => {
+      if (present(value)) {
+        return;
+      }
+      observe?.(1);
+      target.reversed.push(value);
+      if (members === undefined) {
+        stamp.set(value, generation);
+      } else {
+        members.add(value);
+      }
+    };
+    for (const piece of (takeOver ? parts.slice(0, -1) : parts).toReversed()) {
+      if (piece.own !== undefined) {
+        for (const value of piece.own.toReversed()) {
+          add(value);
+        }
+        continue;
+      }
+      for (const value of arrays.get(piece.component)?.reversed ?? []) {
+        add(value);
+      }
+    }
+    // An array nobody else may read keeps a set of its members, so the one component that builds on it can take it over without rescanning it.
+    if (target.pinned) {
+      target.members = undefined;
+    } else if (target.members === undefined) {
+      observe?.(target.reversed.length);
+      target.members = new Set(target.reversed);
     }
 
-    return listed;
+    return target;
   };
+  const arrayOf = (component: number): Targets<I["element"]> => {
+    const frames: { readonly component: number; expanded: boolean }[] = [
+      { component, expanded: false },
+    ];
+    for (
+      let frame = frames.at(-1);
+      frame !== undefined;
+      frame = frames.at(-1)
+    ) {
+      if (arrays.has(frame.component)) {
+        frames.pop();
+        continue;
+      }
+      if (!frame.expanded) {
+        frame.expanded = true;
+        for (const piece of pieces(frame.component)) {
+          if (piece.component !== undefined && !arrays.has(piece.component)) {
+            frames.push({ component: piece.component, expanded: false });
+          }
+        }
+        continue;
+      }
+      arrays.set(frame.component, build(frame.component));
+      frames.pop();
+    }
+    const found = arrays.get(component);
+    if (found === undefined) {
+      throw new Error(
+        "Invariant violated: a component's targets were not built",
+      );
+    }
+
+    return found;
+  };
+  const leads: boolean[] = [];
+  for (const [index] of components.entries()) {
+    leads[index] =
+      ownOf(index).length > 0 ||
+      (successorsOf[index] ?? []).some(
+        (successor) => leads[successor] === true,
+      );
+  }
+  /** A start component's targets in reading order; only ever asked of a component entered from outside, which is standalone. */
+  const targetsOf = (component: number): readonly I["element"][] =>
+    arrayOf(component).reversed.toReversed();
 
   // The route forest: a folded element outside every cycle entered from exactly one folded element that is also outside every cycle hangs below it.
   const parentLink = new Map<I["element"], TransitionOf<I>>();
