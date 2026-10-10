@@ -37,7 +37,7 @@ packages/
 └── targets/<package>/              # deployable entry points, deliberately flat
 ```
 
-A package may depend on its own layer and the layers below it, never above; `no-uphill-dependency` and `no-dependency-cycle` from `@exadev/eslint-config` enforce it from the manifests, configured in `eslint.shared.ts`. Published names are `@exadev/process-graph-<name>`; the unscoped `process-graph` package is the umbrella that re-exports the model and carries the CLI.
+A package may depend on its own layer and the layers below it, never above; `no-uphill-dependency` and `no-dependency-cycle` from `@exadev/eslint-config` enforce it from the manifests, configured in `eslint.shared.ts`. Published names are `@exadev/process-graph-<name>`; the unscoped [`process-graph`](packages/targets/process-graph/README.md) package, in the `targets` layer, is the primary entry point: it re-exports the model, projection, domain and DAG packages so a consumer installs one dependency.
 
 Configuration lives at exactly one of two levels: in the package (`eslint.config.ts`, `tsconfig*.json`, Vitest projects, Stryker) or at the root (commit rules, git hooks, formatting, release).
 
@@ -49,6 +49,7 @@ Configuration lives at exactly one of two levels: in the package (`eslint.config
 | [`graph-schema`](packages/core/graph/schema/README.md)         | The process model: typed identifier spaces, `defineModel` with compile-time reference checking, structural validation.                                             |
 | [`graph-projection`](packages/core/graph/projection/README.md) | Projections of the model into a flowchart, swimlane, state machine and sequence diagram, plus derived hand-offs.                                                   |
 | [`graph-domain`](packages/core/graph/domain/README.md)         | Reasoning over the model and a run overlay: control graph, illegal cycles, three-valued status, ready set, blocked-by, impact, what-if and critical path.          |
+| [`process-graph`](packages/targets/process-graph/README.md)    | The primary entry point: re-exports the schema, projection and domain APIs flat and the DAG API as the `dag` namespace.                                            |
 
 ## Conventions
 
