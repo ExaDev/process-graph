@@ -58,7 +58,10 @@ export const blockedBy = <I extends IdSpace>(
   id: I["element"],
 ): readonly I["element"][] => {
   const analysis = analyse({ model, overlay, facts });
-  lookup(analysis.statuses, id);
+  if (!isLive(lookup(analysis.statuses, id))) {
+    // A finished or skipped element waits on nothing, even when the overlay marked it done ahead of its needs or it consumes an artefact still to be made.
+    return [];
+  }
   const leaves = new Set<I["element"]>();
   const seen = new Set<I["element"]>();
   const pending = [...waitingOn(analysis, id)];

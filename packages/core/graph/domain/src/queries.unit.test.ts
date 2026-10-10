@@ -1,3 +1,4 @@
+import { defineModel } from "@exadev/process-graph-schema";
 import { describe, expect, it } from "vitest";
 import {
   blockedBy,
@@ -6,7 +7,7 @@ import {
   unmetOutputs,
   whatIfDone,
 } from "./queries.ts";
-import { factsOf, noFacts } from "./test-support/conditions.ts";
+import { factsOf, holds, noFacts } from "./test-support/conditions.ts";
 import { approval, chain, diamond, pipeline } from "./test-support/models.ts";
 
 describe("blockedBy", () => {
@@ -23,6 +24,50 @@ describe("blockedBy", () => {
   it("is empty for an element that is ready or done", () => {
     expect(blockedBy(chain, {}, noFacts, "a")).toEqual([]);
     expect(blockedBy(chain, { a: "done" }, noFacts, "a")).toEqual([]);
+  });
+
+  it("is empty for an element marked done while its needs are still open", () => {
+    expect(blockedBy(chain, { c: "done" }, noFacts, "c")).toEqual([]);
+  });
+
+  it("is empty for a skipped element, even one consuming an artefact still to be made", () => {
+    const skippedConsumer = defineModel({
+      participants: [{ id: "team", label: "Team", kind: "role" }],
+      events: [],
+      actions: [],
+      artefacts: [{ id: "spec", name: "Spec" }],
+      elements: [
+        { kind: "decision", id: "choose", label: "Build?", actor: "team" },
+        {
+          kind: "activity",
+          id: "build",
+          label: "Build",
+          actor: "team",
+          consumes: ["spec"],
+        },
+        {
+          kind: "activity",
+          id: "write",
+          label: "Write",
+          actor: "team",
+          produces: ["spec"],
+        },
+      ],
+      transitions: [
+        {
+          id: "t-build",
+          source: "choose",
+          target: "build",
+          condition: holds("wanted"),
+        },
+      ],
+      fragments: [],
+      projections: [],
+    });
+
+    expect(
+      blockedBy(skippedConsumer, {}, factsOf({ wanted: false }), "build"),
+    ).toEqual([]);
   });
 
   it("names an element whose state is unknown as the leaf", () => {
