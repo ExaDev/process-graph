@@ -144,18 +144,47 @@ export const diffStateMachine = <I extends IdSpace>(
       transitionChanges.push(change);
     }
   };
+  // Omitted transitions are grouped by how they end first: one that is a single model transition removes it; ones through folded elements share their steps into a state, so each such state has its arriving steps removed once.
+  const endsLeft = new Set<I["element"]>();
   for (const [key, { origin }] of originals) {
     if (editedKeys.has(key)) {
       continue;
     }
-    for (const tail of arriving(origin)) {
-      push({
-        kind: "removed",
-        transition: tail.id,
-        inferred: origin.first.target !== origin.target,
-      });
+    if (origin.first.target === origin.target) {
+      push({ kind: "removed", transition: origin.first.id, inferred: false });
+    } else {
+      endsLeft.add(origin.target);
     }
   }
+  for (const end of endsLeft) {
+    for (const tail of parts.index.arriving(end)) {
+      push({ kind: "removed", transition: tail.id, inferred: true });
+    }
+  }
+  // An edit to a transition through folded elements acts on the steps into its state, which every such transition into that state shares: each kind of edit is made once per state, and edits to the same state that disagree are refused.
+  const editedEnds = new Map<string, string>();
+  const firstAtEnd = (
+    end: I["element"],
+    kind: string,
+    value: unknown,
+  ): boolean => {
+    const key = JSON.stringify([end, kind]);
+    // `JSON.stringify` gives no text for `undefined`, which here means the label was cleared.
+    const wanted = value === undefined ? "" : `=${JSON.stringify(value)}`;
+    const already = editedEnds.get(key);
+    if (already === undefined) {
+      editedEnds.set(key, wanted);
+
+      return true;
+    }
+    if (already !== wanted) {
+      throw new Error(
+        `Transitions into "${end}" through the same steps were edited differently (${kind})`,
+      );
+    }
+
+    return false;
+  };
   for (const edit of edited.transitions) {
     const key = editedKey(edit);
     const before = key === undefined ? undefined : originals.get(key);
@@ -189,6 +218,12 @@ export const diffStateMachine = <I extends IdSpace>(
     const head = origin.first;
     const chain = head.target !== origin.target;
     const tails = arriving(origin);
+    /** The arriving steps to act on for one kind of edit: the transition itself, or the shared steps into the state the first time that kind of edit reaches it. */
+    const acting = (
+      kind: string,
+      value: unknown,
+    ): readonly TransitionOf<I>[] =>
+      !chain || firstAtEnd(origin.target, kind, value) ? tails : [];
     if (
       !chain &&
       (previous.source !== edit.source || previous.target !== edit.target)
@@ -210,7 +245,9 @@ export const diffStateMachine = <I extends IdSpace>(
           inferred: false,
         });
       }
-      for (const tail of previous.target === edit.target ? [] : tails) {
+      for (const tail of previous.target === edit.target
+        ? []
+        : acting("target", edit.target)) {
         push({
           kind: "rewired",
           transition: tail.id,
@@ -220,7 +257,9 @@ export const diffStateMachine = <I extends IdSpace>(
         });
       }
     }
-    for (const tail of previous.event === edit.event ? [] : tails) {
+    for (const tail of previous.event === edit.event
+      ? []
+      : acting("trigger", edit.event)) {
       push({
         kind: "changed",
         field: "trigger",
@@ -230,7 +269,9 @@ export const diffStateMachine = <I extends IdSpace>(
         inferred: chain,
       });
     }
-    for (const tail of previous.guard === edit.guard ? [] : tails) {
+    for (const tail of previous.guard === edit.guard
+      ? []
+      : acting("guard", edit.guard)) {
       push({
         kind: "changed",
         field: "guard",
@@ -247,7 +288,7 @@ export const diffStateMachine = <I extends IdSpace>(
           `The effect of ${JSON.stringify(edit.transitions)} is the action of "${target.id}"; change that activity's action instead`,
         );
       }
-      for (const tail of tails) {
+      for (const tail of acting("effect", edit.effect)) {
         push({
           kind: "changed",
           field: "effect",
