@@ -1,3 +1,20 @@
+## [1.1.0](https://github.com/ExaDev/process-graph/compare/v1.0.0...v1.1.0) (2026-10-10)
+
+* add projection package ([b449b22](https://github.com/ExaDev/process-graph/commit/b449b2240336c35de9f848ba43b315b12adf4adf))
+* add schema package ([6227576](https://github.com/ExaDev/process-graph/commit/6227576b9c442bf9b8e9fa81d34237660a12b9cd))
+* **projection:** draw authored fragments in sequence diagrams ([c22ba20](https://github.com/ExaDev/process-graph/commit/c22ba201d38e41fe4af40df680f97b5c7611fbe9))
+* **projection:** give every declared actor a swimlane lane ([5ebd366](https://github.com/ExaDev/process-graph/commit/5ebd36691c7630dba3eb5fa9e07ecbd783cf0f52))
+* **projection:** report what each projection dropped as a loss list ([db7fa83](https://github.com/ExaDev/process-graph/commit/db7fa839a2ee0eb577c71bdfdeb6cc338a023df9))
+* **projection:** reuse the shared actor map for hand-offs ([0dc84af](https://github.com/ExaDev/process-graph/commit/0dc84af7aef886b27dcfa17d905da42849e87737))
+* **projection:** scope a state machine to the activities that affect its subject ([e103f3a](https://github.com/ExaDev/process-graph/commit/e103f3a3e944d4ee8ff984e4b0a1893917deb573))
+* **schema:** add a Zod schema and loader for the open model shape ([d2fcdb6](https://github.com/ExaDev/process-graph/commit/d2fcdb6bcc3545efea344051db139e7285be4cb1))
+* **schema:** add an overlay for run state, apart from the model ([a224b7b](https://github.com/ExaDev/process-graph/commit/a224b7ba2d75c4de6fdf00f47e21ee5979d93f0a))
+* **schema:** add artefacts as data and deliverable dependencies ([de4793f](https://github.com/ExaDev/process-graph/commit/de4793f41e33ec6cbe8cb47d1bb2b32c637d2390))
+* **schema:** bind an activity to its source record ([227ce23](https://github.com/ExaDev/process-graph/commit/227ce23ed8cc15603fcc62ab66eae83e5d37cf5f)), closes [org/repo#12](https://github.com/org/repo/issues/12)
+* **schema:** carry notation-only extensions on elements ([f472d6a](https://github.com/ExaDev/process-graph/commit/f472d6a050973e8c2a4cffb03f4d1a4954fc9e81))
+* **schema:** let an activity declare the entities it affects ([a1e851c](https://github.com/ExaDev/process-graph/commit/a1e851ceae844af67f0d19981ba62a7c36b09f68))
+* **schema:** type a transition's condition as a trilean predicate tree ([7c39775](https://github.com/ExaDev/process-graph/commit/7c397753ec0a7891c0943f9d9b5260c2120a3ccb))
+
 ## 1.0.0 (2026-10-10)
 
 * add checks, mutation testing and release workflows ([0535d81](https://github.com/ExaDev/process-graph/commit/0535d813c60c153240a77d9fd4c5a74927917bef))
