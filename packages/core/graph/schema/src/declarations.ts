@@ -48,6 +48,10 @@ export type Element<Id extends string, R extends IdSpace> =
       readonly label: string;
       readonly actor?: R["actor"];
       readonly action?: R["action"];
+      /**
+       * The external record this activity stands for, as a source-qualified identifier such as `github:org/repo#12`. It is the activity's identity in its source and unique across the model's activities.
+       */
+      readonly source?: string;
     }
   | {
       readonly kind: "decision";

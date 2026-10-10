@@ -40,6 +40,7 @@ const elementSchema = z.discriminatedUnion("kind", [
     label: z.string(),
     actor: actorRef.exactOptional(),
     action: actionRef.exactOptional(),
+    source: z.string().exactOptional(),
   }),
   record({
     kind: z.literal("decision"),

@@ -48,7 +48,11 @@ An activity's actor and a message's ends must be actors; a state machine project
 
 ## What the types cannot say
 
-`validate(model)` returns the issues a runtime model can still have: `duplicate-id`, `unknown-reference`, `multiple-initial`, `subject-not-entity` and `actor-is-entity`. An authored model is already reference-safe at compile time; `validate` is for models loaded from JSON and for the rules the type system cannot state.
+`validate(model)` returns the issues a runtime model can still have: `duplicate-id`, `unknown-reference`, `multiple-initial`, `subject-not-entity`, `actor-is-entity` and `duplicate-source`. An authored model is already reference-safe at compile time; `validate` is for models loaded from JSON and for the rules the type system cannot state.
+
+## Source binding
+
+An activity may carry `source`, a source-qualified identifier such as `github:org/repo#12`, tying it to the external record it stands for. The source is the activity's identity in its system, so two activities may not share one (`duplicate-source`). Activities without a source are unaffected.
 
 ## Loading a model
 

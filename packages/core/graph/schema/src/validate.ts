@@ -7,7 +7,8 @@ export type IssueCode =
   | "unknown-reference"
   | "multiple-initial"
   | "subject-not-entity"
-  | "actor-is-entity";
+  | "actor-is-entity"
+  | "duplicate-source";
 
 export interface Issue {
   readonly code: IssueCode;
@@ -125,6 +126,18 @@ export const validate = <I extends IdSpace>(
         require(elementIds, id, `fragment "${fragment.id}" body`);
       }
     }
+  }
+
+  const sources = model.elements.flatMap((element) =>
+    element.kind === "activity" && element.source !== undefined
+      ? [element.source]
+      : [],
+  );
+  for (const source of duplicates(sources)) {
+    issues.push({
+      code: "duplicate-source",
+      message: `Duplicate activity source "${source}"`,
+    });
   }
 
   const initialsByScope = new Map<string, number>();
