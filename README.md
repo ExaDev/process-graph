@@ -51,6 +51,7 @@ Configuration lives at exactly one of two levels: in the package (`eslint.config
 | [`graph-schema`](packages/core/graph/schema/README.md)         | The process model: typed identifier spaces, `defineModel` with compile-time reference checking, structural validation.                                             |
 | [`graph-projection`](packages/core/graph/projection/README.md) | Projections of the model into a flowchart, swimlane, state machine and sequence diagram, plus derived hand-offs.                                                   |
 | [`graph-domain`](packages/core/graph/domain/README.md)         | Reasoning over the model and a run overlay: control graph, illegal cycles, three-valued status, ready set, blocked-by, impact, what-if and critical path.          |
+| [`graph-layout`](packages/core/graph/layout/README.md)         | Layered layout of a projected flowchart, swimlane or state machine into positions in the model's `views` shape.                                                    |
 | [`process-graph`](packages/targets/process-graph/README.md)    | The primary entry point: re-exports the schema, projection and domain APIs flat and the DAG API as the `dag` namespace.                                            |
 
 ## Conventions
