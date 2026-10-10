@@ -463,6 +463,8 @@ interface Placed<I extends IdSpace> {
   readonly first: number;
   readonly last: number;
   readonly slotOf: (position: number) => number;
+  /** The element the message at a position arrives at. */
+  readonly elementAt: (position: number) => string | undefined;
   readonly parent:
     { readonly placed: Placed<I>; readonly slot: number } | undefined;
   readonly order: number;
@@ -537,6 +539,56 @@ const holdsAll = (held: Held, first: number, last: number): boolean => {
   return held.positions === undefined
     ? held.from <= first && last <= held.to
     : countBetween(held.positions, first, last) === last - first + 1;
+};
+
+/** Each operand's body elements as a set, built the first time the operand is asked whether it holds a nested fragment. */
+const elementSets = new WeakMap<object, ReadonlySet<string>>();
+
+/**
+ * Whether a fragment spanning `first` to `last` lies wholly inside operand `slot` of the placed fragment around it, in constant or logarithmic time per check. The outer fragment's messages are consecutive, and both ends of the inner span lie inside it, so a fragment with one operand holds the whole span. A run or list of positions is checked by its ends or by binary search. An operand held by elements holds every message arriving at them, so an authored inner fragment, whose messages are exactly its own elements' and fill the span, fits when its elements are among the operand's; any other inner span is checked against the operand's elements by binary search when they are fewer than the span's positions, and otherwise position by position.
+ */
+const fits = <I extends IdSpace>(
+  outer: Placed<I>,
+  slot: number,
+  inner: Candidate<I>,
+  { first, last }: { readonly first: number; readonly last: number },
+): boolean => {
+  const { operands } = outer.candidate;
+  const operand = operands[slot];
+  if (operand === undefined) {
+    return false;
+  }
+  if (operands.length === 1) {
+    return true;
+  }
+  if (operand.elements === undefined) {
+    return holdsAll(operand, first, last);
+  }
+  let elements = elementSets.get(operand);
+  if (elements === undefined) {
+    elements = new Set(operand.elements.map(({ element }) => element));
+    elementSets.set(operand, elements);
+  }
+  const held = elements;
+  const innerElements = inner.operands.flatMap((part) =>
+    part.elements === undefined ? [] : [part.elements],
+  );
+  if (innerElements.length === inner.operands.length) {
+    return innerElements.every((list) =>
+      list.every(({ element }) => held.has(element)),
+    );
+  }
+  if (operand.elements.length <= last - first + 1) {
+    return holdsAll(operand, first, last);
+  }
+  for (let position = first; position <= last; position += 1) {
+    const element = outer.elementAt(position);
+    if (element === undefined || !held.has(element)) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 /**
@@ -701,6 +753,8 @@ export const wrapFragments = <I extends IdSpace>(
   );
 
   const tree = placementTree(entries.length);
+  const elementAt = (position: number): string | undefined =>
+    entries[position]?.target;
   const placed: Placed<I>[] = [];
   const innermost = (position: number): Placed<I> | undefined => {
     const time = tree.at(position);
@@ -715,8 +769,7 @@ export const wrapFragments = <I extends IdSpace>(
     let parent: Placed<I>["parent"];
     if (outer !== undefined) {
       const slot = outer.slotOf(first);
-      const operand = outer.candidate.operands[slot];
-      if (operand === undefined || !holdsAll(operand, first, last)) {
+      if (!fits(outer, slot, candidate, { first, last })) {
         continue;
       }
       parent = { placed: outer, slot };
@@ -725,11 +778,8 @@ export const wrapFragments = <I extends IdSpace>(
       candidate,
       first,
       last,
-      slotOf: slotIndex(
-        candidate.operands,
-        (position) => entries[position]?.target,
-        observe,
-      ),
+      slotOf: slotIndex(candidate.operands, elementAt, observe),
+      elementAt,
       parent,
       order,
     };
