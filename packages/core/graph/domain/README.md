@@ -25,19 +25,20 @@ deriveStatuses(model, overlay, facts); // Map { "triage" => "done", ... }
 
 ## Functions
 
-| Function                                      | Result                                                                                  |
-| --------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `controlDag(model)`                           | The `graph-dag` `Dag` over element ids, with loop edges removed.                        |
-| `loopTransitions(model)`                      | The transitions that close a legal decision loop.                                       |
-| `illegalCycles(model)`                        | The cycles of the control graph, each with its path.                                    |
-| `evaluateBranches(model, overlay, facts)`     | Each transition's `taken`, `not-taken` or `indeterminate`.                              |
-| `deriveStatuses(model, overlay, facts)`       | The `Status` of every element.                                                          |
-| `readySet(model, overlay, facts)`             | The elements that are `ready`.                                                          |
-| `blockedBy(model, overlay, facts, id)`        | The open leaves an element is waiting on.                                               |
-| `impact(model, overlay, facts, id)`           | The live elements that transitively depend on `id`.                                     |
-| `whatIfDone(model, overlay, facts, id)`       | The elements that become ready and every status change if `id` were done.               |
-| `criticalPath(model, overlay, facts, weight)` | The heaviest chain through the work still ahead.                                        |
-| `unmetOutputs(model, overlay, facts)`         | Each deliverable not yet produced, with the elements and missing inputs it still needs. |
+| Function                                      | Result                                                                                   |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `controlDag(model)`                           | The `graph-dag` `Dag` over element ids, with loop edges removed.                         |
+| `loopTransitions(model)`                      | The transitions that close a legal decision loop.                                        |
+| `illegalCycles(model)`                        | The cycles of the control graph, each with its path.                                     |
+| `evaluateBranches(model, overlay, facts)`     | Each transition's `taken`, `not-taken` or `indeterminate`.                               |
+| `deriveStatuses(model, overlay, facts)`       | The `Status` of every element.                                                           |
+| `readySet(model, overlay, facts)`             | The elements that are `ready`.                                                           |
+| `blockedBy(model, overlay, facts, id)`        | The open leaves an element is waiting on.                                                |
+| `impact(model, overlay, facts, id)`           | The live elements that transitively depend on `id`.                                      |
+| `explainStatus(model, overlay, facts, id)`    | The rule that decided `id`'s status, what it was decided from, and the blocked-by chain. |
+| `whatIfDone(model, overlay, facts, id)`       | The elements that become ready and every status change if `id` were done.                |
+| `criticalPath(model, overlay, facts, weight)` | The heaviest chain through the work still ahead.                                         |
+| `unmetOutputs(model, overlay, facts)`         | Each deliverable not yet produced, with the elements and missing inputs it still needs.  |
 
 Every function that derives status throws `CycleError` (from `graph-dag`, carrying the cycles) when `illegalCycles` is not empty, `UnknownNodeError` when a transition names an element the model does not declare, and `UnsupportedConditionError` for a condition the facts port cannot serve.
 
@@ -84,7 +85,9 @@ The `Facts` port is `(key: JsonValue) => Resolution`: an opaque key in, `{ found
 
 ## Queries
 
-`blockedBy` starts at an element's unfinished needs and follows each one's own unfinished needs to the elements that wait on nothing further: the minimal set of open work to finish first. Cut transitions and provided artefacts are not followed. An element that is not blocked by anything returns an empty list.
+`blockedBy` starts at an element's unfinished needs and follows each one's own unfinished needs to the elements that wait on nothing further: the minimal set of open work to finish first. Cut transitions and provided artefacts are not followed. An element that is not blocked by anything returns an empty list, and so does an element that is `done` or `skipped`, even one the overlay marked done ahead of its needs.
+
+`explainStatus` says why an element has its status. `rule` names the rule of the status table that decided it (`overlay-done`, `overlay-unknown`, `unknown-need`, `all-cut`, `needs-met` or `waiting`); `transitions` lists its incoming transitions other than loop edges, each with its branch, its source's status and whether it is cut; `artefacts` lists what it consumes, each with whether it is provided and its producers' statuses. `chain` is the blocked-by chain: the element, then every unfinished need reached from it, each with the needs it still waits on, so the links after the first that wait on nothing are exactly what `blockedBy` returns. The explanation is recorded by the derivation itself, so it never disagrees with `deriveStatuses`.
 
 `impact` follows live needs in reverse, so a branch that was not taken, a skipped element and an element already `done` carry no impact; `id` itself is not included.
 
