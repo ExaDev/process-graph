@@ -29,6 +29,7 @@ minimumReleaseAgeExclude:
   - "@exadev/eslint-config"
   - "@exadev/json-compose"
   - "@exadev/process-graph-*"
+  - "@exadev/semantic-release-workspace"
   - process-graph
   - cosmiconfig-extends
   - trilean
