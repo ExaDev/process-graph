@@ -1,0 +1,29 @@
+# Dependabot for the exact-pinned dependency tree. Every manifest pins exact versions (syncpack-enforced), so Dependabot's proposals arrive as exact bumps: one version, no range widening, reviewed like any other diff. Internal workspace packages never resolve on a registry, so they are ignored by name; the same applies to the workspace-root glob since Dependabot cannot know them.
+#
+# Every entry waits a week after a release before proposing it (cooldown), so a compromised or broken publish has time to be noticed and pulled before it reaches a pull request here. Security updates are not delayed by it.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    # The workspace pins exact; keep proposals exact rather than letting Dependabot widen to a range.
+    versioning-strategy: increase
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+    # Workspace packages never resolve on a registry at the version the workspace holds, so Dependabot must not propose them.
+    ignore:
+      - dependency-name: "@exadev/process-graph-*"
+      - dependency-name: "process-graph"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]

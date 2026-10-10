@@ -1,0 +1,42 @@
+name: Setup workspace
+description: Set up pnpm + Node, install the workspace from the frozen lockfile, restore turbo's local cache, then run a command. Requires checkout before use.
+
+inputs:
+  task:
+    description: Task identifier, used for the step name and as part of the turbo cache key (lint, typecheck, test, build, release).
+    required: true
+  command:
+    description: Shell command to execute after install.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      with:
+        standalone: true
+
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version-file: .tool-versions
+        cache: pnpm
+
+    - run: pnpm install --frozen-lockfile
+      shell: bash
+
+    # turbo's local filesystem cache, keyed per task. A package whose inputs (per turbo.json) are unchanged since a prior run on this lockfile/pipeline generation replays that task's recorded result instead of re-running eslint/tsc/vitest.
+    #
+    # hashFiles(pnpm-lock.yaml, turbo.json) puts the dependency set and the task graph itself into the key, so either changing starts a fresh cache lineage rather than inheriting a stale one; github.run_id keeps every run's own save key unique, since actions/cache silently skips a save under a key that already exists.
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .turbo
+        key: turbo-${{ inputs.task }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.run_id }}
+        restore-keys: |
+          turbo-${{ inputs.task }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+          turbo-${{ inputs.task }}-${{ runner.os }}-
+
+    # Running caller-supplied shell is this action's contract, and every caller passes a literal command written in this repository's own workflows, with any run-time value (a matrix entry, a job output) handed over through the step's env instead of spliced into the command text. zizmor cannot see the callers, so it reports the expansion here.
+    - name: Run ${{ inputs.task }}
+      # zizmor: ignore[template-injection]
+      run: ${{ inputs.command }}
+      shell: bash

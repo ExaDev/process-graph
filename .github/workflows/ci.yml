@@ -1,0 +1,206 @@
+name: CI
+
+# One workflow for the whole workspace. Every check runs its task across the workspace through turbo from the repository root, rather than against a single package directory, so adding a package needs no edit here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  commitlint:
+    name: Commitlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          standalone: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .tool-versions
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate the last commit with commitlint
+        if: github.event_name == 'push'
+        run: pnpm exec commitlint --last --verbose
+      - name: Validate every PR commit with commitlint
+        if: github.event_name == 'pull_request'
+        run: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          task: lint
+          command: pnpm lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          task: typecheck
+          # _typecheck:attw (attw --pack per published package, checking each package's declared types resolve under every module resolution mode) is one of the tasks `pnpm typecheck` runs through turbo, depending on that package's own _build. No separate build step is needed to give it a dist/ to inspect.
+          command: pnpm typecheck
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          task: test
+          command: pnpm test:coverage && pnpm test:integration && pnpm test:smoke
+
+  knip:
+    name: Knip
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          task: knip
+          # Building first matters: without a real dist/ for every workspace package to resolve types against, knip cannot see a dependency that is only reachable through another package's declarations and reports it as unused.
+          command: pnpm build && pnpm exec knip
+
+  dependency-versions:
+    name: Dependency versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          task: deps-lint
+          command: pnpm run deps:lint
+
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      # actionlint and the shellcheck it runs on every `run:` script, each at an exact version and each archive checked against the SHA-256 committed here before it is unpacked. The digests were checked against actionlint's release checksums file and against the asset digests GitHub records for both releases. shellcheck is installed explicitly so the script checks never depend on what the runner image happens to carry.
+      - name: Install actionlint and shellcheck
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          SHELLCHECK_VERSION: 0.11.0
+        run: |
+          case "$RUNNER_ARCH" in
+            X64)
+              actionlint_arch=amd64 actionlint_sha256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+              shellcheck_arch=x86_64 shellcheck_sha256=b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6
+              ;;
+            *)
+              echo "::error::No pinned actionlint or shellcheck build for runner architecture $RUNNER_ARCH"
+              exit 1
+              ;;
+          esac
+          tools="$RUNNER_TEMP/workflow-linters"
+          mkdir -p "$tools"
+          cd "$tools"
+          actionlint_archive="actionlint_${ACTIONLINT_VERSION}_linux_${actionlint_arch}.tar.gz"
+          shellcheck_archive="shellcheck-v${SHELLCHECK_VERSION}.linux.${shellcheck_arch}.tar.gz"
+          curl -fsSLo "$actionlint_archive" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${actionlint_archive}"
+          curl -fsSLo "$shellcheck_archive" "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/${shellcheck_archive}"
+          printf '%s  %s\n' "$actionlint_sha256" "$actionlint_archive" "$shellcheck_sha256" "$shellcheck_archive" | sha256sum --check --strict
+          tar -xzf "$actionlint_archive" actionlint
+          tar -xzf "$shellcheck_archive" --strip-components=1 "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
+          echo "$tools" >> "$GITHUB_PATH"
+      # Every workflow the repository tracks, wherever it sits.
+      - name: Lint every workflow
+        run: git ls-files -z -- ':(glob)**/.github/workflows/*.yml' ':(glob)**/.github/workflows/*.yaml' | xargs -0 actionlint
+
+  zizmor:
+    name: Zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      # uvx rather than zizmorcore/zizmor-action: the action runs zizmor's container image, which needs a Docker daemon. setup-uv checks the uv download against its published checksum, and uv fetches a Python for zizmor's environment if the runner has none.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: 0.12.19
+          enable-cache: false
+      # Offline, so the result never depends on whether a token happens to be in the environment: the online audits (impostor commits, known-vulnerable actions, ref confusion) only run with one. Every workflow and composite action in the repository is audited.
+      - name: Audit every workflow and action
+        run: uvx zizmor@1.30.1 --offline --config .github/zizmor.yml --no-progress .
+
+  release:
+    name: Release
+    needs:
+      [
+        commitlint,
+        lint,
+        typecheck,
+        test,
+        knip,
+        dependency-versions,
+        actionlint,
+        zizmor,
+      ]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    concurrency:
+      group: release-workspace
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # to push the release commit and tags, and create a GitHub Release
+      issues: write # to comment on released issues
+      pull-requests: write # to comment on released pull requests
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          standalone: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .tool-versions
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Release the whole workspace as one version
+        # npmPublish: false throughout release.config.ts. This cuts a single shared version, CHANGELOG.md, git tag, and GitHub Release for the whole repository, and never calls `npm publish`.
+        run: HUSKY=0 pnpm release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
