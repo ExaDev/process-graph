@@ -293,10 +293,10 @@ export const chainIndex = <I extends IdSpace>(
   let generation = 0;
   const build = (component: number): Targets<I["element"]> => {
     const parts = pieces(component);
-    const [only, ...more] = parts;
+    const only = parts.length === 1 ? parts[0] : undefined;
     const onlyArray =
       only?.component === undefined ? undefined : arrays.get(only.component);
-    if (onlyArray !== undefined && more.length === 0) {
+    if (onlyArray !== undefined) {
       // Nothing of its own to add to the one array it reads: share it.
       onlyArray.pinned ||= pinnedFor(component);
 
@@ -332,7 +332,15 @@ export const chainIndex = <I extends IdSpace>(
         members.add(value);
       }
     };
-    for (const piece of (takeOver ? parts.slice(0, -1) : parts).toReversed()) {
+    for (
+      let index = parts.length - (takeOver ? 2 : 1);
+      index >= 0;
+      index -= 1
+    ) {
+      const piece = parts[index];
+      if (piece === undefined) {
+        continue;
+      }
       if (piece.own !== undefined) {
         for (const value of piece.own.toReversed()) {
           add(value);
@@ -403,14 +411,9 @@ export const chainIndex = <I extends IdSpace>(
   const parentLink = new Map<I["element"], TransitionOf<I>>();
   const children = new Map<I["element"], I["element"][]>();
   for (const id of foldedIds) {
-    const into = foldedIn.get(id) ?? [];
-    const [link, ...rest] = into;
-    if (
-      link !== undefined &&
-      rest.length === 0 &&
-      !cyclic.has(id) &&
-      !cyclic.has(link.source)
-    ) {
+    const into = foldedIn.get(id);
+    const link = into?.length === 1 ? into[0] : undefined;
+    if (link !== undefined && !cyclic.has(id) && !cyclic.has(link.source)) {
       parentLink.set(id, link);
       append(children, link.source, id);
     }
@@ -566,12 +569,13 @@ export const chainIndex = <I extends IdSpace>(
     const level = depth.get(start);
 
     return reached.map((target): Chain<I> => {
-      const [last, ...more] = arrivingIn.get(target) ?? [];
+      // Only the length and the one arriving step are read, never a copy of the list: many chains end at the same target.
+      const into = arrivingIn.get(target);
+      const last = into?.length === 1 ? into[0] : undefined;
       const source = last?.source;
       const single =
         last !== undefined &&
         source !== undefined &&
-        more.length === 0 &&
         level !== undefined &&
         above(start, source);
       const lists = once(() => union(first, target));

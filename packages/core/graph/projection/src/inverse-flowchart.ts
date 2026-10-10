@@ -206,11 +206,11 @@ const diffFlow = <I extends IdSpace>(
   for (const edge of edited.edges) {
     const key = editedKey(edge);
     const before = key === undefined ? undefined : originals.get(key);
-    const [first, ...rest] = edge.transitions;
+    const [first] = edge.transitions;
     if (before === undefined) {
       if (
         first === undefined ||
-        rest.length > 0 ||
+        edge.transitions.length > 1 ||
         transitions.has(first) ||
         edge.through !== undefined
       ) {
