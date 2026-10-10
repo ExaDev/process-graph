@@ -59,9 +59,15 @@ describe("toStateMachine scoping by affects", () => {
       "end",
     ]);
     expect(machine.transitions).toEqual([
-      { source: "start", target: "a-accept" },
-      { source: "a-accept", target: "a-ship", event: "ev-paid" },
-      { source: "a-ship", target: "end" },
+      { source: "start", target: "a-accept", transitions: ["t1"] },
+      {
+        source: "a-accept",
+        target: "a-ship",
+        event: "ev-paid",
+        transitions: ["t2", "t3"],
+        through: ["a-invoice"],
+      },
+      { source: "a-ship", target: "end", transitions: ["t4"] },
     ]);
   });
 
@@ -74,8 +80,20 @@ describe("toStateMachine scoping by affects", () => {
       "end",
     ]);
     expect(machine.transitions).toEqual([
-      { source: "start", target: "a-invoice", effect: "act-issue" },
-      { source: "a-invoice", target: "end", event: "ev-paid" },
+      {
+        source: "start",
+        target: "a-invoice",
+        effect: "act-issue",
+        transitions: ["t1", "t2"],
+        through: ["a-accept"],
+      },
+      {
+        source: "a-invoice",
+        target: "end",
+        event: "ev-paid",
+        transitions: ["t3", "t4"],
+        through: ["a-ship"],
+      },
     ]);
   });
 
@@ -97,7 +115,9 @@ describe("toStateMachine scoping by affects", () => {
     const machine = toStateMachine(unscoped, "order");
 
     expect(machine.states.map((state) => state.id)).toEqual(["a", "b"]);
-    expect(machine.transitions).toEqual([{ source: "a", target: "b" }]);
+    expect(machine.transitions).toEqual([
+      { source: "a", target: "b", transitions: ["t1"] },
+    ]);
   });
 
   it("drops an activity with no affects once any activity declares it", () => {

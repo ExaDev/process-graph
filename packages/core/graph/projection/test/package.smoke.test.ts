@@ -24,5 +24,7 @@ test("the built package projects a model", () => {
   expect(handoffs(model)).toEqual([
     { transition: "t1", from: "customer", to: "shop" },
   ]);
-  expect(toFlowchart(model).edges).toEqual([{ from: "submit", to: "pack" }]);
+  expect(toFlowchart(model).edges).toEqual([
+    { from: "submit", to: "pack", transitions: ["t1"] },
+  ]);
 });

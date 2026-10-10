@@ -1,11 +1,12 @@
 import type {
-  Fragment,
   FragmentOperator,
   IdSpace,
+  MessageMode,
   Model,
   Transition,
 } from "@exadev/process-graph-schema";
-import { actorMap } from "./actors.ts";
+import { actorMap, type ElementOf } from "./actors.ts";
+import { deriveFragments } from "./derived-fragments.ts";
 import { commonLoss, type Loss } from "./loss.ts";
 
 export interface SequenceMessage<I extends IdSpace> {
@@ -14,6 +15,10 @@ export interface SequenceMessage<I extends IdSpace> {
   /** Equal to `from` for a self-message. */
   readonly to: I["actor"];
   readonly label: string;
+  /** The `message` element drawn, when the step arrives at one. Its `from`, `to`, `label` and `mode` are the message's own. */
+  readonly element?: I["element"];
+  /** How the message is sent, when it is a `message` element's. A step between two activities has no mode of its own. */
+  readonly mode?: MessageMode;
 }
 
 /** One operand of an emitted fragment: the operand's guard, when it has one, and what happens inside it. */
@@ -22,23 +27,32 @@ export interface SequenceOperand<I extends IdSpace> {
   readonly items: readonly SequenceItem<I>[];
 }
 
-/** A message, or an authored fragment wrapping the messages of the scenario that fall inside it. */
+/** What every drawn fragment carries, authored or derived. */
+interface FragmentItem<I extends IdSpace> {
+  readonly kind: "fragment";
+  readonly operator: FragmentOperator;
+  /** The operands the scenario takes, in authored or branch order. */
+  readonly operands: readonly SequenceOperand<I>[];
+}
+
+/** A message, or a fragment wrapping the messages of the scenario that fall inside it: an authored one, named by `fragment`, or one derived from the decision or fork named by `element`. */
 export type SequenceItem<I extends IdSpace> =
   | { readonly kind: "message"; readonly message: SequenceMessage<I> }
-  | {
-      readonly kind: "fragment";
+  | (FragmentItem<I> & {
       readonly fragment: I["fragment"];
-      readonly operator: FragmentOperator;
-      /** The operands the scenario takes, in authored order. */
-      readonly operands: readonly SequenceOperand<I>[];
-    };
+      readonly element?: never;
+    })
+  | (FragmentItem<I> & {
+      readonly element: I["element"];
+      readonly fragment?: never;
+    });
 
 export interface SequenceDiagram<I extends IdSpace> {
   /** Actors in order of first appearance. */
   readonly lifelines: readonly I["actor"][];
   /** Every message in scenario order, including those inside fragments. */
   readonly messages: readonly SequenceMessage<I>[];
-  /** The same messages, with authored fragments wrapped around the ones that fall inside them. */
+  /** The same messages, with authored and derived fragments wrapped around the ones that fall inside them. */
   readonly items: readonly SequenceItem<I>[];
   /** What the projection dropped from the model. */
   readonly loss: readonly Loss<I>[];
@@ -61,23 +75,42 @@ interface Container<I extends IdSpace> {
   readonly children: Placed<I>[];
 }
 
-/** An authored fragment the scenario passes through, with a container for the fragments nested inside each of its operands. */
+/** A fragment that may be drawn: authored or derived. */
+interface Candidate<I extends IdSpace> {
+  /** The authored fragment's id; absent for a derived fragment. */
+  readonly authored: I["fragment"] | undefined;
+  /** Builds the item drawn for it from the operands the scenario takes. */
+  readonly item: (operands: readonly SequenceOperand<I>[]) => SequenceItem<I>;
+  readonly operands: readonly {
+    readonly guard?: string | undefined;
+    readonly body: readonly I["element"][];
+  }[];
+}
+
+/** A fragment the scenario passes through, with a container for the fragments nested inside each of its operands. */
 interface Placed<I extends IdSpace> {
-  readonly fragment: Fragment<I["fragment"], I>;
+  readonly candidate: Candidate<I>;
   readonly operands: readonly TakenOperand<I>[];
   readonly indices: ReadonlySet<number>;
   readonly nested: readonly Container<I>[];
 }
 
+/** Whether two sets of message positions are the same. */
+const sameIndices = (
+  first: ReadonlySet<number>,
+  second: ReadonlySet<number>,
+): boolean =>
+  first.size === second.size && [...first].every((index) => second.has(index));
+
 /**
- * Wraps the scenario's messages in the authored fragments they fall inside.
+ * Wraps the scenario's messages in the fragments they fall inside: the authored ones first, then those derived from the model's structure.
  *
- * A fragment is drawn when at least one of its operands has a body that lies wholly on the scenario path and receives at least one message, and when the messages it holds are consecutive in the scenario. Only the operands the scenario takes are drawn, in authored order. A fragment whose messages overlap another's without nesting, or are interleaved with messages outside it, is not drawn, because drawing it would reorder or misrepresent the scenario. Fragments are never invented: every one drawn is authored.
+ * A fragment is drawn when at least one of its operands has a body that lies wholly on the scenario path and receives at least one message, and when the messages it holds are consecutive in the scenario. Only the operands the scenario takes are drawn, in their own order. A fragment whose messages overlap another's without nesting, or are interleaved with messages outside it, is not drawn, because drawing it would reorder or misrepresent the scenario. A derived fragment holding exactly the messages an authored one holds is not drawn either: the authored fragment is the author's notation for the same structure.
  *
  * A message belongs to an operand when the element it arrives at is in that operand's body.
  */
 const wrapFragments = <I extends IdSpace>(
-  fragments: readonly Fragment<I["fragment"], I>[],
+  fragments: readonly Candidate<I>[],
   entries: readonly Entry<I>[],
   onPath: ReadonlySet<I["element"]>,
 ): {
@@ -109,9 +142,20 @@ const wrapFragments = <I extends IdSpace>(
     }
     const first = Math.min(...claimed);
     const last = Math.max(...claimed);
-    if (operands.length > 0 && last - first + 1 === claimed.size) {
+    const duplicate =
+      fragment.authored === undefined &&
+      candidates.some(
+        (placed) =>
+          placed.candidate.authored !== undefined &&
+          sameIndices(placed.indices, claimed),
+      );
+    if (
+      operands.length > 0 &&
+      last - first + 1 === claimed.size &&
+      !duplicate
+    ) {
       candidates.push({
-        fragment,
+        candidate: fragment,
         operands,
         indices: claimed,
         nested: operands.map(() => ({ children: [] })),
@@ -161,16 +205,20 @@ const wrapFragments = <I extends IdSpace>(
         items.push({ kind: "message", message: entry.message });
       } else if (!emitted.has(owner)) {
         emitted.add(owner);
-        drawn.add(owner.fragment.id);
-        items.push({
-          kind: "fragment",
-          fragment: owner.fragment.id,
-          operator: owner.fragment.operator,
-          operands: owner.operands.map((operand, slot) => ({
-            ...(operand.guard === undefined ? {} : { guard: operand.guard }),
-            items: itemsOf(operand.entries, owner.nested[slot]?.children ?? []),
-          })),
-        });
+        if (owner.candidate.authored !== undefined) {
+          drawn.add(owner.candidate.authored);
+        }
+        items.push(
+          owner.candidate.item(
+            owner.operands.map((operand, slot) => ({
+              ...(operand.guard === undefined ? {} : { guard: operand.guard }),
+              items: itemsOf(
+                operand.entries,
+                owner.nested[slot]?.children ?? [],
+              ),
+            })),
+          ),
+        );
       }
     }
 
@@ -181,64 +229,122 @@ const wrapFragments = <I extends IdSpace>(
 };
 
 /**
- * One path through the process as messages. A step between two elements with actors becomes a message, labelled by the transition's event when it has one and by the target's label otherwise. Steps touching an element with no actor are skipped and reported as `skipped-steps`. Branches off the path are not drawn, which is why this direction is lossy and one-to-many.
- 
-`messages` is the flat list. `items` is the same messages with the authored fragments the scenario passes through wrapped around the ones that fall inside them; a fragment that cannot be drawn faithfully is left out and reported in `loss`.
+ * One path through the process as messages.
+ *
+ * A step between two elements with actors becomes a message, labelled by the transition's event when it has one and by the target's label otherwise. A step arriving at a `message` element draws that message, with its own `from`, `to`, `label` and `mode`, and the step leaving it continues the same message rather than drawing another. An element with no actor that the scenario passes through, such as a fork or join, passes on whoever reached it: a step leaving it is sent by the actor of the step that arrived. A step that still has no sender, or that arrives at an element with no actor, draws nothing and is reported as `skipped-steps`. Branches off the path are not drawn, which is why this direction is lossy and one-to-many.
+ *
+ * `messages` is the flat list. `items` is the same messages with fragments wrapped around the ones that fall inside them: the authored `fragments` the scenario passes through, and those its structure implies (an `alt` or `opt` at a decision, a `loop` back through a decision, a `par` at a fork), each derived fragment naming the decision or fork it comes from. A fragment that cannot be drawn faithfully is left out, and an authored one left out is reported in `loss`.
+ * @param model - The model to project.
+ * @param scenario - The transitions the path takes, in order.
+ * @returns Lifelines in order of first appearance, the messages, the items and what was dropped.
+ * @throws Error when a scenario step is not a declared transition.
  */
 export const toSequence = <I extends IdSpace>(
   model: Model<I>,
   scenario: readonly I["transition"][],
 ): SequenceDiagram<I> => {
   const actors = actorMap(model);
-  const labels = new Map<I["element"], string>();
-  for (const element of model.elements) {
-    if (element.kind === "activity" || element.kind === "decision") {
-      labels.set(element.id, element.label);
-    }
-  }
+  const elements = new Map<I["element"], ElementOf<I>>(
+    model.elements.map((element) => [element.id, element]),
+  );
   const transitions = new Map<I["transition"], Transition<I["transition"], I>>(
     model.transitions.map((transition) => [transition.id, transition]),
   );
   const eventNames = new Map<I["event"], string>(
     model.events.map((event) => [event.id, event.name]),
   );
+  const labelOf = (id: I["element"]): string | undefined => {
+    const element = elements.get(id);
+
+    return element?.kind === "activity" || element?.kind === "decision"
+      ? element.label
+      : undefined;
+  };
 
   const skipped: I["transition"][] = [];
   const lifelines: I["actor"][] = [];
   const messages: SequenceMessage<I>[] = [];
   const entries: Entry<I>[] = [];
+  const shownMessages = new Set<I["element"]>();
+  // The actor holding control at each element the scenario has reached, so a step leaving an element with no actor has a sender.
+  const holder = new Map<I["element"], I["actor"]>();
+  let arrivedAt: I["element"] | undefined;
+  const draw = (message: SequenceMessage<I>, target: I["element"]): void => {
+    for (const participant of [message.from, message.to]) {
+      if (!lifelines.includes(participant)) {
+        lifelines.push(participant);
+      }
+    }
+    entries.push({ index: messages.length, message, target });
+    messages.push(message);
+  };
   for (const id of scenario) {
     const transition = transitions.get(id);
     if (transition === undefined) {
       throw new Error(`Scenario step "${id}" is not a declared transition`);
     }
-    const from = actors.get(transition.source);
+    const source = elements.get(transition.source);
+    const target = elements.get(transition.target);
+    const previous = arrivedAt;
+    arrivedAt = transition.target;
+    if (target?.kind === "message") {
+      shownMessages.add(target.id);
+      holder.set(target.id, target.to);
+      draw(
+        {
+          transition: id,
+          from: target.from,
+          to: target.to,
+          label: target.label,
+          element: target.id,
+          mode: target.mode,
+        },
+        target.id,
+      );
+      continue;
+    }
+    if (source?.kind === "message") {
+      if (previous !== source.id) {
+        shownMessages.add(source.id);
+        draw(
+          {
+            transition: id,
+            from: source.from,
+            to: source.to,
+            label: source.label,
+            element: source.id,
+            mode: source.mode,
+          },
+          source.id,
+        );
+      }
+      const to = actors.get(transition.target);
+      holder.set(transition.target, to ?? source.to);
+      continue;
+    }
+    const from = actors.get(transition.source) ?? holder.get(transition.source);
     const to = actors.get(transition.target);
+    const held = to ?? from;
+    if (held !== undefined) {
+      holder.set(transition.target, held);
+    }
     if (from === undefined || to === undefined) {
       skipped.push(id);
       continue;
-    }
-    for (const participant of [from, to]) {
-      if (!lifelines.includes(participant)) {
-        lifelines.push(participant);
-      }
     }
     const eventName =
       transition.trigger === undefined
         ? undefined
         : eventNames.get(transition.trigger);
-    const message: SequenceMessage<I> = {
-      transition: id,
-      from,
-      to,
-      label: eventName ?? labels.get(transition.target) ?? id,
-    };
-    entries.push({
-      index: messages.length,
-      message,
-      target: transition.target,
-    });
-    messages.push(message);
+    draw(
+      {
+        transition: id,
+        from,
+        to,
+        label: eventName ?? labelOf(transition.target) ?? id,
+      },
+      transition.target,
+    );
   }
 
   const onPath = new Set<I["element"]>();
@@ -255,9 +361,38 @@ export const toSequence = <I extends IdSpace>(
     (transition) => !taken.has(transition.id) && onPath.has(transition.source),
   );
 
-  const { items, drawn } = wrapFragments(model.fragments, entries, onPath);
+  const candidates: Candidate<I>[] = [
+    ...model.fragments.map(({ id, operator, operands }): Candidate<I> => ({
+      authored: id,
+      operands,
+      item: (drawnOperands) => ({
+        kind: "fragment",
+        fragment: id,
+        operator,
+        operands: drawnOperands,
+      }),
+    })),
+    ...deriveFragments(model, onPath).map(
+      ({ element, operator, operands }): Candidate<I> => ({
+        authored: undefined,
+        operands,
+        item: (drawnOperands) => ({
+          kind: "fragment",
+          element,
+          operator,
+          operands: drawnOperands,
+        }),
+      }),
+    ),
+  ];
+  const { items, drawn } = wrapFragments(candidates, entries, onPath);
 
-  const loss: Loss<I>[] = [...commonLoss(model, "sequence", drawn)];
+  const loss: Loss<I>[] = [
+    ...commonLoss(model, "sequence", {
+      fragments: drawn,
+      messages: shownMessages,
+    }),
+  ];
   if (offPath.length > 0) {
     loss.push({
       kind: "scenario",

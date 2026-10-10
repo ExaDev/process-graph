@@ -35,14 +35,24 @@ describe("the order process", () => {
       { id: "end", label: "End", shape: "terminator" },
     ]);
     expect(flow.edges).toEqual([
-      { from: "start", to: "a-submit" },
-      { from: "a-submit", to: "a-request" },
-      { from: "a-request", to: "a-authorise" },
-      { from: "a-authorise", to: "d-authorised" },
-      { from: "d-authorised", to: "a-pack", label: "authorised" },
-      { from: "d-authorised", to: "a-cancel", label: "declined" },
-      { from: "a-pack", to: "end" },
-      { from: "a-cancel", to: "end" },
+      { from: "start", to: "a-submit", transitions: ["t1"] },
+      { from: "a-submit", to: "a-request", transitions: ["t2"] },
+      { from: "a-request", to: "a-authorise", transitions: ["t3"] },
+      { from: "a-authorise", to: "d-authorised", transitions: ["t4"] },
+      {
+        from: "d-authorised",
+        to: "a-pack",
+        label: "authorised",
+        transitions: ["t5"],
+      },
+      {
+        from: "d-authorised",
+        to: "a-cancel",
+        label: "declined",
+        transitions: ["t6"],
+      },
+      { from: "a-pack", to: "end", transitions: ["t7"] },
+      { from: "a-cancel", to: "end", transitions: ["t8"] },
     ]);
   });
 
@@ -82,15 +92,27 @@ describe("the order process", () => {
       { id: "end", label: "End", role: "final" },
     ]);
     expect(machine.transitions).toEqual([
-      { source: "start", target: "a-submit", event: "ev-submitted" },
-      { source: "a-submit", target: "a-request", effect: "act-request" },
-      { source: "a-request", target: "a-authorise" },
+      {
+        source: "start",
+        target: "a-submit",
+        event: "ev-submitted",
+        transitions: ["t1"],
+      },
+      {
+        source: "a-submit",
+        target: "a-request",
+        effect: "act-request",
+        transitions: ["t2"],
+      },
+      { source: "a-request", target: "a-authorise", transitions: ["t3"] },
       {
         source: "a-authorise",
         target: "a-pack",
         event: "ev-authorised",
         guard: "authorised",
         effect: "act-pack",
+        transitions: ["t4", "t5"],
+        through: ["d-authorised"],
       },
       {
         source: "a-authorise",
@@ -98,9 +120,11 @@ describe("the order process", () => {
         event: "ev-declined",
         guard: "declined",
         effect: "act-cancel",
+        transitions: ["t4", "t6"],
+        through: ["d-authorised"],
       },
-      { source: "a-pack", target: "end" },
-      { source: "a-cancel", target: "end" },
+      { source: "a-pack", target: "end", transitions: ["t7"] },
+      { source: "a-cancel", target: "end", transitions: ["t8"] },
     ]);
   });
 
@@ -162,13 +186,25 @@ describe("the order process", () => {
           },
         },
         {
-          kind: "message",
-          message: {
-            transition: "t5",
-            from: "shop",
-            to: "shop",
-            label: "payment authorised",
-          },
+          kind: "fragment",
+          element: "d-authorised",
+          operator: "alt",
+          operands: [
+            {
+              guard: "authorised",
+              items: [
+                {
+                  kind: "message",
+                  message: {
+                    transition: "t5",
+                    from: "shop",
+                    to: "shop",
+                    label: "payment authorised",
+                  },
+                },
+              ],
+            },
+          ],
         },
       ],
       loss: [

@@ -22,7 +22,7 @@ export type Loss<I extends IdSpace> =
   | { readonly kind: "layout"; readonly elements: readonly I["element"][] }
   /** Elements carrying notation-only `extensions`, which no projection shows. */
   | { readonly kind: "extensions"; readonly elements: readonly I["element"][] }
-  /** `message` elements, which the projection does not draw. */
+  /** `message` elements the projection neither draws nor folds into an edge or transition. */
   | {
       readonly kind: "message-elements";
       readonly elements: readonly I["element"][];
@@ -59,7 +59,7 @@ export type Loss<I extends IdSpace> =
     };
 
 /**
- * The elements the notation cannot draw: every element that is neither in `accounted` (drawn, or folded away by design, as a decision is in a state machine) nor a `message`, which is reported as `message-elements` by every projection.
+ * The elements the notation cannot draw: every element that is neither in `accounted` (drawn, or folded away by design, as a decision is in a state machine) nor a `message`, which `commonLoss` reports as `message-elements` when it is not shown.
  * @param model - The model being projected.
  * @param notation - The notation that cannot draw them.
  * @param accounted - Elements the projection draws or folds away by design.
@@ -95,11 +95,24 @@ export const unrepresentedLoss = <I extends IdSpace>(
   return [{ kind: "unrepresented-elements", notation, elements, transitions }];
 };
 
-/** The losses every projection can have, whatever its notation: dropped layout, notation-only extensions, message elements and authored fragments. */
+/** What a projection drew of the elements and fragments that only some notations can show. */
+export interface Shown<I extends IdSpace> {
+  /** Authored fragments drawn. */
+  readonly fragments: ReadonlySet<I["fragment"]>;
+  /** `message` elements drawn, or folded into an edge or transition that carries them. */
+  readonly messages: ReadonlySet<I["element"]>;
+}
+
+/**
+ * The losses every projection can have, whatever its notation: dropped layout, notation-only extensions, message elements and authored fragments.
+ * @param model - The model projected.
+ * @param notation - The notation whose recorded positions are dropped.
+ * @param shown - The message elements and fragments the projection did draw, which are therefore not reported.
+ */
 export const commonLoss = <I extends IdSpace>(
   model: Model<I>,
   notation: Notation,
-  shownFragments: ReadonlySet<I["fragment"]> = new Set(),
+  shown: Shown<I>,
 ): readonly Loss<I>[] => {
   const positions = model.views?.[notation];
   const positioned = model.elements.filter(
@@ -111,10 +124,10 @@ export const commonLoss = <I extends IdSpace>(
       Object.keys(element.extensions).length > 0,
   );
   const messages = model.elements.filter(
-    (element) => element.kind === "message",
+    (element) => element.kind === "message" && !shown.messages.has(element.id),
   );
   const hidden = model.fragments.filter(
-    (fragment) => !shownFragments.has(fragment.id),
+    (fragment) => !shown.fragments.has(fragment.id),
   );
 
   const losses: Loss<I>[] = [];

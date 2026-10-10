@@ -78,14 +78,47 @@ const outcome = {
   ],
 } as const;
 
-describe("toSequence without fragments", () => {
-  it("lists every message as a message item in scenario order", () => {
+/** The authored fragment ids drawn anywhere in `items`, outermost first. */
+const authoredIn = (items: readonly SequenceItem<OpenIds>[]): string[] =>
+  items.flatMap((item) =>
+    item.kind === "fragment"
+      ? [
+          ...(item.fragment === undefined ? [] : [item.fragment]),
+          ...item.operands.flatMap((operand) => authoredIn(operand.items)),
+        ]
+      : [],
+  );
+
+/** The alt the payment decision implies when the scenario ships. */
+const shipping: SequenceItem<OpenIds> = {
+  kind: "fragment",
+  element: "d-ok",
+  operator: "alt",
+  operands: [
+    { guard: "authorised", items: [message("t6", "shop", "shop", "Ship")] },
+  ],
+};
+
+describe("toSequence without authored fragments", () => {
+  it("derives a loop and an alt from the payment decision, keeping messages flat in `messages`", () => {
     const diagram = toSequence(withFragments([]), ["t2", "t3", "t6"]);
 
     expect(diagram.items).toEqual([
-      message("t2", "customer", "shop", "Take payment"),
-      message("t3", "shop", "shop", "Paid?"),
-      message("t6", "shop", "shop", "Ship"),
+      {
+        kind: "fragment",
+        element: "d-ok",
+        operator: "loop",
+        operands: [
+          {
+            guard: "declined",
+            items: [
+              message("t2", "customer", "shop", "Take payment"),
+              message("t3", "shop", "shop", "Paid?"),
+            ],
+          },
+        ],
+      },
+      shipping,
     ]);
     expect(diagram.messages.map((entry) => entry.transition)).toEqual([
       "t2",
@@ -96,7 +129,7 @@ describe("toSequence without fragments", () => {
 });
 
 describe("toSequence with authored fragments", () => {
-  it("wraps the messages a loop covers and leaves the rest outside", () => {
+  it("wraps the messages a loop covers, in place of the loop the decision implies", () => {
     const diagram = toSequence(withFragments([paymentLoop]), retried);
 
     expect(diagram.items).toEqual([
@@ -117,7 +150,7 @@ describe("toSequence with authored fragments", () => {
           },
         ],
       },
-      message("t6", "shop", "shop", "Ship"),
+      shipping,
     ]);
     expect(diagram.loss).not.toContainEqual(
       expect.objectContaining({ kind: "fragments" }),
@@ -202,7 +235,7 @@ describe("toSequence with authored fragments", () => {
                   },
                 ],
               },
-              message("t6", "shop", "shop", "Ship"),
+              shipping,
             ],
           },
         ],
@@ -218,11 +251,7 @@ describe("toSequence with authored fragments", () => {
     } as const;
     const diagram = toSequence(withFragments([split]), ["t2", "t3", "t6"]);
 
-    expect(diagram.items.map((item) => item.kind)).toEqual([
-      "message",
-      "message",
-      "message",
-    ]);
+    expect(authoredIn(diagram.items)).toEqual([]);
     expect(diagram.loss).toContainEqual({
       kind: "fragments",
       fragments: ["f-split"],
@@ -237,11 +266,7 @@ describe("toSequence with authored fragments", () => {
     } as const;
     const diagram = toSequence(withFragments([offPath]), ["t2", "t3", "t6"]);
 
-    expect(diagram.items.map((item) => item.kind)).toEqual([
-      "message",
-      "message",
-      "message",
-    ]);
+    expect(authoredIn(diagram.items)).toEqual([]);
     expect(diagram.loss).toContainEqual({
       kind: "fragments",
       fragments: ["f-off"],
@@ -265,11 +290,7 @@ describe("toSequence with authored fragments", () => {
       "t4",
     ]);
 
-    const drawn = diagram.items.flatMap((item) =>
-      item.kind === "fragment" ? [item.fragment] : [],
-    );
-
-    expect(drawn).toEqual(["f-left"]);
+    expect(authoredIn(diagram.items)).toEqual(["f-left"]);
     expect(diagram.loss).toContainEqual({
       kind: "fragments",
       fragments: ["f-right"],
