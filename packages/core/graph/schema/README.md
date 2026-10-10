@@ -83,6 +83,10 @@ The two cover different things on purpose.
 
 `z.infer<typeof modelSchema>` is exactly `Model<OpenIds>`, pinned by a type-level test, so a loaded model is usable anywhere an open-space model is.
 
+## Extensions
+
+Some concepts belong to one notation and have no meaning in the model: an activation bar, a history pseudo-state's depth, a pool. Every element may carry `extensions`, a record keyed by notation name whose values are JSON. The model gives them no meaning, so a projection ignores them (and reports that it did); they are kept so a round trip through a view restores them, and they load through the open schema unchanged.
+
 ## Overlay
 
 Run state is never part of the model. An `Overlay<I>` maps element identifiers to `"done"`, `"open"` or `"unknown"`, and is supplied by a source or by a person alongside the model, the same rule as layout: the model describes a process, an overlay describes one run of it, and many overlays can sit over one model. An element with no entry has no recorded state, which is distinct from the explicit `"unknown"`. `parseOverlay` loads one from untrusted input and reports problems by JSON pointer in an `OverlayParseError`.

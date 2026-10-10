@@ -1,4 +1,4 @@
-import { PredicateNodeSchema } from "trilean";
+import { JsonValueSchema, PredicateNodeSchema } from "trilean";
 import { z } from "zod";
 import {
   fragmentOperators,
@@ -20,6 +20,8 @@ const actionRef = z.string();
 const transitionRef = z.string();
 const entityRef = z.string();
 const artefactRef = z.string();
+
+const extensionsSchema = z.record(z.string(), JsonValueSchema).readonly();
 
 const participantSchema = record({
   id,
@@ -45,6 +47,7 @@ const elementSchema = z.discriminatedUnion("kind", [
   record({
     kind: z.literal("activity"),
     id,
+    extensions: extensionsSchema.exactOptional(),
     label: z.string(),
     actor: actorRef.exactOptional(),
     action: actionRef.exactOptional(),
@@ -56,12 +59,14 @@ const elementSchema = z.discriminatedUnion("kind", [
   record({
     kind: z.literal("decision"),
     id,
+    extensions: extensionsSchema.exactOptional(),
     label: z.string(),
     actor: actorRef.exactOptional(),
   }),
   record({
     kind: z.literal("state"),
     id,
+    extensions: extensionsSchema.exactOptional(),
     label: z.string(),
     parent: elementRef.exactOptional(),
     entry: actionRef.exactOptional(),
@@ -70,12 +75,14 @@ const elementSchema = z.discriminatedUnion("kind", [
   record({
     kind: z.literal("pseudo"),
     id,
+    extensions: extensionsSchema.exactOptional(),
     role: z.enum(pseudoRoles),
     parent: elementRef.exactOptional(),
   }),
   record({
     kind: z.literal("message"),
     id,
+    extensions: extensionsSchema.exactOptional(),
     label: z.string(),
     from: actorRef,
     to: actorRef,
