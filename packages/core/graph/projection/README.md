@@ -21,6 +21,10 @@ toSequence(model, ["t1", "t2"]);
 
 A transition between two elements with different actors is a hand-off, never stored. Elements without an actor never produce one.
 
+## Swimlane lanes
+
+`toSwimlane` has a lane for every declared role or system, in declaration order, with empty `nodes` when nothing is assigned to it, so a participant that has not started yet is still visible. Entities are not actors and get no lane. An actor that a runtime model names without declaring still gets a lane, after the declared ones, and `validate` reports it.
+
 ## State machine scope
 
 `toStateMachine(model, subject)` keeps the activities whose `affects` lists the subject, plus authored `state` elements and pseudo-states. A step that does not affect the subject is not one of its states: transitions through it are folded into the transition leaving the previous state, the way a decision is, so one model yields a different machine per subject.
