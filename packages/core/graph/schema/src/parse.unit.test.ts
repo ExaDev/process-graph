@@ -198,6 +198,27 @@ describe("parseModel", () => {
     });
   });
 
+  it("round-trips an activity's affected entities", () => {
+    const activity = {
+      kind: "activity",
+      id: "a",
+      label: "A",
+      actor: "shop",
+      affects: ["order"],
+    };
+
+    expect(
+      parseModel(
+        fromJson({
+          ...order,
+          elements: [activity],
+          transitions: [],
+          projections: [],
+        }),
+      ).elements,
+    ).toEqual([activity]);
+  });
+
   it("names every problem in the error message", () => {
     const error = new ModelParseError([
       { source: "schema", pointer: "/a", message: "bad" },

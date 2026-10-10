@@ -62,6 +62,10 @@ export type Element<Id extends string, R extends IdSpace> =
        * The external record this activity stands for, as a source-qualified identifier such as `github:org/repo#12`. It is the activity's identity in its source and unique across the model's activities.
        */
       readonly source?: string;
+      /**
+       * The entities whose lifecycle this activity changes. A state machine projection for a subject keeps the activities that affect it. Only entity participants can be named.
+       */
+      readonly affects?: readonly R["entity"][];
       /** Artefacts this activity needs before it can run. */
       readonly consumes?: readonly R["artefact"][];
       /** Artefacts this activity makes. An artefact has at most one producing activity. */

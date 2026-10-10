@@ -9,7 +9,8 @@ export type IssueCode =
   | "subject-not-entity"
   | "actor-is-entity"
   | "duplicate-source"
-  | "multiple-producers";
+  | "multiple-producers"
+  | "affects-not-entity";
 
 export interface Issue {
   readonly code: IssueCode;
@@ -95,6 +96,16 @@ export const validate = <I extends IdSpace>(
       case "activity":
         requireActor(element.actor, `activity "${element.id}" actor`);
         require(actionIds, element.action, `activity "${element.id}" action`);
+        for (const id of element.affects ?? []) {
+          const where = `activity "${element.id}" affects`;
+          require(participantIds, id, where);
+          if (participantIds.has(id) && kindOf.get(id) !== "entity") {
+            issues.push({
+              code: "affects-not-entity",
+              message: `${where} "${id}", which is not an entity`,
+            });
+          }
+        }
         for (const id of element.consumes ?? []) {
           require(artefactIds, id, `activity "${element.id}" consumes`);
         }

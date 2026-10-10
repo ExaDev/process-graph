@@ -281,4 +281,31 @@ describe("validate", () => {
       { code: "duplicate-id", message: 'Duplicate artefact id "spec"' },
     ]);
   });
+
+  it("reports an affected participant that is not an entity or not declared", () => {
+    const issues = validate(
+      open({
+        elements: [
+          {
+            kind: "activity",
+            id: "a",
+            label: "A",
+            affects: ["order", "shop", "ghost"],
+          },
+        ],
+        transitions: [],
+      }),
+    );
+
+    expect(issues).toEqual([
+      {
+        code: "affects-not-entity",
+        message: 'activity "a" affects "shop", which is not an entity',
+      },
+      {
+        code: "unknown-reference",
+        message: 'activity "a" affects refers to unknown id "ghost"',
+      },
+    ]);
+  });
 });

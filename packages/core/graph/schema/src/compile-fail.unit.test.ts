@@ -1,4 +1,4 @@
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { defineModel } from "./model.ts";
 
 /** Every block below must fail to compile. `@ts-expect-error` turns a missing failure into an error, so `typecheck` fails when a regression stops one of them failing. */
@@ -219,5 +219,57 @@ describe("defineModel reference checking", () => {
       fragments: [],
       projections: [],
     });
+  });
+
+  it("rejects an activity that affects an actor rather than an entity", () => {
+    defineModel({
+      participants: [
+        { id: "shop", label: "Shop", kind: "system" },
+        { id: "order", label: "Order", kind: "entity" },
+      ],
+      events: [],
+      actions: [],
+      artefacts: [],
+      elements: [
+        // @ts-expect-error "shop" is a system, so it has no lifecycle to affect
+        { kind: "activity", id: "a1", label: "Pack", affects: ["shop"] },
+      ],
+      transitions: [],
+      fragments: [],
+      projections: [],
+    });
+  });
+
+  it("rejects an activity that affects an undeclared participant", () => {
+    defineModel({
+      participants: [{ id: "order", label: "Order", kind: "entity" }],
+      events: [],
+      actions: [],
+      artefacts: [],
+      elements: [
+        // @ts-expect-error "invoice" is not a declared participant
+        { kind: "activity", id: "a1", label: "Pack", affects: ["invoice"] },
+      ],
+      transitions: [],
+      fragments: [],
+      projections: [],
+    });
+  });
+
+  it("accepts an activity that affects a declared entity", () => {
+    const model = defineModel({
+      participants: [{ id: "order", label: "Order", kind: "entity" }],
+      events: [],
+      actions: [],
+      artefacts: [],
+      elements: [
+        { kind: "activity", id: "a1", label: "Pack", affects: ["order"] },
+      ],
+      transitions: [],
+      fragments: [],
+      projections: [],
+    });
+
+    expect(model.elements).toHaveLength(1);
   });
 });

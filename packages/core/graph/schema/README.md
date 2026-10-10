@@ -48,11 +48,15 @@ An activity's actor and a message's ends must be actors; a state machine project
 
 ## What the types cannot say
 
-`validate(model)` returns the issues a runtime model can still have: `duplicate-id`, `unknown-reference`, `multiple-initial`, `subject-not-entity`, `actor-is-entity` and `duplicate-source` and `multiple-producers`. An authored model is already reference-safe at compile time; `validate` is for models loaded from JSON and for the rules the type system cannot state.
+`validate(model)` returns the issues a runtime model can still have: `duplicate-id`, `unknown-reference`, `multiple-initial`, `subject-not-entity`, `actor-is-entity` and `duplicate-source`, `multiple-producers` and `affects-not-entity`. An authored model is already reference-safe at compile time; `validate` is for models loaded from JSON and for the rules the type system cannot state.
 
 ## Source binding
 
 An activity may carry `source`, a source-qualified identifier such as `github:org/repo#12`, tying it to the external record it stands for. The source is the activity's identity in its system, so two activities may not share one (`duplicate-source`). Activities without a source are unaffected.
+
+## Affected entities
+
+An activity may list the `entity` participants whose lifecycle it changes in `affects`. It is typed to the entity space only, so naming a role or a system is a compile error, and `validate` reports the same mistake in a loaded model (`affects-not-entity`). A state machine projection uses it to keep only the activities that change its subject.
 
 ## Artefacts
 
