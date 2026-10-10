@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-sqlite-node",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "The SQLite graph store on Node's built-in node:sqlite through drizzle-orm/node-sqlite, for the command line and servers.",
   "type": "module",
   "repository": {
@@ -57,7 +57,7 @@
   ],
   "dependencies": {
     "@exadev/process-graph-store-contract": "1.0.1",
-    "@exadev/process-graph-store-sqlite": "1.0.0",
+    "@exadev/process-graph-store-sqlite": "1.0.1",
     "drizzle-orm": "1.0.0-rc.4"
   },
   "devDependencies": {

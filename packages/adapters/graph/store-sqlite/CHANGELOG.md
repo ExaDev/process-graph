@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-store-sqlite@1.0.0...@exadev/process-graph-store-sqlite@1.0.1) (2026-10-10)
+
+### Build System
+
+* **store-sqlite:** cache the embedded migrations with the build output ([631efde](https://github.com/ExaDev/process-graph/commit/631efdede06e91e38eb63baf23e916af92f56008))
+
 ## 1.0.0 (2026-10-10)
 
 ### Features

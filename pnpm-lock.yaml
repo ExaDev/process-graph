@@ -312,7 +312,7 @@ importers:
         specifier: 1.0.1
         version: link:../../../core/graph/store-contract
       '@exadev/process-graph-store-sqlite':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../store-sqlite
       drizzle-orm:
         specifier: 1.0.0-rc.4
