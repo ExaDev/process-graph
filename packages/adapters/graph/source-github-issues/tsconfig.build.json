@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "rewriteRelativeImportExtensions": true,
+    "types": ["node"]
+  },
+  "exclude": ["src/**/*.test.ts", "src/test-support/**"],
+  "references": [
+    {
+      "path": "../../../core/graph/source-contract/tsconfig.build.json"
+    }
+  ]
+}
