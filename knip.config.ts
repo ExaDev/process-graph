@@ -25,7 +25,8 @@ const config: KnipConfig = {
       project: ["src/**/*.{ts,tsx}!"],
     },
     "packages/targets/*": {
-      entry: ["src/index.{ts,tsx}"],
+      // A target's bin is an entry point of its own, run as a process rather than imported.
+      entry: ["src/index.{ts,tsx}", "src/bin.ts"],
       project: ["src/**/*.{ts,tsx}!"],
     },
   },

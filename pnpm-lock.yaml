@@ -713,6 +713,70 @@ importers:
         specifier: 5.0.3
         version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0)(yaml@2.9.1))
 
+  packages/targets/graph-cli:
+    dependencies:
+      '@exadev/process-graph-dag':
+        specifier: 1.0.2
+        version: link:../../core/graph/dag
+      '@exadev/process-graph-domain':
+        specifier: 1.0.3
+        version: link:../../core/graph/domain
+      '@exadev/process-graph-projection':
+        specifier: 1.0.3
+        version: link:../../core/graph/projection
+      '@exadev/process-graph-schema':
+        specifier: 1.1.0
+        version: link:../../core/graph/schema
+      '@exadev/process-graph-source-contract':
+        specifier: 1.0.1
+        version: link:../../core/graph/source-contract
+      '@exadev/process-graph-source-github-issues':
+        specifier: 1.0.1
+        version: link:../../adapters/graph/source-github-issues
+      '@exadev/process-graph-sqlite-node':
+        specifier: 1.0.0
+        version: link:../../adapters/graph/sqlite-node
+      '@exadev/process-graph-store-contract':
+        specifier: 1.0.1
+        version: link:../../core/graph/store-contract
+      '@orpc/server':
+        specifier: 2.0.0-beta.41
+        version: 2.0.0-beta.41
+      commander:
+        specifier: 15.0.0
+        version: 15.0.0
+    devDependencies:
+      '@arethetypeswrong/cli':
+        specifier: 0.18.5
+        version: 0.18.5
+      '@stryker-mutator/core':
+        specifier: 10.0.0
+        version: 10.0.0(@types/node@26.6.4)
+      '@stryker-mutator/typescript-checker':
+        specifier: 10.0.0
+        version: 10.0.0(@stryker-mutator/core@10.0.0(@types/node@26.6.4))(typescript@6.0.3)
+      '@stryker-mutator/vitest-runner':
+        specifier: 10.0.0
+        version: 10.0.0(@stryker-mutator/core@10.0.0(@types/node@26.6.4))(vitest@5.0.3)
+      '@types/node':
+        specifier: 26.6.4
+        version: 26.6.4
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
+      eslint:
+        specifier: 10.12.0
+        version: 10.12.0(jiti@2.7.0)(supports-color@7.2.0)
+      publint:
+        specifier: 0.3.25
+        version: 0.3.25
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 5.0.3
+        version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0)(yaml@2.9.1))
+
   packages/targets/process-graph:
     dependencies:
       '@exadev/process-graph-dag':
