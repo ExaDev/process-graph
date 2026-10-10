@@ -1,3 +1,7 @@
+## [1.3.0](https://github.com/ExaDev/process-graph/compare/v1.2.0...v1.3.0) (2026-10-10)
+
+* add domain package ([d531846](https://github.com/ExaDev/process-graph/commit/d531846a6127fd79c2e95a5b5c2792695e5acfae))
+
 ## [1.2.0](https://github.com/ExaDev/process-graph/compare/v1.1.0...v1.2.0) (2026-10-10)
 
 * **projection:** export the unrepresented element types ([966e2aa](https://github.com/ExaDev/process-graph/commit/966e2aa8457aad7860cb9dcec14e7b372d38ebb4))
