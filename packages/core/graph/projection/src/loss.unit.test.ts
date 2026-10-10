@@ -119,4 +119,145 @@ describe("loss reports", () => {
 
     expect(toFlowchart(bare).loss).toEqual([]);
   });
+
+  describe("elements a notation cannot draw", () => {
+    /** A `state` and a `history` pseudo-state, which no flowchart shape exists for, plus a fork that a flowchart draws and a state machine does not. */
+    const stateful = defineModel({
+      participants: [
+        { id: "customer", label: "Customer", kind: "role" },
+        { id: "order", label: "Order", kind: "entity" },
+      ],
+      events: [],
+      actions: [],
+      artefacts: [],
+      elements: [
+        { kind: "pseudo", id: "start", role: "initial" },
+        { kind: "activity", id: "a-pay", label: "Pay", actor: "customer" },
+        { kind: "state", id: "s-paid", label: "Paid" },
+        { kind: "pseudo", id: "h", role: "history" },
+        { kind: "pseudo", id: "fork", role: "fork" },
+        { kind: "pseudo", id: "end", role: "final" },
+      ],
+      transitions: [
+        { id: "t1", source: "start", target: "a-pay" },
+        { id: "t2", source: "a-pay", target: "s-paid" },
+        { id: "t3", source: "s-paid", target: "h" },
+        { id: "t4", source: "a-pay", target: "fork" },
+        { id: "t5", source: "fork", target: "end" },
+      ],
+      fragments: [],
+      projections: [],
+    });
+
+    it("reports the state and the history pseudo-state a flowchart drops, with their transitions", () => {
+      const flow = toFlowchart(stateful);
+
+      expect(flow.nodes.map((node) => node.id)).toEqual([
+        "start",
+        "a-pay",
+        "fork",
+        "end",
+      ]);
+      expect(flow.loss).toEqual([
+        {
+          kind: "unrepresented-elements",
+          notation: "flowchart",
+          elements: [
+            { element: "s-paid", kind: "state" },
+            { element: "h", kind: "history" },
+          ],
+          transitions: ["t2", "t3"],
+        },
+      ]);
+    });
+
+    it("reports the same drop for a swimlane under its own notation", () => {
+      expect(toSwimlane(stateful).loss).toEqual([
+        {
+          kind: "unrepresented-elements",
+          notation: "swimlane",
+          elements: [
+            { element: "s-paid", kind: "state" },
+            { element: "h", kind: "history" },
+          ],
+          transitions: ["t2", "t3"],
+        },
+      ]);
+    });
+
+    it("reports the fork and history a state machine has no state for, and leaves no transition pointing at them", () => {
+      const machine = toStateMachine(stateful, "order");
+
+      expect(machine.states.map((state) => state.id)).toEqual([
+        "start",
+        "a-pay",
+        "s-paid",
+        "end",
+      ]);
+      expect(machine.transitions.map((t) => [t.source, t.target])).toEqual([
+        ["start", "a-pay"],
+        ["a-pay", "s-paid"],
+      ]);
+      expect(machine.loss).toEqual([
+        {
+          kind: "unrepresented-elements",
+          notation: "stateMachine",
+          elements: [
+            { element: "h", kind: "history" },
+            { element: "fork", kind: "fork" },
+          ],
+          transitions: ["t3", "t4", "t5"],
+        },
+      ]);
+    });
+
+    it("does not report a decision a state machine folds into guards", () => {
+      const decided = defineModel({
+        participants: [{ id: "order", label: "Order", kind: "entity" }],
+        events: [],
+        actions: [],
+        artefacts: [],
+        elements: [
+          { kind: "activity", id: "a", label: "A" },
+          { kind: "decision", id: "d", label: "D" },
+          { kind: "activity", id: "b", label: "B" },
+        ],
+        transitions: [
+          { id: "t1", source: "a", target: "d" },
+          { id: "t2", source: "d", target: "b", guard: "yes" },
+        ],
+        fragments: [],
+        projections: [],
+      });
+
+      expect(toStateMachine(decided, "order").loss).toEqual([]);
+    });
+  });
+
+  it("reports scenario steps that touch an element with no actor as skipped", () => {
+    const partial = defineModel({
+      participants: [
+        { id: "customer", label: "Customer", kind: "role" },
+        { id: "shop", label: "Shop", kind: "system" },
+      ],
+      events: [],
+      actions: [],
+      artefacts: [],
+      elements: [
+        { kind: "pseudo", id: "start", role: "initial" },
+        { kind: "activity", id: "a", label: "A", actor: "customer" },
+        { kind: "activity", id: "b", label: "B", actor: "shop" },
+      ],
+      transitions: [
+        { id: "t1", source: "start", target: "a" },
+        { id: "t2", source: "a", target: "b" },
+      ],
+      fragments: [],
+      projections: [],
+    });
+
+    expect(toSequence(partial, ["t1", "t2"]).loss).toEqual([
+      { kind: "skipped-steps", transitions: ["t1"] },
+    ]);
+  });
 });

@@ -174,6 +174,7 @@ describe("the order process", () => {
       loss: [
         { kind: "scenario", elements: ["a-cancel"] },
         { kind: "unshown-branches", transitions: ["t6"] },
+        { kind: "skipped-steps", transitions: ["t1", "t7"] },
       ],
     });
   });
@@ -185,6 +186,7 @@ describe("the order process", () => {
     expect(diagram.loss).toEqual([
       { kind: "scenario", elements: ["a-pack"] },
       { kind: "unshown-branches", transitions: ["t5"] },
+      { kind: "skipped-steps", transitions: ["t1", "t8"] },
     ]);
     expect(diagram.messages.map((message) => message.label)).toEqual([
       "Request payment",

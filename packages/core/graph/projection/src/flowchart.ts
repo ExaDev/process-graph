@@ -1,6 +1,6 @@
 import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import type { ElementOf } from "./actors.ts";
-import { commonLoss, type Loss } from "./loss.ts";
+import { commonLoss, unrepresentedLoss, type Loss } from "./loss.ts";
 
 export interface FlowNode<I extends IdSpace> {
   readonly id: I["element"];
@@ -51,7 +51,28 @@ const flowNode = <I extends IdSpace>(
   return undefined;
 };
 
-/** Activities, decisions and terminators, joined by the transitions between them. */
+/**
+ * What a flowchart-shaped projection drops: the common losses, then the elements the flowchart has no node for (`state` elements and `history` pseudo-states) and the transitions that touch them.
+ * @param model - The model projected.
+ * @param notation - The notation the result is for, `flowchart` or `swimlane`.
+ * @param nodes - The nodes the projection drew.
+ */
+export const flowchartLoss = <I extends IdSpace>(
+  model: Model<I>,
+  notation: "flowchart" | "swimlane",
+  nodes: readonly FlowNode<I>[],
+): readonly Loss<I>[] => [
+  ...commonLoss(model, notation),
+  ...unrepresentedLoss(
+    model,
+    notation,
+    new Set<I["element"]>(nodes.map((node) => node.id)),
+  ),
+];
+
+/**
+ * Activities, decisions and terminators, joined by the transitions between them. `state` elements and `history` pseudo-states have no flowchart shape and are reported as unrepresented, with the transitions that touch them.
+ */
 export const toFlowchart = <I extends IdSpace>(
   model: Model<I>,
 ): Flowchart<I> => {
@@ -79,5 +100,5 @@ export const toFlowchart = <I extends IdSpace>(
     }
   }
 
-  return { nodes, edges, loss: commonLoss(model, "flowchart") };
+  return { nodes, edges, loss: flowchartLoss(model, "flowchart", nodes) };
 };
