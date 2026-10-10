@@ -16,6 +16,7 @@ export {
   type ArtefactBasis,
   type IncomingBasis,
   type ProducerBasis,
+  type StatusBasis,
   type StatusRule,
 } from "./derive.ts";
 export {
