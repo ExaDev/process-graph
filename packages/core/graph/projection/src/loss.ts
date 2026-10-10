@@ -1,7 +1,21 @@
-import type { IdSpace, Model, Notation } from "@exadev/process-graph-schema";
+import type {
+  IdSpace,
+  Model,
+  Notation,
+  PseudoRole,
+} from "@exadev/process-graph-schema";
+
+/** What an element that a notation cannot draw is: an element kind, or the role of a pseudo-state. */
+export type UnrepresentedKind = "activity" | "decision" | "state" | PseudoRole;
+
+/** An element a projection could not draw, and what it was. */
+export interface UnrepresentedElement<I extends IdSpace> {
+  readonly element: I["element"];
+  readonly kind: UnrepresentedKind;
+}
 
 /**
- * Something a projection does not carry from the model into its result. A projection returns every loss that applies, in this order: layout, extensions, message elements, fragments, then the notation's own choice (subject, scenario, unshown branches). A kind is only reported when something was actually dropped.
+ * Something a projection does not carry from the model into its result. A projection returns every loss that applies, in this order: layout, extensions, message elements, fragments, then the notation's own choice (unrepresented elements, subject, scenario, unshown branches, skipped steps). A kind is only reported when something was actually dropped.
  */
 export type Loss<I extends IdSpace> =
   /** Positions recorded for this projection's notation in `views`. No projection reads or keeps coordinates. */
@@ -18,6 +32,13 @@ export type Loss<I extends IdSpace> =
       readonly kind: "fragments";
       readonly fragments: readonly I["fragment"][];
     }
+  /** Elements, other than messages, that the notation has no way to draw, and the transitions left out because one end of them is such an element. */
+  | {
+      readonly kind: "unrepresented-elements";
+      readonly notation: Notation;
+      readonly elements: readonly UnrepresentedElement<I>[];
+      readonly transitions: readonly I["transition"][];
+    }
   /** Activities left out of a state machine because they do not affect its subject. */
   | {
       readonly kind: "subject";
@@ -30,7 +51,49 @@ export type Loss<I extends IdSpace> =
   | {
       readonly kind: "unshown-branches";
       readonly transitions: readonly I["transition"][];
+    }
+  /** Scenario steps that produced no message because an end of the transition has no actor. */
+  | {
+      readonly kind: "skipped-steps";
+      readonly transitions: readonly I["transition"][];
     };
+
+/**
+ * The elements the notation cannot draw: every element that is neither in `accounted` (drawn, or folded away by design, as a decision is in a state machine) nor a `message`, which is reported as `message-elements` by every projection.
+ * @param model - The model being projected.
+ * @param notation - The notation that cannot draw them.
+ * @param accounted - Elements the projection draws or folds away by design.
+ * @returns A single `unrepresented-elements` loss, or none when every element is accounted for.
+ */
+export const unrepresentedLoss = <I extends IdSpace>(
+  model: Model<I>,
+  notation: Notation,
+  accounted: ReadonlySet<I["element"]>,
+): readonly Loss<I>[] => {
+  const elements: UnrepresentedElement<I>[] = [];
+  for (const element of model.elements) {
+    if (element.kind === "message" || accounted.has(element.id)) {
+      continue;
+    }
+    elements.push({
+      element: element.id,
+      kind: element.kind === "pseudo" ? element.role : element.kind,
+    });
+  }
+  if (elements.length === 0) {
+    return [];
+  }
+
+  const lost = new Set<I["element"]>(elements.map((entry) => entry.element));
+  const transitions = model.transitions
+    .filter(
+      (transition) =>
+        lost.has(transition.source) || lost.has(transition.target),
+    )
+    .map((transition) => transition.id);
+
+  return [{ kind: "unrepresented-elements", notation, elements, transitions }];
+};
 
 /** The losses every projection can have, whatever its notation: dropped layout, notation-only extensions, message elements and authored fragments. */
 export const commonLoss = <I extends IdSpace>(

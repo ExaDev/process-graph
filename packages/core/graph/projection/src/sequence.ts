@@ -181,7 +181,7 @@ const wrapFragments = <I extends IdSpace>(
 };
 
 /**
- * One path through the process as messages. A step between two elements with actors becomes a message, labelled by the transition's event when it has one and by the target's label otherwise. Steps touching an element with no actor are skipped. Branches off the path are not drawn, which is why this direction is lossy and one-to-many.
+ * One path through the process as messages. A step between two elements with actors becomes a message, labelled by the transition's event when it has one and by the target's label otherwise. Steps touching an element with no actor are skipped and reported as `skipped-steps`. Branches off the path are not drawn, which is why this direction is lossy and one-to-many.
  
 `messages` is the flat list. `items` is the same messages with the authored fragments the scenario passes through wrapped around the ones that fall inside them; a fragment that cannot be drawn faithfully is left out and reported in `loss`.
  */
@@ -203,6 +203,7 @@ export const toSequence = <I extends IdSpace>(
     model.events.map((event) => [event.id, event.name]),
   );
 
+  const skipped: I["transition"][] = [];
   const lifelines: I["actor"][] = [];
   const messages: SequenceMessage<I>[] = [];
   const entries: Entry<I>[] = [];
@@ -214,6 +215,7 @@ export const toSequence = <I extends IdSpace>(
     const from = actors.get(transition.source);
     const to = actors.get(transition.target);
     if (from === undefined || to === undefined) {
+      skipped.push(id);
       continue;
     }
     for (const participant of [from, to]) {
@@ -267,6 +269,10 @@ export const toSequence = <I extends IdSpace>(
       kind: "unshown-branches",
       transitions: unshown.map((transition) => transition.id),
     });
+  }
+
+  if (skipped.length > 0) {
+    loss.push({ kind: "skipped-steps", transitions: skipped });
   }
 
   return { lifelines, messages, items, loss };

@@ -41,17 +41,19 @@ A message belongs to an operand when it arrives at an element in that operand's 
 
 Every projection result carries `loss`, what it did not carry over from the model. Each `Loss` is a discriminated union on `kind`, reported only when something was actually dropped, in this order:
 
-| `kind`             | Dropped                                                                         | Reported by      |
-| ------------------ | ------------------------------------------------------------------------------- | ---------------- |
-| `layout`           | Positions recorded in `views` for this projection's own notation.               | every projection |
-| `extensions`       | Notation-only `extensions` on elements, which no projection shows.              | every projection |
-| `message-elements` | `message` elements, which no projection draws.                                  | every projection |
-| `fragments`        | Authored fragments the projection does not draw.                                | every projection |
-| `subject`          | Activities left out because they do not affect the state machine's subject.     | `toStateMachine` |
-| `scenario`         | Elements of the model that are not on the scenario.                             | `toSequence`     |
-| `unshown-branches` | Transitions leaving an element on the scenario that the scenario does not take. | `toSequence`     |
+| `kind`                   | Dropped                                                                                                                                      | Reported by                                   |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `layout`                 | Positions recorded in `views` for this projection's own notation.                                                                            | every projection                              |
+| `extensions`             | Notation-only `extensions` on elements, which no projection shows.                                                                           | every projection                              |
+| `message-elements`       | `message` elements, which no projection draws.                                                                                               | every projection                              |
+| `fragments`              | Authored fragments the projection does not draw.                                                                                             | every projection                              |
+| `unrepresented-elements` | Elements the notation has no way to draw (`state`, `history`, and in a state machine `fork` and `join`), with the transitions touching them. | `toFlowchart`, `toSwimlane`, `toStateMachine` |
+| `subject`                | Activities left out because they do not affect the state machine's subject.                                                                  | `toStateMachine`                              |
+| `scenario`               | Elements of the model that are not on the scenario.                                                                                          | `toSequence`                                  |
+| `unshown-branches`       | Transitions leaving an element on the scenario that the scenario does not take.                                                              | `toSequence`                                  |
+| `skipped-steps`          | Scenario steps that touch an element with no actor and so draw no message.                                                                   | `toSequence`                                  |
 
-A flowchart drops ownership, a state machine needs its subject recorded, and a sequence diagram follows one path, so one model yields a different diagram per scenario.
+Decisions a state machine folds into guards are by design and not a loss. A flowchart drops ownership, a state machine needs its subject recorded, and a sequence diagram follows one path, so one model yields a different diagram per scenario.
 
 ## Commands
 

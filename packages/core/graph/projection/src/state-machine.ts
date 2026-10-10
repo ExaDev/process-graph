@@ -1,6 +1,6 @@
 import type { IdSpace, Model, Transition } from "@exadev/process-graph-schema";
 import type { ElementOf } from "./actors.ts";
-import { commonLoss, type Loss } from "./loss.ts";
+import { commonLoss, unrepresentedLoss, type Loss } from "./loss.ts";
 
 export interface StateMachineState<I extends IdSpace> {
   readonly id: I["element"];
@@ -52,6 +52,8 @@ const stateOf = <I extends IdSpace>(
  * Activity-as-state projection. Each activity that affects the subject becomes a state the subject entity rests in, and a decision collapses into guarded transitions leaving the state before it. The target activity's action becomes the effect of the transition that enters it.
  *
  * Which activities affect the subject is declared by their `affects`. An activity that does not list the subject is not a state of it: transitions through it are folded into the transition that leaves the previous state, exactly as a decision is. Authored `state` elements and pseudo-states are always kept. When no activity in the model declares `affects`, the model carries no such information and every activity is kept, which is the unscoped behaviour.
+ *
+ * Decisions are folded into guards by design and are not a loss. Fork, join and history pseudo-states have no state of their own here and are reported as unrepresented, together with the transitions that touch them, which are left out rather than pointing at a state that is not drawn.
  *
  * Other conventions exist, such as steps as transitions with states between them. Naming states such as "Paid" needs authored states, which the model can hold as `state` elements.
  */
@@ -147,6 +149,15 @@ export const toStateMachine = <I extends IdSpace>(
   };
 
   const states: StateMachineState<I>[] = [];
+  const stateIds = new Set<I["element"]>();
+  const folded = new Set<I["element"]>();
+  for (const element of model.elements) {
+    if (isTransparent(element)) {
+      folded.add(element.id);
+    } else if (stateOf<I>(element) !== undefined) {
+      stateIds.add(element.id);
+    }
+  }
   const transitions: StateMachineTransition<I>[] = [];
   for (const element of model.elements) {
     const state = isTransparent(element) ? undefined : stateOf<I>(element);
@@ -156,6 +167,9 @@ export const toStateMachine = <I extends IdSpace>(
     states.push(state);
     for (const transition of outgoing.get(element.id) ?? []) {
       for (const arrival of resolve(transition, new Set<I["element"]>())) {
+        if (!stateIds.has(arrival.target)) {
+          continue;
+        }
         transitions.push({
           source: element.id,
           target: arrival.target,
@@ -167,15 +181,22 @@ export const toStateMachine = <I extends IdSpace>(
     }
   }
 
-  const folded = model.elements.filter(
+  const loss: Loss<I>[] = [
+    ...commonLoss(model, "stateMachine"),
+    ...unrepresentedLoss(
+      model,
+      "stateMachine",
+      new Set<I["element"]>([...stateIds, ...folded]),
+    ),
+  ];
+  const skipped = model.elements.filter(
     (element) => element.kind === "activity" && isTransparent(element),
   );
-  const loss: Loss<I>[] = [...commonLoss(model, "stateMachine")];
-  if (folded.length > 0) {
+  if (skipped.length > 0) {
     loss.push({
       kind: "subject",
       subject,
-      elements: folded.map((element) => element.id),
+      elements: skipped.map((element) => element.id),
     });
   }
 
