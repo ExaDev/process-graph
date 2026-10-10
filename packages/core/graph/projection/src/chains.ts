@@ -124,7 +124,7 @@ export const once = <T>(compute: () => T): (() => T) => {
 /**
  * Indexes a model's folded elements so chains can be read off for any first transition.
  *
- * The folded elements are condensed into strongly connected components in one pass, and the condensed graph is read in reverse topological order. A component gets a flat array of its accepted targets only when something reads it on its own: it is entered from an element that is not folded, or from two or more components. Every other component has at most one component before it and is read as part of that one, so it is visited once in all. Arrays are built on demand and remembered, so a region no start reaches costs nothing; a generation stamp per target removes duplicates in constant time, a component with nothing of its own to add shares the one array it reads, and the only builder of an array nothing else reads extends it in place instead of copying it. The total work is linear in the elements and transitions plus the sizes of the arrays that must be copied, which is where two or more starts, or two or more components, read the same targets. Folded elements entered from exactly one folded element, outside any cycle, form a forest of routes; each records how deep it is and the last trigger, effect and guard on the way down to it, so a single-route chain's labels are found from its ends in constant time.
+ * The folded elements that lead to some accepted element are found first, by one walk back from the accepted elements, and no walk enters any other, so a run that leads nowhere costs nothing. The folded elements are condensed into strongly connected components in one pass, and the condensed graph is read in reverse topological order. A component gets a flat array of its accepted targets only when something reads it on its own: it is entered from an element that is not folded, or from two or more components. Every other component has at most one component before it and is read as part of that one, so it is visited once in all. Arrays are built on demand and remembered, so a region no start reaches costs nothing; a generation stamp per target removes duplicates in constant time, a component with nothing of its own to add shares the one array it reads, and the only builder of an array nothing else reads extends it in place instead of copying it. The total work is linear in the elements and transitions plus the sizes of the arrays that must be copied, which is where two or more starts, or two or more components, read the same targets. Folded elements entered from exactly one folded element, outside any cycle, form a forest of routes; each records how deep it is and the last trigger, effect and guard on the way down to it, so a single-route chain's labels are found from its ends in constant time.
  *
  * Merged chains' lists, and every chain's lists, are built only when read.
  */
@@ -159,6 +159,32 @@ export const chainIndex = <I extends IdSpace>(
       transition,
     );
   }
+
+  // The folded elements that lead to some accepted element, found once by walking back from the accepted elements over the transitions into them. No walk enters any other folded element, so a suffix that leads nowhere costs nothing however many chains pass its entrance.
+  const live = new Set<I["element"]>();
+  const towards: I["element"][] = [];
+  for (const [target, into] of arrivingIn) {
+    if (!folding.accepted(target)) {
+      continue;
+    }
+    for (const { source } of into) {
+      if (!live.has(source)) {
+        live.add(source);
+        towards.push(source);
+      }
+    }
+  }
+  for (let at = towards.pop(); at !== undefined; at = towards.pop()) {
+    for (const { source } of foldedIn.get(at) ?? []) {
+      if (!live.has(source)) {
+        live.add(source);
+        towards.push(source);
+      }
+    }
+  }
+  /** Whether a walk follows a transition: into a folded element that leads somewhere, or into an accepted element. */
+  const followed = (target: I["element"]): boolean =>
+    isFolded.has(target) ? live.has(target) : folding.accepted(target);
 
   const foldedIds = [...isFolded];
   const components = stronglyConnectedComponents(
@@ -496,18 +522,37 @@ export const chainIndex = <I extends IdSpace>(
     );
   };
 
-  /** What a depth-first walk from a folded element meets: each transition and each folded element entered, numbered in the order met, and the transitions met indexed by the element they arrive at. Done once per element walked from, however many chains start there or end at its targets. */
+  /** What a depth-first walk from a component meets, among the transitions it follows: each transition and each folded element entered, numbered in the order met, and the transitions met indexed by the element they arrive at. Done once per component, from its first member in model order, however many chains start in it or end at its targets; every member of a component reaches the same elements, so they share it. */
   interface Walk {
     readonly order: ReadonlyMap<TransitionOf<I>, number>;
     readonly entered: ReadonlyMap<I["element"], number>;
     readonly into: ReadonlyMap<I["element"], readonly TransitionOf<I>[]>;
   }
-  const walks = new Map<I["element"], Walk>();
-  const walkFrom = (start: I["element"]): Walk => {
-    const known = walks.get(start);
+  const position = new Map<I["element"], number>(
+    foldedIds.map((id, index) => [id, index]),
+  );
+  const rootOf = (component: number): I["element"] | undefined => {
+    let root: I["element"] | undefined;
+    for (const member of components[component] ?? []) {
+      if (
+        root === undefined ||
+        (position.get(member) ?? 0) < (position.get(root) ?? 0)
+      ) {
+        root = member;
+      }
+    }
+
+    return root;
+  };
+  const walks = new Map<number, Walk>();
+  const walkFrom = (element: I["element"]): Walk => {
+    const component = componentOf.get(element);
+    const known = component === undefined ? undefined : walks.get(component);
     if (known !== undefined) {
       return known;
     }
+    const start =
+      (component === undefined ? undefined : rootOf(component)) ?? element;
     const order = new Map<TransitionOf<I>, number>();
     const entered = new Map<I["element"], number>([[start, 0]]);
     const into = new Map<I["element"], TransitionOf<I>[]>();
@@ -521,6 +566,9 @@ export const chainIndex = <I extends IdSpace>(
         continue;
       }
       top.next += 1;
+      if (!followed(transition.target)) {
+        continue;
+      }
       order.set(transition, order.size);
       append(into, transition.target, transition);
       if (isFolded.has(transition.target) && !entered.has(transition.target)) {
@@ -529,7 +577,9 @@ export const chainIndex = <I extends IdSpace>(
       }
     }
     const walk = { order, entered, into };
-    walks.set(start, walk);
+    if (component !== undefined) {
+      walks.set(component, walk);
+    }
 
     return walk;
   };
@@ -690,31 +740,21 @@ export const chainIndex = <I extends IdSpace>(
     const reached = new Set<I["element"]>();
     const stack: I["element"][] = [];
     for (const first of firsts) {
-      if (isFolded.has(first.target) && !reached.has(first.target)) {
+      if (live.has(first.target) && !reached.has(first.target)) {
         reached.add(first.target);
         stack.push(first.target);
       }
     }
     for (let at = stack.pop(); at !== undefined; at = stack.pop()) {
       for (const transition of outgoing.get(at) ?? []) {
-        if (
-          isFolded.has(transition.target) &&
-          !reached.has(transition.target)
-        ) {
+        if (live.has(transition.target) && !reached.has(transition.target)) {
           reached.add(transition.target);
           stack.push(transition.target);
         }
       }
     }
-    const leading = new Set<I["element"]>();
-    for (const id of reached) {
-      const component = componentOf.get(id);
-      if (component !== undefined && leads[component] === true) {
-        leading.add(id);
-      }
-    }
 
-    return leading;
+    return reached;
   };
 
   return {
