@@ -9,6 +9,9 @@
     },
     {
       "path": "packages/core/graph/projection/tsconfig.build.json"
+    },
+    {
+      "path": "packages/core/graph/domain/tsconfig.build.json"
     }
   ]
 }

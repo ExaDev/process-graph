@@ -1,0 +1,75 @@
+{
+  "name": "@exadev/process-graph-domain",
+  "version": "0.0.0",
+  "description": "Reasoning over the process model and a run overlay: control graph, illegal cycles, three-valued status, decision evaluation, ready set, blocked-by, impact, what-if and critical path.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ExaDev/process-graph.git",
+    "directory": "packages/core/graph/domain"
+  },
+  "homepage": "https://github.com/ExaDev/process-graph/tree/main/packages/core/graph/domain#readme",
+  "bugs": {
+    "url": "https://github.com/ExaDev/process-graph/issues"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
+  },
+  "sideEffects": false,
+  "license": "MIT",
+  "scripts": {
+    "build": "turbo run _build",
+    "_build": "tsc -b tsconfig.build.json",
+    "lint": "turbo run _lint",
+    "_lint": "eslint . --cache --max-warnings 0",
+    "_lint:fix": "eslint . --fix --cache --max-warnings 0",
+    "typecheck": "turbo run _typecheck _typecheck:attw",
+    "_typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "_typecheck:attw": "attw --pack --profile esm-only",
+    "test": "turbo run _test",
+    "_test": "vitest run --project unit",
+    "test:coverage": "turbo run _test:coverage",
+    "_test:coverage": "vitest run --project unit --coverage",
+    "test:smoke": "turbo run _test:smoke",
+    "_test:smoke": "vitest run --project smoke",
+    "test:mutation": "turbo run _test:mutation",
+    "_test:mutation": "stryker run stryker.config.ts",
+    "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && publint && attw --pack --profile esm-only"
+  },
+  "keywords": [
+    "process-model",
+    "dependency-graph",
+    "three-valued-logic",
+    "critical-path",
+    "what-if"
+  ],
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/typescript-checker": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
+    "@types/node": "26.6.4",
+    "@vitest/coverage-v8": "4.1.11",
+    "eslint": "10.12.0",
+    "publint": "0.3.25",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11"
+  },
+  "dependencies": {
+    "@exadev/process-graph-dag": "0.0.0",
+    "@exadev/process-graph-schema": "0.0.0",
+    "trilean": "1.7.2"
+  }
+}
