@@ -50,6 +50,19 @@ An activity's actor and a message's ends must be actors; a state machine project
 
 `validate(model)` returns the issues a runtime model can still have: `duplicate-id`, `unknown-reference`, `multiple-initial`, `subject-not-entity` and `actor-is-entity`. An authored model is already reference-safe at compile time; `validate` is for models loaded from JSON and for the rules the type system cannot state.
 
+## Loading a model
+
+`parseModel(input)` loads a model from untrusted input such as parsed JSON and returns a `Model<OpenIds>`. It checks the shape with `modelSchema` first, so every shape problem is reported with the JSON pointer of the offending value, then runs `validate`. A bad input throws `ModelParseError`, whose `issues` are either `{ source: "schema", pointer, message }` or `{ source: "validate", code, message }`.
+
+### Types and the open schema
+
+The two cover different things on purpose.
+
+- **Types** carry what only an author can get wrong before the model exists: a reference to an undeclared identifier, an identifier of the wrong space, an entity acting. They need the identifiers to be literals, so they only apply to a model written in source.
+- **The open schema** carries what a loaded document can get wrong: shape, vocabulary, unknown keys (every object is strict, so a misspelt field is an error and is never dropped), then the rules in `validate`.
+
+`z.infer<typeof modelSchema>` is exactly `Model<OpenIds>`, pinned by a type-level test, so a loaded model is usable anywhere an open-space model is.
+
 ## Layout
 
 Layout is not part of the model's meaning. `views` holds optional positions keyed by element identifier and notation, so a projection never has to preserve or read coordinates.
