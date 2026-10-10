@@ -1,6 +1,6 @@
 import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import { actorMap } from "./actors.ts";
-import { flowchartLoss, toFlowchart, type Flowchart } from "./flowchart.ts";
+import { flowchartLoss, flowchartParts, type Flowchart } from "./flowchart.ts";
 import { handoffs, type Handoff } from "./handoffs.ts";
 
 /** One lane. `participant` is a declared role or system; in a runtime model it may instead be an actor that was named but never declared, which `validate` reports. */
@@ -21,7 +21,8 @@ export interface Swimlane<I extends IdSpace> extends Flowchart<I> {
  * A flowchart plus partitions: a lane for every declared role or system, in declaration order and empty when nothing is assigned to it, then a lane for each actor that was named but never declared. Hand-offs are the edges that change lane.
  */
 export const toSwimlane = <I extends IdSpace>(model: Model<I>): Swimlane<I> => {
-  const flow = toFlowchart(model);
+  const parts = flowchartParts(model);
+  const flow = parts.flowchart;
   const actors = actorMap(model);
 
   const members = new Map<I["participant"] | I["actor"], I["element"][]>();
@@ -64,6 +65,6 @@ export const toSwimlane = <I extends IdSpace>(model: Model<I>): Swimlane<I> => {
     lanes,
     unassigned,
     handoffs: handoffs(model),
-    loss: flowchartLoss(model, "swimlane", flow),
+    loss: flowchartLoss(model, "swimlane", flow.nodes, parts.carried),
   };
 };

@@ -1,13 +1,13 @@
 import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import { actorMap } from "./actors.ts";
-import { chainsFrom, outgoingMap } from "./chains.ts";
+import { chainIndex } from "./chains.ts";
 
 export interface Handoff<I extends IdSpace> {
   /** The transition the hand-off starts with. */
   readonly transition: I["transition"];
   readonly from: I["actor"];
   readonly to: I["actor"];
-  /** The `message` elements the hand-off passes through, in order, when it is carried by a message. */
+  /** The `message` elements the hand-off passes through, each once in the order met, when it is carried by a message; built when first read. */
   readonly through?: readonly I["element"][];
 }
 
@@ -25,8 +25,10 @@ export const handoffs = <I extends IdSpace>(
       element.kind === "message" ? [element.id] : [],
     ),
   );
-  const outgoing = outgoingMap(model);
-  const isMessage = (id: I["element"]): boolean => messages.has(id);
+  const index = chainIndex(model, {
+    folded: (id) => messages.has(id),
+    accepted: (id) => actorOf.has(id),
+  });
 
   const found: Handoff<I>[] = [];
   for (const transition of model.transitions) {
@@ -34,16 +36,23 @@ export const handoffs = <I extends IdSpace>(
     if (from === undefined) {
       continue;
     }
-    for (const chain of chainsFrom(transition, outgoing, isMessage)) {
+    for (const chain of index.from(transition)) {
       const to = actorOf.get(chain.target);
-      if (to !== undefined && from !== to) {
-        found.push({
-          transition: transition.id,
-          from,
-          to,
-          ...(chain.through.length === 0 ? {} : { through: chain.through }),
-        });
+      if (to === undefined || from === to) {
+        continue;
       }
+      found.push(
+        transition.target === chain.target
+          ? { transition: transition.id, from, to }
+          : {
+              transition: transition.id,
+              from,
+              to,
+              get through(): readonly I["element"][] {
+                return chain.through();
+              },
+            },
+      );
     }
   }
 

@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   applyModelDiff,
   diffFlowchart,
+  handoffs,
+  toFlowchart,
   toSequence,
+  toStateMachine,
+  toSwimlane,
   type FlowEdge,
   type FlowNode,
   type ModelDiff,
@@ -257,5 +261,94 @@ describe("toSequence's derived fragments", () => {
         operands: [{ guard: "done", items: [message("t-x", "X")] }],
       },
     ]);
+  });
+});
+
+/** Message elements in a line between activities: `sources` activities lead into the first message, and the last message leads to `ends` activities. */
+const messageRun = (
+  length: number,
+  sources: number,
+  ends: number,
+): Model<OpenIds> => {
+  const run = ids(length, "m-");
+  const starts = ids(sources, "s-");
+  const finishes = ids(ends, "e-");
+
+  return {
+    ...empty,
+    participants: [
+      { id: "customer", label: "Customer", kind: "role" },
+      { id: "shop", label: "Shop", kind: "system" },
+      { id: "order", label: "Order", kind: "entity" },
+    ],
+    elements: [
+      ...starts.map((id) => ({
+        kind: "activity" as const,
+        id,
+        label: id,
+        actor: "customer",
+      })),
+      ...run.map((id) => ({
+        kind: "message" as const,
+        id,
+        label: id,
+        from: "customer",
+        to: "shop",
+        mode: "async" as const,
+      })),
+      ...finishes.map((id) => ({
+        kind: "activity" as const,
+        id,
+        label: id,
+        actor: "shop",
+      })),
+    ],
+    transitions: [
+      ...starts.map((id) => ({ id: `t-${id}`, source: id, target: "m-0" })),
+      ...run.slice(1).map((id, index) => ({
+        id: `t-${id}`,
+        source: run[index] ?? id,
+        target: id,
+      })),
+      ...finishes.map((id) => ({
+        id: `t-${id}`,
+        source: `m-${String(length - 1)}`,
+        target: id,
+      })),
+    ],
+  };
+};
+
+/** Transition reads every chain-drawing projection makes over a model. */
+const chainReads = (model: Model<OpenIds>): number => {
+  const counting = countingTransitions(model);
+  toFlowchart(counting.model);
+  toSwimlane(counting.model);
+  handoffs(counting.model);
+  toStateMachine(counting.model, "order");
+
+  return counting.reads();
+};
+
+describe("chains through runs of message elements", () => {
+  it("does not copy a long run of messages once per end it fans out to", () => {
+    expect(chainReads(messageRun(2 * size, 1, 2 * size))).toBeLessThan(
+      growthLimit * chainReads(messageRun(size, 1, size)),
+    );
+  });
+
+  it("does not walk a shared run of messages once per source leading into it", () => {
+    expect(chainReads(messageRun(2 * size, 2 * size, 1))).toBeLessThan(
+      growthLimit * chainReads(messageRun(size, size, 1)),
+    );
+  });
+
+  it("still lists a chain's whole run when it is read", () => {
+    const model = messageRun(size, 1, 1);
+    const [edge] = toFlowchart(model).edges;
+
+    expect(edge?.through).toEqual(ids(size, "m-"));
+    expect(edge?.transitions).toHaveLength(size + 1);
+    expect(edge?.label).toBe(ids(size, "m-").join(", "));
   });
 });

@@ -2,12 +2,13 @@ import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import type { ElementOf } from "./actors.ts";
 import type { TransitionOf } from "./chains.ts";
 import type { ElementChange, ModelDiff, TransitionChange } from "./diff.ts";
-import { toFlowchart, type FlowEdge, type FlowNode } from "./flowchart.ts";
+import {
+  flowchartParts,
+  type EdgeOrigin,
+  type FlowEdge,
+  type FlowNode,
+} from "./flowchart.ts";
 import type { Swimlane } from "./swimlane.ts";
-
-/** The key an edge is matched by across the original and the edited view: the transitions it stands for. */
-const edgeKey = <I extends IdSpace>(edge: FlowEdge<I>): string =>
-  JSON.stringify(edge.transitions);
 
 /** How many edited edges arrive at and leave each node, counted in one pass over the edges. */
 interface Degrees<I extends IdSpace> {
@@ -85,7 +86,8 @@ const diffFlow = <I extends IdSpace>(
   }>,
   actorOf: (node: I["element"]) => I["actor"] | undefined,
 ): Pick<ModelDiff<I>, "elements" | "transitions"> => {
-  const original = toFlowchart(model);
+  const parts = flowchartParts(model);
+  const original = parts.flowchart;
   const elements = new Map<I["element"], ElementOf<I>>(
     model.elements.map((element) => [element.id, element]),
   );
@@ -138,34 +140,64 @@ const diffFlow = <I extends IdSpace>(
   }
 
   const transitionChanges: TransitionChange<I>[] = [];
-  const originalEdges = new Map<string, FlowEdge<I>>(
-    original.edges.map((edge) => [edgeKey(edge), edge]),
-  );
-  const editedKeys = new Set<string>(edited.edges.map(edgeKey));
   const transitions = new Map(
     model.transitions.map((transition) => [transition.id, transition]),
   );
-  /** The transitions of an edge that arrive at its drawn end: the edge's one transition, or the last step of each route through the messages it carries. */
-  const arriving = (edge: FlowEdge<I>): TransitionOf<I>[] =>
-    edge.transitions.flatMap((id) => {
-      const transition = transitions.get(id);
+  // Edges are matched by where they come from: the transition they start with and the node they end at, read from the projection's own record for the original edges, so an edge through messages is never built just to be compared.
+  const keyOf = (first: I["transition"], target: I["element"]): string =>
+    JSON.stringify([first, target]);
+  const originals = new Map<
+    string,
+    { readonly edge: FlowEdge<I>; readonly origin: EdgeOrigin<I> }
+  >();
+  for (const [position, origin] of parts.origins.entries()) {
+    const edge = original.edges[position];
+    if (edge !== undefined) {
+      originals.set(keyOf(origin.first.id, origin.target), { edge, origin });
+    }
+  }
+  /** An edited edge's key: its first transition and the node one of its transitions arrives at, or `undefined` for an edge whose first transition is new. */
+  const editedKey = (edge: FlowEdge<I>): string | undefined => {
+    const [first] = edge.transitions;
+    if (first === undefined || !transitions.has(first)) {
+      return undefined;
+    }
+    for (const id of edge.transitions) {
+      const target = transitions.get(id)?.target;
+      if (target !== undefined && drawn.has(target)) {
+        return keyOf(first, target);
+      }
+    }
 
-      return transition?.target === edge.to ? [transition] : [];
-    });
-  for (const edge of original.edges) {
-    if (!editedKeys.has(edgeKey(edge))) {
-      // An edge that carries messages shares its earlier steps with every other edge through the same messages, so only the steps arriving at its end are removed, and which of them is a choice: inferred.
-      for (const transition of arriving(edge)) {
+    return undefined;
+  };
+  const editedKeys = new Set<string | undefined>(edited.edges.map(editedKey));
+  /** The transitions arriving at an edge's end: its one transition, or every step from a message into its end. */
+  const arriving = (origin: EdgeOrigin<I>): readonly TransitionOf<I>[] =>
+    origin.first.target === origin.target
+      ? [origin.first]
+      : parts.index.arriving(origin.target);
+  const removed = new Set<I["transition"]>();
+  for (const [key, { origin }] of originals) {
+    if (editedKeys.has(key)) {
+      continue;
+    }
+    // An edge that carries messages shares its earlier steps with every other edge through the same messages, so only the steps arriving at its end are removed, and which of them is a choice: inferred.
+    for (const transition of arriving(origin)) {
+      if (!removed.has(transition.id)) {
+        removed.add(transition.id);
         transitionChanges.push({
           kind: "removed",
           transition: transition.id,
-          inferred: edge.transitions.length > 1,
+          inferred: origin.first.target !== origin.target,
         });
       }
     }
   }
+  const retargeted = new Map<I["transition"], I["element"]>();
   for (const edge of edited.edges) {
-    const before = originalEdges.get(edgeKey(edge));
+    const key = editedKey(edge);
+    const before = key === undefined ? undefined : originals.get(key);
     const [first, ...rest] = edge.transitions;
     if (before === undefined) {
       if (
@@ -175,7 +207,7 @@ const diffFlow = <I extends IdSpace>(
         edge.through !== undefined
       ) {
         throw new Error(
-          `Edge ${edgeKey(edge)} is neither an edge of the model nor a new edge with a single new transition id`,
+          `Edge ${JSON.stringify(edge.transitions)} is neither an edge of the model nor a new edge with a single new transition id`,
         );
       }
       transitionChanges.push({
@@ -190,55 +222,66 @@ const diffFlow = <I extends IdSpace>(
       });
       continue;
     }
-    const head = first === undefined ? undefined : transitions.get(first);
-    if (head === undefined) {
-      continue;
-    }
-    const chain = edge.transitions.length > 1;
-    if (!chain && (before.from !== edge.from || before.to !== edge.to)) {
-      transitionChanges.push({
-        kind: "rewired",
-        transition: head.id,
-        from: { source: head.source, target: head.target },
-        to: { source: edge.from, target: edge.to },
-        inferred: false,
-      });
-    } else {
-      if (before.from !== edge.from) {
+    const { origin } = before;
+    const head = origin.first;
+    const chain = head.target !== origin.target;
+    if (!chain) {
+      if (before.edge.from !== edge.from || before.edge.to !== edge.to) {
         transitionChanges.push({
           kind: "rewired",
           transition: head.id,
           from: { source: head.source, target: head.target },
-          to: { source: edge.from, target: head.target },
+          to: { source: edge.from, target: edge.to },
           inferred: false,
         });
       }
-      if (before.to !== edge.to) {
-        // The arriving steps are shared with every other edge through the same messages, so moving them is a choice: inferred.
-        for (const tail of arriving(before)) {
-          transitionChanges.push({
-            kind: "rewired",
-            transition: tail.id,
-            from: { source: tail.source, target: tail.target },
-            to: { source: tail.source, target: edge.to },
-            inferred: true,
-          });
-        }
+      if (before.edge.label !== edge.label) {
+        transitionChanges.push({
+          kind: "changed",
+          field: "guard",
+          transition: head.id,
+          from: head.guard,
+          to: edge.label,
+          inferred: false,
+        });
       }
+      continue;
     }
-    if (before.label !== edge.label) {
-      if (chain) {
+    if (before.edge.label !== edge.label) {
+      throw new Error(
+        `Edge ${JSON.stringify(edge.transitions)} carries a message; edit the message or its steps rather than the edge's label`,
+      );
+    }
+    if (head.source !== edge.from) {
+      transitionChanges.push({
+        kind: "rewired",
+        transition: head.id,
+        from: { source: head.source, target: head.target },
+        to: { source: edge.from, target: head.target },
+        inferred: false,
+      });
+    }
+    if (origin.target === edge.to) {
+      continue;
+    }
+    // The arriving steps are shared with every other edge through the same messages, so moving them is a choice: inferred, and made once however many of those edges moved.
+    for (const tail of arriving(origin)) {
+      const already = retargeted.get(tail.id);
+      if (already === edge.to) {
+        continue;
+      }
+      if (already !== undefined) {
         throw new Error(
-          `Edge ${edgeKey(edge)} carries a message; edit the message or its steps rather than the edge's label`,
+          `Edges ending at "${origin.target}" through the same steps were moved to different ends, "${already}" and "${edge.to}"`,
         );
       }
+      retargeted.set(tail.id, edge.to);
       transitionChanges.push({
-        kind: "changed",
-        field: "guard",
-        transition: head.id,
-        from: head.guard,
-        to: edge.label,
-        inferred: false,
+        kind: "rewired",
+        transition: tail.id,
+        from: { source: tail.source, target: tail.target },
+        to: { source: tail.source, target: edge.to },
+        inferred: true,
       });
     }
   }
@@ -249,11 +292,11 @@ const diffFlow = <I extends IdSpace>(
 /**
  * The inverse of `toFlowchart`: what an edited flowchart changes in the model, matched by element and transition id.
  *
- * A node not in the projection is an added element: a process an activity, a decision a decision, both certain; a terminator or bar a pseudo-state whose role is inferred from its edges. A projected node missing from the edit is removed, and a changed label renames the element. An edge is matched by the transitions it stands for: a new edge must carry one new transition id and is an added transition; a projected edge missing from the edit removes its transition; moved ends rewire it; a changed label changes its guard. An edge that carries messages stands for every route through them, so its earlier steps are shared with other edges: moving its source rewires its first transition, which is certain, while removing it or moving its target acts on each step arriving at its end and is inferred.
+ * A node not in the projection is an added element: a process an activity, a decision a decision, both certain; a terminator or bar a pseudo-state whose role is inferred from its edges. A projected node missing from the edit is removed, and a changed label renames the element. An edge is matched by where it comes from: the transition it starts with and the node one of its transitions arrives at. A new edge must carry one new transition id and is an added transition; a projected edge missing from the edit removes its transition; moved ends rewire it; a changed label changes its guard. An edge that carries messages stands for every route through them, so its earlier steps are shared with other edges: moving its source rewires its first transition, which is certain, while removing it or moving its target acts on each step from a message into its end, once however many edges share them, and is inferred.
  * @param model - The model the flowchart was projected from.
  * @param edited - The projected flowchart after editing. Its `loss` is not read.
  * @returns The changes, with no event changes, since a flowchart draws no events.
- * @throws Error when the edit cannot be expressed in the model: a node that is a model element the flowchart does not draw, a changed shape, a relabelled terminator or bar, an unmatched edge that is not a single new transition, or a relabelled edge that carries a message.
+ * @throws Error when the edit cannot be expressed in the model: a node that is a model element the flowchart does not draw, a changed shape, a relabelled terminator or bar, an unmatched edge that is not a single new transition, a relabelled edge that carries a message, or edges sharing their last steps moved to different ends.
  */
 export const diffFlowchart = <I extends IdSpace>(
   model: Model<I>,

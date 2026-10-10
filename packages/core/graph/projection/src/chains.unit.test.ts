@@ -1,6 +1,6 @@
 import type { Model, OpenIds } from "@exadev/process-graph-schema";
 import { describe, expect, it } from "vitest";
-import { chainsFrom, outgoingMap } from "./chains.ts";
+import { chainIndex } from "./chains.ts";
 import {
   diffFlowchart,
   handoffs,
@@ -86,27 +86,31 @@ const layered: Model<OpenIds> = {
 const pairs = sources.flatMap((source) => ends.map((end) => [source, end]));
 
 describe("chains through a layered acyclic graph of message elements", () => {
-  it("visits each folded element at most once per first transition", () => {
-    const outgoing = outgoingMap(layered);
+  it("asks whether each element is folded once, and reaches every end from each source as one merged chain", () => {
     const messages = new Set(
       layered.elements.flatMap((element) =>
         element.kind === "message" ? [element.id] : [],
       ),
     );
-    for (const first of layered.transitions.filter((transition) =>
-      sources.includes(transition.source),
-    )) {
-      const visits = new Map<string, number>();
-      const chains = chainsFrom(first, outgoing, (element) => {
+    const visits = new Map<string, number>();
+    const index = chainIndex(layered, {
+      folded: (element) => {
         visits.set(element, (visits.get(element) ?? 0) + 1);
 
         return messages.has(element);
-      });
+      },
+      accepted: (element) => ends.includes(element),
+    });
+    for (const first of layered.transitions.filter((transition) =>
+      sources.includes(transition.source),
+    )) {
+      const chains = index.from(first);
 
-      expect([...visits.values()].every((count) => count === 1)).toBe(true);
       expect(chains.map((chain) => chain.target)).toEqual(ends);
       expect(chains.every((chain) => chain.merged)).toBe(true);
     }
+    expect([...visits.values()].every((count) => count === 1)).toBe(true);
+    expect(visits.size).toBe(layered.elements.length);
   });
 
   it("draws one flowchart edge per distinct drawn source and target, carrying every message on its routes", () => {

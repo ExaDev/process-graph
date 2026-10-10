@@ -1,6 +1,14 @@
 import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import type { ElementOf } from "./actors.ts";
-import { chainsFrom, outgoingMap, type Chain } from "./chains.ts";
+import {
+  chainIndex,
+  once,
+  outgoingMap,
+  type Chain,
+  type ChainIndex,
+  type TransitionOf,
+} from "./chains.ts";
+import type { EdgeOrigin } from "./flowchart.ts";
 import { commonLoss, unrepresentedLoss, type Loss } from "./loss.ts";
 
 export interface StateMachineState<I extends IdSpace> {
@@ -53,27 +61,22 @@ const stateOf = <I extends IdSpace>(
   return undefined;
 };
 
+/** A state machine with what its inverse needs beside it: each transition's origin, in transition order, and the chain index. */
+export interface StateMachineParts<I extends IdSpace> {
+  readonly machine: StateMachine<I>;
+  readonly origins: readonly EdgeOrigin<I>[];
+  readonly index: ChainIndex<I>;
+}
+
 /**
- * Activity-as-state projection. Each activity that affects the subject becomes a state the subject entity rests in, and a decision collapses into guarded transitions leaving the state before it. The target activity's action becomes the effect of the transition that enters it.
- *
- * Which activities affect the subject is declared by their `affects`. An activity that does not list the subject is not a state of it: transitions through it are folded into the transition that leaves the previous state, exactly as a decision is. Authored `state` elements and pseudo-states are always kept. When no activity in the model declares `affects`, the model carries no such information and every activity is kept, which is the unscoped behaviour.
- *
- * A `message` element is folded the same way, and its `event`, when it has one, triggers the transition that carries it. A message element no drawn transition carries is reported as a `message-elements` loss.
- *
- * Each drawn transition lists the model `transitions` it stands for and the elements folded into it (`through`), so an edit to it maps back to the model. Several routes through folded elements from the same transition to the same state are one drawn transition whose `transitions` and `through` are the union over the routes, each once in the order met; it carries no event or guard, which differ by route, and its effect is only the target's entry action.
- *
- * Decisions are folded into guards by design and are not a loss. Fork, join and history pseudo-states have no state of their own here and are reported as unrepresented, together with the transitions that touch them, which are left out rather than pointing at a state that is not drawn.
- *
- * Other conventions exist, such as steps as transitions with states between them. Naming states such as "Paid" needs authored states, which the model can hold as `state` elements.
+ * The state machine and the parts its inverse needs; see `toStateMachine`.
  * @param model - The model to project.
  * @param subject - The entity whose lifecycle the machine shows.
- * @returns The states in model order, the transitions leaving each in turn, and what was dropped.
- * @throws Error when `subject` is not a declared entity participant, which only a runtime model can cause.
  */
-export const toStateMachine = <I extends IdSpace>(
+export const stateMachineParts = <I extends IdSpace>(
   model: Model<I>,
   subject: I["entity"],
-): StateMachine<I> => {
+): StateMachineParts<I> => {
   // The type already limits `subject` to declared entities. This guards models loaded from JSON.
   const owner = model.participants.find(
     (participant) => participant.id === subject,
@@ -99,55 +102,55 @@ export const toStateMachine = <I extends IdSpace>(
     (element.kind === "activity" &&
       scoped &&
       element.affects?.includes(subject) !== true);
-  const isFolded = (id: I["element"]): boolean => {
-    const element = elements.get(id);
 
-    return element !== undefined && isTransparent(element);
-  };
-
-  /** The transition a chain draws. On a single route, the event is the last trigger along it, counting a folded message's own event right after the transition that arrives at it; guards are joined in order; the effect is the entry action of the target activity, or else the last effect along the route. Where several routes are merged their triggers, guards and effects belong to different routes, so only the target's entry action is kept. */
-  const transitionOf = (
-    source: I["element"],
-    chain: Chain<I>,
-  ): StateMachineTransition<I> => {
-    const triggers: I["event"][] = [];
-    const guards: string[] = [];
-    const effects: I["action"][] = [];
-    for (const transition of chain.merged ? [] : chain.transitions) {
-      if (transition.trigger !== undefined) {
-        triggers.push(transition.trigger);
-      }
-      if (transition.guard !== undefined) {
-        guards.push(transition.guard);
-      }
-      if (transition.effect !== undefined) {
-        effects.push(transition.effect);
-      }
-      const arrived = elements.get(transition.target);
-      if (
-        transition.target !== chain.target &&
-        arrived?.kind === "message" &&
-        arrived.event !== undefined
-      ) {
-        triggers.push(arrived.event);
-      }
-    }
+  /** The transition a chain draws. On a single route, the event is the last trigger along it, counting a folded message's own event right after the transition that arrives at it; guards are joined in order; the effect is the entry action of the target activity, or else the last effect along the route. Where several routes are merged their triggers, guards and effects belong to different routes, so only the target's entry action is kept. A transition through folded elements builds its lists and guard only when they are read. */
+  const transitionOf = (chain: Chain<I>): StateMachineTransition<I> => {
     const target = elements.get(chain.target);
-    const event = triggers.at(-1);
-    const guard = guards.length > 0 ? guards.join(" and ") : undefined;
+    const event = chain.trigger;
     const effect =
-      (target?.kind === "activity" ? target.action : undefined) ??
-      effects.at(-1);
-
-    return {
-      source,
+      (target?.kind === "activity" ? target.action : undefined) ?? chain.effect;
+    const base = {
+      source: chain.first.source,
       target: chain.target,
       ...(event === undefined ? {} : { event }),
-      ...(guard === undefined ? {} : { guard }),
       ...(effect === undefined ? {} : { effect }),
-      transitions: chain.transitions.map((transition) => transition.id),
-      ...(chain.through.length === 0 ? {} : { through: chain.through }),
     };
+    if (chain.first.target === chain.target) {
+      const { guard } = chain.first;
+
+      return {
+        ...base,
+        ...(guard === undefined ? {} : { guard }),
+        transitions: [chain.first.id],
+      };
+    }
+    const ids = once(() =>
+      chain.transitions().map((transition) => transition.id),
+    );
+    const guard = once(() => chain.guards().join(" and "));
+
+    return chain.guarded
+      ? {
+          ...base,
+          get guard(): string {
+            return guard();
+          },
+          get transitions(): readonly I["transition"][] {
+            return ids();
+          },
+          get through(): readonly I["element"][] {
+            return chain.through();
+          },
+        }
+      : {
+          ...base,
+          get transitions(): readonly I["transition"][] {
+            return ids();
+          },
+          get through(): readonly I["element"][] {
+            return chain.through();
+          },
+        };
   };
 
   const states: StateMachineState<I>[] = [];
@@ -160,7 +163,18 @@ export const toStateMachine = <I extends IdSpace>(
       stateIds.add(element.id);
     }
   }
+  const index = chainIndex(model, {
+    folded: (id) => folded.has(id),
+    accepted: (id) => stateIds.has(id),
+    eventOf: (id) => {
+      const element = elements.get(id);
+
+      return element?.kind === "message" ? element.event : undefined;
+    },
+  });
   const transitions: StateMachineTransition<I>[] = [];
+  const origins: EdgeOrigin<I>[] = [];
+  const firsts: TransitionOf<I>[] = [];
   for (const element of model.elements) {
     const state = isTransparent(element) ? undefined : stateOf<I>(element);
     if (state === undefined) {
@@ -168,16 +182,14 @@ export const toStateMachine = <I extends IdSpace>(
     }
     states.push(state);
     for (const transition of outgoing.get(element.id) ?? []) {
-      for (const chain of chainsFrom(transition, outgoing, isFolded)) {
-        if (stateIds.has(chain.target)) {
-          transitions.push(transitionOf(element.id, chain));
-        }
+      firsts.push(transition);
+      for (const chain of index.from(transition)) {
+        transitions.push(transitionOf(chain));
+        origins.push({ first: transition, target: chain.target });
       }
     }
   }
-  const carried = new Set<I["element"]>(
-    transitions.flatMap((transition) => transition.through ?? []),
-  );
+  const carried = index.carried(firsts);
 
   const loss: Loss<I>[] = [
     ...commonLoss(model, "stateMachine", {
@@ -201,5 +213,27 @@ export const toStateMachine = <I extends IdSpace>(
     });
   }
 
-  return { subject, states, transitions, loss };
+  return { machine: { subject, states, transitions, loss }, origins, index };
 };
+
+/**
+ * Activity-as-state projection. Each activity that affects the subject becomes a state the subject entity rests in, and a decision collapses into guarded transitions leaving the state before it. The target activity's action becomes the effect of the transition that enters it.
+ *
+ * Which activities affect the subject is declared by their `affects`. An activity that does not list the subject is not a state of it: transitions through it are folded into the transition that leaves the previous state, exactly as a decision is. Authored `state` elements and pseudo-states are always kept. When no activity in the model declares `affects`, the model carries no such information and every activity is kept, which is the unscoped behaviour.
+ *
+ * A `message` element is folded the same way, and its `event`, when it has one, triggers the transition that carries it. A message element no drawn transition carries is reported as a `message-elements` loss.
+ *
+ * Each drawn transition lists the model `transitions` it stands for and the elements folded into it (`through`), so an edit to it maps back to the model. Several routes through folded elements from the same transition to the same state are one drawn transition whose `transitions` and `through` are the union over the routes, each once in the order met; it carries no event or guard, which differ by route, and its effect is only the target's entry action.
+ *
+ * Decisions are folded into guards by design and are not a loss. Fork, join and history pseudo-states have no state of their own here and are reported as unrepresented, together with the transitions that touch them, which are left out rather than pointing at a state that is not drawn.
+ *
+ * Other conventions exist, such as steps as transitions with states between them. Naming states such as "Paid" needs authored states, which the model can hold as `state` elements.
+ * @param model - The model to project.
+ * @param subject - The entity whose lifecycle the machine shows.
+ * @returns The states in model order, the transitions leaving each in turn, and what was dropped.
+ * @throws Error when `subject` is not a declared entity participant, which only a runtime model can cause.
+ */
+export const toStateMachine = <I extends IdSpace>(
+  model: Model<I>,
+  subject: I["entity"],
+): StateMachine<I> => stateMachineParts(model, subject).machine;
