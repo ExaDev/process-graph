@@ -7,9 +7,13 @@ interface TarjanFrame<Id extends NodeId> {
 }
 
 /**
- * Every strongly connected component of the graph, found with an explicit stack so depth is bounded by memory, not by the call stack.
+ * Every strongly connected component of the graph: the maximal sets of nodes in which each node reaches every other along `needs` edges. Every node is in exactly one component, and a node on no cycle is a component of its own. Found by Tarjan's algorithm with an explicit stack, so depth is bounded by memory, not by the call stack, and each node and edge is visited once.
+ *
+ * A component lists its nodes in the order Tarjan's algorithm completes them, its root last. Components come out in reverse topological order of the condensed graph along `needs`: a component appears before every component that needs it. Since mutual reachability is symmetric, the components are the same whichever direction the edges are read in.
+ * @param dag - The graph to partition.
+ * @returns Every component, each a non-empty list of nodes.
  */
-function stronglyConnectedComponents<Id extends NodeId>(
+export function stronglyConnectedComponents<Id extends NodeId>(
   dag: Dag<Id>,
 ): readonly (readonly Id[])[] {
   const index = new Map<Id, number>();

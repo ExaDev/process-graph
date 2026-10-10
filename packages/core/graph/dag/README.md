@@ -40,15 +40,16 @@ Nothing is absorbed silently:
 
 ## API
 
-| Function                    | Returns                                                          | With a cycle                                                                          |
-| --------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `buildDag(nodes, needs)`    | An immutable `Dag`: nodes, needs, dependents, unknown references | Builds normally.                                                                      |
-| `topologicalLayers(dag)`    | `levels`, `layers`, `unlayered`                                  | Layers the acyclic part; nodes on a cycle or needing one are returned in `unlayered`. |
-| `ancestorsOf(dag, id)`      | Transitive needs, in node order                                  | Includes `id` itself when it is on a cycle.                                           |
-| `descendantsOf(dag, id)`    | Transitive dependents, in node order                             | Includes `id` itself when it is on a cycle.                                           |
-| `findCycles(dag)`           | One closed path per cyclic strongly connected component          | Not applicable; this is the report.                                                   |
-| `transitiveReduction(dag)`  | A `Dag` without redundant edges                                  | Throws `CycleError`: with a cycle the reduction is not unique.                        |
-| `criticalPath(dag, weight)` | `{ path, weight }`, the heaviest chain                           | Throws `CycleError`: a chain through a cycle has no greatest weight.                  |
+| Function                           | Returns                                                                                             | With a cycle                                                                           |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `buildDag(nodes, needs)`           | An immutable `Dag`: nodes, needs, dependents, unknown references                                    | Builds normally.                                                                       |
+| `topologicalLayers(dag)`           | `levels`, `layers`, `unlayered`                                                                     | Layers the acyclic part; nodes on a cycle or needing one are returned in `unlayered`.  |
+| `ancestorsOf(dag, id)`             | Transitive needs, in node order                                                                     | Includes `id` itself when it is on a cycle.                                            |
+| `descendantsOf(dag, id)`           | Transitive dependents, in node order                                                                | Includes `id` itself when it is on a cycle.                                            |
+| `findCycles(dag)`                  | One closed path per cyclic strongly connected component                                             | Not applicable; this is the report.                                                    |
+| `stronglyConnectedComponents(dag)` | Every strongly connected component, each node in exactly one, a component before those that need it | Not applicable; a cycle is a component of several nodes or of one node needing itself. |
+| `transitiveReduction(dag)`         | A `Dag` without redundant edges                                                                     | Throws `CycleError`: with a cycle the reduction is not unique.                         |
+| `criticalPath(dag, weight)`        | `{ path, weight }`, the heaviest chain                                                              | Throws `CycleError`: a chain through a cycle has no greatest weight.                   |
 
 `ancestorsOf` and `descendantsOf` throw `UnknownNodeError` for an id that is not a node. `criticalPath` throws `RangeError` for a negative or non-finite weight.
 
