@@ -48,11 +48,19 @@ An activity's actor and a message's ends must be actors; a state machine project
 
 ## What the types cannot say
 
-`validate(model)` returns the issues a runtime model can still have: `duplicate-id`, `unknown-reference`, `multiple-initial`, `subject-not-entity`, `actor-is-entity` and `duplicate-source`. An authored model is already reference-safe at compile time; `validate` is for models loaded from JSON and for the rules the type system cannot state.
+`validate(model)` returns the issues a runtime model can still have: `duplicate-id`, `unknown-reference`, `multiple-initial`, `subject-not-entity`, `actor-is-entity` and `duplicate-source` and `multiple-producers`. An authored model is already reference-safe at compile time; `validate` is for models loaded from JSON and for the rules the type system cannot state.
 
 ## Source binding
 
 An activity may carry `source`, a source-qualified identifier such as `github:org/repo#12`, tying it to the external record it stands for. The source is the activity's identity in its system, so two activities may not share one (`duplicate-source`). Activities without a source are unaffected.
+
+## Artefacts
+
+Control flow says what follows what; artefacts say what a step needs and makes. An `ArtefactDef` has an `id`, a `name` and an optional `deliverable` flag, and an activity lists the artefacts it `consumes` and `produces` by identifier. `artefact` is an identifier space like the others, so an undeclared artefact is a compile error.
+
+- An artefact no activity produces is an **input**: the process takes it as given. `inputsOf(model)` lists them.
+- An artefact flagged `deliverable` is an **output**: what the process exists to deliver. `outputsOf(model)` lists them.
+- An artefact has at most one producer (`multiple-producers`), so "what produces this" has one answer.
 
 ## Loading a model
 

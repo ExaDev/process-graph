@@ -10,6 +10,8 @@ export interface IdSpace {
   readonly element: string;
   readonly transition: string;
   readonly fragment: string;
+  /** The data or deliverables activities consume and produce. */
+  readonly artefact: string;
 }
 
 /** The open identifier space, used for models whose identifiers are only known at runtime. */

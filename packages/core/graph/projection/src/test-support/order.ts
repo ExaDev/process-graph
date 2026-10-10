@@ -18,6 +18,7 @@ export const order = defineModel({
     { id: "act-pack", name: "pack and ship" },
     { id: "act-cancel", name: "cancel order and notify" },
   ],
+  artefacts: [],
   elements: [
     { kind: "pseudo", id: "start", role: "initial" },
     {

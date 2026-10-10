@@ -11,6 +11,7 @@ test("the built package projects a model", () => {
     ],
     events: [],
     actions: [],
+    artefacts: [],
     elements: [
       { kind: "activity", id: "submit", label: "Submit", actor: "customer" },
       { kind: "activity", id: "pack", label: "Pack", actor: "shop" },

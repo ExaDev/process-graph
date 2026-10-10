@@ -7,6 +7,7 @@ test("the built package defines and validates a model", () => {
     participants: [{ id: "shop", label: "Shop", kind: "system" }],
     events: [],
     actions: [],
+    artefacts: [],
     elements: [
       { kind: "pseudo", id: "start", role: "initial" },
       { kind: "activity", id: "pack", label: "Pack", actor: "shop" },

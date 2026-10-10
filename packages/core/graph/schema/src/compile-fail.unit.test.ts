@@ -9,6 +9,7 @@ describe("defineModel reference checking", () => {
       participants: [],
       events: [],
       actions: [],
+      artefacts: [],
       elements: [{ kind: "pseudo", id: "start", role: "initial" }],
       transitions: [
         // @ts-expect-error "nowhere" is not a declared element
@@ -24,6 +25,7 @@ describe("defineModel reference checking", () => {
       participants: [{ id: "shop", label: "Shop", kind: "system" }],
       events: [],
       actions: [],
+      artefacts: [],
       elements: [
         // @ts-expect-error "warehouse" is not a declared participant
         { kind: "activity", id: "a1", label: "Pack", actor: "warehouse" },
@@ -57,6 +59,7 @@ describe("defineModel reference checking", () => {
       participants: [],
       events: [],
       actions: [],
+      artefacts: [],
       elements: [
         { kind: "pseudo", id: "s", role: "initial" },
         { kind: "pseudo", id: "e", role: "final" },
@@ -75,6 +78,7 @@ describe("defineModel reference checking", () => {
       participants: [],
       events: [],
       actions: [],
+      artefacts: [],
       elements: [],
       transitions: [],
       fragments: [],
@@ -90,6 +94,7 @@ describe("defineModel reference checking", () => {
       participants: [],
       events: [],
       actions: [],
+      artefacts: [],
       elements: [{ kind: "pseudo", id: "s", role: "initial" }],
       transitions: [],
       fragments: [
@@ -112,6 +117,7 @@ describe("defineModel reference checking", () => {
       ],
       events: [],
       actions: [],
+      artefacts: [],
       elements: [
         // @ts-expect-error "order" is an entity, so it cannot be an actor
         { kind: "activity", id: "a1", label: "Pack", actor: "order" },
@@ -130,6 +136,7 @@ describe("defineModel reference checking", () => {
       ],
       events: [],
       actions: [],
+      artefacts: [],
       elements: [
         {
           kind: "message",
@@ -155,6 +162,7 @@ describe("defineModel reference checking", () => {
       ],
       events: [],
       actions: [],
+      artefacts: [],
       elements: [],
       transitions: [],
       fragments: [],
@@ -162,6 +170,54 @@ describe("defineModel reference checking", () => {
         // @ts-expect-error "shop" is a system, so it cannot be a state machine subject
         { id: "p", notation: "stateMachine", subject: "shop" },
       ],
+    });
+  });
+
+  it("rejects a consumed artefact that was never declared", () => {
+    defineModel({
+      participants: [],
+      events: [],
+      actions: [],
+      artefacts: [{ id: "spec", name: "Specification" }],
+      elements: [
+        // @ts-expect-error "design" is not a declared artefact
+        { kind: "activity", id: "a1", label: "Build", consumes: ["design"] },
+      ],
+      transitions: [],
+      fragments: [],
+      projections: [],
+    });
+  });
+
+  it("rejects a produced artefact that was never declared", () => {
+    defineModel({
+      participants: [],
+      events: [],
+      actions: [],
+      artefacts: [{ id: "spec", name: "Specification" }],
+      elements: [
+        // @ts-expect-error "design" is not a declared artefact
+        { kind: "activity", id: "a1", label: "Draw", produces: ["design"] },
+      ],
+      transitions: [],
+      fragments: [],
+      projections: [],
+    });
+  });
+
+  it("rejects an identifier from another space where an artefact is expected", () => {
+    defineModel({
+      participants: [],
+      events: [],
+      actions: [{ id: "act-go", name: "go" }],
+      artefacts: [{ id: "spec", name: "Specification" }],
+      elements: [
+        // @ts-expect-error "act-go" is an action id, not an artefact id
+        { kind: "activity", id: "a1", label: "Build", consumes: ["act-go"] },
+      ],
+      transitions: [],
+      fragments: [],
+      projections: [],
     });
   });
 });

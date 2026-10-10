@@ -15,6 +15,7 @@ export type {
 } from "./vocabulary.ts";
 export type {
   ActionDef,
+  ArtefactDef,
   Element,
   EventDef,
   Fragment,
@@ -25,6 +26,7 @@ export type {
   Transition,
   Views,
 } from "./declarations.ts";
+export { inputsOf, outputsOf } from "./artefacts.ts";
 export { defineModel, type Model, type ModelParts } from "./model.ts";
 export { validate, type Issue, type IssueCode } from "./validate.ts";
 export { modelSchema } from "./schema.ts";

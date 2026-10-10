@@ -11,6 +11,7 @@ const open = (overrides: Partial<Model<OpenIds>>): Model<OpenIds> => ({
   ],
   events: [],
   actions: [],
+  artefacts: [],
   elements: [
     { kind: "pseudo", id: "s", role: "initial" },
     { kind: "pseudo", id: "e", role: "final" },
@@ -195,5 +196,89 @@ describe("validate", () => {
     );
 
     expect(issues).toEqual([]);
+  });
+
+  it("reports an unknown consumed or produced artefact", () => {
+    const issues = validate(
+      open({
+        artefacts: [{ id: "spec", name: "Specification" }],
+        elements: [
+          {
+            kind: "activity",
+            id: "a",
+            label: "A",
+            consumes: ["design"],
+            produces: ["spec", "code"],
+          },
+        ],
+        transitions: [],
+      }),
+    );
+
+    expect(issues).toEqual([
+      {
+        code: "unknown-reference",
+        message: 'activity "a" consumes refers to unknown id "design"',
+      },
+      {
+        code: "unknown-reference",
+        message: 'activity "a" produces refers to unknown id "code"',
+      },
+    ]);
+  });
+
+  it("reports an artefact produced by more than one activity", () => {
+    const issues = validate(
+      open({
+        artefacts: [{ id: "spec", name: "Specification" }],
+        elements: [
+          { kind: "activity", id: "a", label: "A", produces: ["spec"] },
+          { kind: "activity", id: "b", label: "B", produces: ["spec"] },
+          { kind: "activity", id: "c", label: "C", consumes: ["spec"] },
+        ],
+        transitions: [],
+      }),
+    );
+
+    expect(issues).toEqual([
+      {
+        code: "multiple-producers",
+        message: 'Artefact "spec" is produced by more than one activity: a, b',
+      },
+    ]);
+  });
+
+  it("does not count one activity listing an artefact twice as two producers", () => {
+    const issues = validate(
+      open({
+        artefacts: [{ id: "spec", name: "Specification" }],
+        elements: [
+          {
+            kind: "activity",
+            id: "a",
+            label: "A",
+            produces: ["spec", "spec"],
+          },
+        ],
+        transitions: [],
+      }),
+    );
+
+    expect(issues).toEqual([]);
+  });
+
+  it("reports a duplicate artefact identifier", () => {
+    const issues = validate(
+      open({
+        artefacts: [
+          { id: "spec", name: "One" },
+          { id: "spec", name: "Two" },
+        ],
+      }),
+    );
+
+    expect(issues).toEqual([
+      { code: "duplicate-id", message: 'Duplicate artefact id "spec"' },
+    ]);
   });
 });
