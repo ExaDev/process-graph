@@ -63,8 +63,8 @@
     "worker"
   ],
   "dependencies": {
-    "@exadev/process-graph-store-contract": "0.0.0",
-    "@exadev/process-graph-store-sqlite": "0.0.0",
+    "@exadev/process-graph-store-contract": "1.0.1",
+    "@exadev/process-graph-store-sqlite": "1.0.0",
     "@orpc/client": "2.0.0-beta.41",
     "@orpc/server": "2.0.0-beta.41",
     "@sqlite.org/sqlite-wasm": "3.53.4-build2",
