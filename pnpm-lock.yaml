@@ -309,8 +309,8 @@ importers:
   packages/adapters/graph/sqlite-node:
     dependencies:
       '@exadev/process-graph-store-contract':
-        specifier: 1.0.0
-        version: 1.0.0(vitest@5.0.3)
+        specifier: 1.0.1
+        version: link:../../../core/graph/store-contract
       '@exadev/process-graph-store-sqlite':
         specifier: 1.0.0
         version: link:../store-sqlite
@@ -1347,23 +1347,6 @@ packages:
       eslint-plugin-react-hooks:
         optional: true
       eslint-plugin-turbo:
-        optional: true
-
-  '@exadev/process-graph-dag@1.0.2':
-    resolution: {integrity: sha512-zLxpkUTKcNrwjjk4JAhu77rN/wZldj7A5pOKJlaRP0HSR95Q0vinap86SyqpoNkczWPqP09WJdCiVmb2UsC+WQ==}
-
-  '@exadev/process-graph-domain@1.0.2':
-    resolution: {integrity: sha512-BOX7nDnSs2Q3Azd87AmElpn/uRciq7o9iVNGrg5T/ZsDxRtji0m4qIs+snAIPEzqd4xIq+GidA12QoRaG75glg==}
-
-  '@exadev/process-graph-schema@1.0.2':
-    resolution: {integrity: sha512-ZRqTlLLCVeYQEP/Dx3I6Mks+3jUkg10WW+/n89ERtpvuVwAlFQZzGykuUlWdGBXzyWoIoFzJtmoJVrd2hS3RAg==}
-
-  '@exadev/process-graph-store-contract@1.0.0':
-    resolution: {integrity: sha512-3kahu8kI5my3QIMyoPVBl5YHll1BD0tBRGFArhAFTaQKEVzaVVP8yd4Qfm9PN45oNQpqnPuTLNF7f+M8dMLoYA==}
-    peerDependencies:
-      vitest: 5.0.3
-    peerDependenciesMeta:
-      vitest:
         optional: true
 
   '@exadev/release-gate@1.0.2':
@@ -5480,33 +5463,6 @@ snapshots:
     transitivePeerDependencies:
       - oxlint
       - supports-color
-
-  '@exadev/process-graph-dag@1.0.2': {}
-
-  '@exadev/process-graph-domain@1.0.2':
-    dependencies:
-      '@exadev/process-graph-dag': 1.0.2
-      '@exadev/process-graph-schema': 1.0.2
-      trilean: 1.7.2
-
-  '@exadev/process-graph-schema@1.0.2':
-    dependencies:
-      trilean: 1.7.2
-      zod: 4.6.5
-
-  '@exadev/process-graph-store-contract@1.0.0(vitest@5.0.3)':
-    dependencies:
-      '@exadev/process-graph-domain': 1.0.2
-      '@exadev/process-graph-schema': 1.0.2
-      '@orpc/contract': 2.0.0-beta.41
-      '@orpc/server': 2.0.0-beta.41
-      trilean: 1.7.2
-      zod: 4.6.5
-    optionalDependencies:
-      vitest: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0)(yaml@2.9.1))
-    transitivePeerDependencies:
-      - crossws
-      - fastify
 
   '@exadev/release-gate@1.0.2(supports-color@7.2.0)(typescript@6.0.3)':
     dependencies:
