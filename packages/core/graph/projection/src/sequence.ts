@@ -15,7 +15,7 @@ export interface SequenceMessage<I extends IdSpace> {
   /** Equal to `from` for a self-message. */
   readonly to: I["actor"];
   readonly label: string;
-  /** The `message` element drawn, when the step arrives at one. Its `from`, `to`, `label` and `mode` are the message's own. */
+  /** The `message` element drawn, when the step arrives at one; its `from`, `to`, `label` and `mode` are the message's own. In an edited diagram passed to `diffSequence`, a new message names here the element it arrives at instead. */
   readonly element?: I["element"];
   /** How the message is sent, when it is a `message` element's. A step between two activities has no mode of its own. */
   readonly mode?: MessageMode;
