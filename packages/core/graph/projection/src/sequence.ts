@@ -6,7 +6,7 @@ import type {
   Transition,
 } from "@exadev/process-graph-schema";
 import { actorMap, type ElementOf } from "./actors.ts";
-import { deriveFragments } from "./derived-fragments.ts";
+import { wrapFragments, type Entry, type Step } from "./fragments.ts";
 import { commonLoss, type Loss } from "./loss.ts";
 
 export interface SequenceMessage<I extends IdSpace> {
@@ -58,186 +58,6 @@ export interface SequenceDiagram<I extends IdSpace> {
   readonly loss: readonly Loss<I>[];
 }
 
-/** A scenario message with its position and the element it arrives at. */
-interface Entry<I extends IdSpace> {
-  readonly index: number;
-  readonly message: SequenceMessage<I>;
-  readonly target: I["element"];
-}
-
-interface TakenOperand<I extends IdSpace> {
-  readonly guard: string | undefined;
-  readonly entries: readonly Entry<I>[];
-  /** The scenario positions of `entries`, for constant-time membership. */
-  readonly indices: ReadonlySet<number>;
-}
-
-/** A place fragments are drawn into: the top level, or one operand of another fragment. */
-interface Container<I extends IdSpace> {
-  readonly children: Placed<I>[];
-}
-
-/** A fragment that may be drawn: authored or derived. */
-interface Candidate<I extends IdSpace> {
-  /** The authored fragment's id; absent for a derived fragment. */
-  readonly authored: I["fragment"] | undefined;
-  /** Builds the item drawn for it from the operands the scenario takes. */
-  readonly item: (operands: readonly SequenceOperand<I>[]) => SequenceItem<I>;
-  readonly operands: readonly {
-    readonly guard?: string | undefined;
-    readonly body: readonly I["element"][];
-  }[];
-}
-
-/** A fragment the scenario passes through, with a container for the fragments nested inside each of its operands. */
-interface Placed<I extends IdSpace> {
-  readonly candidate: Candidate<I>;
-  readonly operands: readonly TakenOperand<I>[];
-  readonly indices: ReadonlySet<number>;
-  readonly nested: readonly Container<I>[];
-}
-
-/** Whether two sets of message positions are the same. */
-const sameIndices = (
-  first: ReadonlySet<number>,
-  second: ReadonlySet<number>,
-): boolean =>
-  first.size === second.size && [...first].every((index) => second.has(index));
-
-/**
- * Wraps the scenario's messages in the fragments they fall inside: the authored ones first, then those derived from the model's structure.
- *
- * A fragment is drawn when at least one of its operands has a body that lies wholly on the scenario path and receives at least one message, and when the messages it holds are consecutive in the scenario. Only the operands the scenario takes are drawn, in their own order. A fragment whose messages overlap another's without nesting, or are interleaved with messages outside it, is not drawn, because drawing it would reorder or misrepresent the scenario. A derived fragment holding exactly the messages an authored one holds is not drawn either: the authored fragment is the author's notation for the same structure.
- *
- * A message belongs to an operand when the element it arrives at is in that operand's body.
- */
-const wrapFragments = <I extends IdSpace>(
-  fragments: readonly Candidate<I>[],
-  entries: readonly Entry<I>[],
-  onPath: ReadonlySet<I["element"]>,
-): {
-  readonly items: SequenceItem<I>[];
-  readonly drawn: Set<I["fragment"]>;
-} => {
-  const candidates: Placed<I>[] = [];
-  for (const fragment of fragments) {
-    const claimed = new Set<number>();
-    const operands: TakenOperand<I>[] = [];
-    for (const operand of fragment.operands) {
-      if (
-        operand.body.length === 0 ||
-        !operand.body.every((id) => onPath.has(id))
-      ) {
-        continue;
-      }
-      const body = new Set<I["element"]>(operand.body);
-      const inside = entries.filter(
-        (entry) => body.has(entry.target) && !claimed.has(entry.index),
-      );
-      if (inside.length === 0) {
-        continue;
-      }
-      for (const entry of inside) {
-        claimed.add(entry.index);
-      }
-      operands.push({
-        guard: operand.guard,
-        entries: inside,
-        indices: new Set(inside.map((entry) => entry.index)),
-      });
-    }
-    // A fold rather than a spread into Math.min and Math.max, which would pass every position as an argument.
-    let first = Number.POSITIVE_INFINITY;
-    let last = Number.NEGATIVE_INFINITY;
-    for (const index of claimed) {
-      first = Math.min(first, index);
-      last = Math.max(last, index);
-    }
-    const duplicate =
-      fragment.authored === undefined &&
-      candidates.some(
-        (placed) =>
-          placed.candidate.authored !== undefined &&
-          sameIndices(placed.indices, claimed),
-      );
-    if (
-      operands.length > 0 &&
-      last - first + 1 === claimed.size &&
-      !duplicate
-    ) {
-      candidates.push({
-        candidate: fragment,
-        operands,
-        indices: claimed,
-        nested: operands.map(() => ({ children: [] })),
-      });
-    }
-  }
-
-  // Largest first, so a fragment nests inside any larger one that holds all its messages.
-  const bySize = candidates.toSorted((a, b) => b.indices.size - a.indices.size);
-  const top: Container<I> = { children: [] };
-  // Descends into the operand of the first overlapping fragment that holds all of `node`'s messages; an overlap no operand holds is not drawn.
-  const place = (node: Placed<I>): void => {
-    const positions = [...node.indices];
-    for (
-      let container: Container<I> | undefined = top;
-      container !== undefined;
-    ) {
-      const sibling: Placed<I> | undefined = container.children.find((child) =>
-        positions.some((index) => child.indices.has(index)),
-      );
-      if (sibling === undefined) {
-        container.children.push(node);
-
-        return;
-      }
-      const slot: number = sibling.operands.findIndex((operand) =>
-        positions.every((index) => operand.indices.has(index)),
-      );
-      container = slot === -1 ? undefined : sibling.nested[slot];
-    }
-  };
-  for (const node of bySize) {
-    place(node);
-  }
-
-  const drawn = new Set<I["fragment"]>();
-  const itemsOf = (
-    inside: readonly Entry<I>[],
-    nodes: readonly Placed<I>[],
-  ): SequenceItem<I>[] => {
-    const items: SequenceItem<I>[] = [];
-    const emitted = new Set<Placed<I>>();
-    for (const entry of inside) {
-      const owner = nodes.find((node) => node.indices.has(entry.index));
-      if (owner === undefined) {
-        items.push({ kind: "message", message: entry.message });
-      } else if (!emitted.has(owner)) {
-        emitted.add(owner);
-        if (owner.candidate.authored !== undefined) {
-          drawn.add(owner.candidate.authored);
-        }
-        items.push(
-          owner.candidate.item(
-            owner.operands.map((operand, slot) => ({
-              ...(operand.guard === undefined ? {} : { guard: operand.guard }),
-              items: itemsOf(
-                operand.entries,
-                owner.nested[slot]?.children ?? [],
-              ),
-            })),
-          ),
-        );
-      }
-    }
-
-    return items;
-  };
-
-  return { items: itemsOf(entries, top.children), drawn };
-};
-
 /**
  * One path through the process as messages.
  *
@@ -276,6 +96,7 @@ export const toSequence = <I extends IdSpace>(
   const onLifeline = new Set<I["actor"]>();
   const messages: SequenceMessage<I>[] = [];
   const entries: Entry<I>[] = [];
+  const steps: Step<I>[] = [];
   const shownMessages = new Set<I["element"]>();
   // The actor holding control at each element the scenario has reached, so a step leaving an element with no actor has a sender.
   const holder = new Map<I["element"], I["actor"]>();
@@ -295,6 +116,7 @@ export const toSequence = <I extends IdSpace>(
     if (transition === undefined) {
       throw new Error(`Scenario step "${id}" is not a declared transition`);
     }
+    steps.push({ transition, before: entries.length });
     const source = elements.get(transition.source);
     const target = elements.get(transition.target);
     const previous = arrivedAt;
@@ -373,31 +195,7 @@ export const toSequence = <I extends IdSpace>(
     (transition) => !taken.has(transition.id) && onPath.has(transition.source),
   );
 
-  const candidates: Candidate<I>[] = [
-    ...model.fragments.map(({ id, operator, operands }): Candidate<I> => ({
-      authored: id,
-      operands,
-      item: (drawnOperands) => ({
-        kind: "fragment",
-        fragment: id,
-        operator,
-        operands: drawnOperands,
-      }),
-    })),
-    ...deriveFragments(model, onPath).map(
-      ({ element, operator, operands }): Candidate<I> => ({
-        authored: undefined,
-        operands,
-        item: (drawnOperands) => ({
-          kind: "fragment",
-          element,
-          operator,
-          operands: drawnOperands,
-        }),
-      }),
-    ),
-  ];
-  const { items, drawn } = wrapFragments(candidates, entries, onPath);
+  const { items, drawn } = wrapFragments(model, steps, entries, onPath);
 
   const loss: Loss<I>[] = [
     ...commonLoss(model, "sequence", {
