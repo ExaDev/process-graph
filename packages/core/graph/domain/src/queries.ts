@@ -4,23 +4,11 @@ import {
   type CriticalPath,
 } from "@exadev/process-graph-dag";
 import type { IdSpace, Model, Overlay } from "@exadev/process-graph-schema";
-import { analyse, type Analysis } from "./derive.ts";
+import { analyse } from "./derive.ts";
 import { isProvided, type Facts } from "./facts.ts";
 import { lookup } from "./lookup.ts";
+import { isLive, waitingOn } from "./progress.ts";
 import type { Status } from "./status.ts";
-
-/** Whether an element still has work ahead of it: it is neither finished nor going to be skipped. */
-const isLive = (status: Status): boolean =>
-  status !== "done" && status !== "skipped";
-
-/** The live needs of an element that are not done: what it is still waiting for. */
-const waitingOn = <I extends IdSpace>(
-  analysis: Analysis<I>,
-  id: I["element"],
-): readonly I["element"][] =>
-  lookup(analysis.liveNeeds, id).filter(
-    (need) => lookup(analysis.statuses, need) !== "done",
-  );
 
 /**
  * The elements that can be worked on now: every element whose status is `ready`, in model order. Pure control elements (decisions and pseudo-states) are derived `done` and never appear.
@@ -58,10 +46,7 @@ export const blockedBy = <I extends IdSpace>(
   id: I["element"],
 ): readonly I["element"][] => {
   const analysis = analyse({ model, overlay, facts });
-  if (!isLive(lookup(analysis.statuses, id))) {
-    // A finished or skipped element waits on nothing, even when the overlay marked it done ahead of its needs or it consumes an artefact still to be made.
-    return [];
-  }
+  lookup(analysis.statuses, id);
   const leaves = new Set<I["element"]>();
   const seen = new Set<I["element"]>();
   const pending = [...waitingOn(analysis, id)];

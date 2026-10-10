@@ -10,7 +10,19 @@ export {
   type Facts,
 } from "./facts.ts";
 export { controlDag, illegalCycles, loopTransitions } from "./control.ts";
-export { deriveStatuses } from "./derive.ts";
+export {
+  deriveStatuses,
+  statusRules,
+  type ArtefactBasis,
+  type IncomingBasis,
+  type ProducerBasis,
+  type StatusRule,
+} from "./derive.ts";
+export {
+  explainStatus,
+  type ChainLink,
+  type StatusExplanation,
+} from "./explain.ts";
 export {
   blockedBy,
   criticalPath,
