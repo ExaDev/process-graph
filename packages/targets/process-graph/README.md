@@ -1,5 +1,7 @@
 # process-graph
 
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/process-graph) [![Release](https://img.shields.io/github/v/release/ExaDev/process-graph)](https://github.com/ExaDev/process-graph/releases/latest) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+
 The one install for the process-graph model: a layout-free description of a process, its projections into a flowchart, a swimlane, a state machine and a sequence diagram, and reasoning over a run (what is ready, what blocks what, what finishing something changes). It re-exports the building-block packages so a consumer depends on one package and imports from one place. `src/` imports nothing Node-only and runs unchanged in a browser or a Worker.
 
 ```ts
