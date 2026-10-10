@@ -43,7 +43,9 @@ Configuration lives at exactly one of two levels: in the package (`eslint.config
 
 ## Packages
 
-Packages are listed here as they are added, each linking to its own README.
+| Package                                          | What it is                                                                                                                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`graph-dag`](packages/core/graph/dag/README.md) | Model-independent dependency-graph primitives over a node set and a `needs` accessor: layers, ancestors, descendants, cycles, transitive reduction, critical path. |
 
 ## Conventions
 
