@@ -29,14 +29,26 @@ export interface Step<I extends IdSpace> {
   readonly before: number;
 }
 
-/** A fragment that may be drawn, with the positions of the messages each of its operands holds, each list ascending and the lists disjoint. */
+/** The messages an operand holds: a run of consecutive positions given by its ends, or an ascending list of positions. A run is never expanded into its positions. */
+type Held =
+  | {
+      readonly from: number;
+      readonly to: number;
+      readonly positions?: never;
+    }
+  | {
+      readonly positions: readonly number[];
+      readonly from?: never;
+      readonly to?: never;
+    };
+
+type Operand = { readonly guard: string | undefined } & Held;
+
+/** A fragment that may be drawn, with the messages each of its operands holds; operands never share a position. */
 interface Candidate<I extends IdSpace> {
   /** The authored fragment's id; absent for a derived fragment. */
   readonly authored: I["fragment"] | undefined;
-  readonly operands: readonly {
-    readonly guard: string | undefined;
-    readonly positions: readonly number[];
-  }[];
+  readonly operands: readonly Operand[];
   /** Builds the item drawn for it from its operands' items. */
   readonly item: (operands: readonly SequenceOperand<I>[]) => SequenceItem<I>;
 }
@@ -70,8 +82,17 @@ const append = <Key, Value>(
   }
 };
 
-const range = (from: number, to: number): number[] =>
-  Array.from({ length: to - from }, (_, offset) => from + offset);
+/** Counts work done over message positions, so a caller can measure it. */
+export type Observe = (positions: number) => void;
+
+/** One scenario as fragments see it: the model, its steps, the messages drawn, the elements it passes, and an optional work counter. */
+export interface ScenarioPath<I extends IdSpace> {
+  readonly model: Model<I>;
+  readonly steps: readonly Step<I>[];
+  readonly entries: readonly Entry<I>[];
+  readonly onPath: ReadonlySet<I["element"]>;
+  readonly observe?: Observe;
+}
 
 /**
  * The fragments the model's structure implies along the scenario, in model order of the decision or fork each comes from, each decision's loop before its other fragments.
@@ -82,12 +103,13 @@ const range = (from: number, to: number): number[] =>
  *
  * One pass finds every component and one pass every post-dominator, both only when the path passes a decision or fork, and the path is then read once, so the work is the size of the model and of the path, not their product.
  */
-const deriveCandidates = <I extends IdSpace>(
-  model: Model<I>,
-  steps: readonly Step<I>[],
-  entries: readonly Entry<I>[],
-  onPath: ReadonlySet<I["element"]>,
-): Candidate<I>[] => {
+const deriveCandidates = <I extends IdSpace>({
+  model,
+  steps,
+  entries,
+  onPath,
+  observe,
+}: ScenarioPath<I>): Candidate<I>[] => {
   const branching = model.elements.filter(
     (element) =>
       onPath.has(element.id) &&
@@ -180,6 +202,7 @@ const deriveCandidates = <I extends IdSpace>(
   for (const entry of entries) {
     const own = component.get(entry.target);
     if (own !== undefined && looping.has(own)) {
+      observe?.(1);
       append(inside, own, entry.index);
     }
   }
@@ -246,7 +269,7 @@ const deriveCandidates = <I extends IdSpace>(
       add(occurrence.element, {
         authored: undefined,
         operands: [
-          { guard: occurrence.guard, positions: range(occurrence.start, stop) },
+          { guard: occurrence.guard, from: occurrence.start, to: stop - 1 },
         ],
         item: derivedItem<I>(occurrence.element, occurrence.operator),
       });
@@ -343,6 +366,7 @@ const deriveCandidates = <I extends IdSpace>(
     // The message of a step arriving where its branch's `par` meets lies outside that `par`.
     const holder = after(label, transition.target);
     if (holder !== undefined && position !== undefined) {
+      observe?.(1);
       holder.parallel.operands[holder.operand]?.positions.push(position);
     }
     relabel(transition.target, label);
@@ -373,6 +397,7 @@ const authoredCandidates = <I extends IdSpace>(
   fragments: readonly Fragment<I["fragment"], I>[],
   entries: readonly Entry<I>[],
   onPath: ReadonlySet<I["element"]>,
+  observe: Observe | undefined,
 ): Candidate<I>[] => {
   const operands = fragments.map((fragment) =>
     fragment.operands.map(
@@ -409,6 +434,7 @@ const authoredCandidates = <I extends IdSpace>(
     for (const { fragment, operand } of holders.get(entry.target) ?? []) {
       if (fragment !== previous) {
         previous = fragment;
+        observe?.(1);
         operands[fragment]?.[operand]?.positions.push(entry.index);
       }
     }
@@ -463,26 +489,144 @@ const countBetween = (
   return firstAtLeast(to + 1) - firstAtLeast(from);
 };
 
+/** The first and last position an operand holds and how many it holds, from its ends or its list's ends. */
+const extentOf = (
+  held: Held,
+):
+  | { readonly first: number; readonly last: number; readonly count: number }
+  | undefined => {
+  if (held.positions === undefined) {
+    return held.to < held.from
+      ? undefined
+      : { first: held.from, last: held.to, count: held.to - held.from + 1 };
+  }
+  const first = held.positions[0];
+  const last = held.positions.at(-1);
+
+  return first === undefined || last === undefined
+    ? undefined
+    : { first, last, count: held.positions.length };
+};
+
+/** Whether an operand holds every position from `first` to `last`. */
+const holdsAll = (held: Held, first: number, last: number): boolean =>
+  held.positions === undefined
+    ? held.from <= first && last <= held.to
+    : countBetween(held.positions, first, last) === last - first + 1;
+
+/**
+ * Which of a fragment's operands holds a position: listed positions are looked up in a map built from the lists, which together hold no more positions than the fragment does, and runs are found by a binary search over their starts. No run is expanded.
+ */
+const slotIndex = (
+  operands: readonly Operand[],
+  observe: Observe | undefined,
+): ((position: number) => number) => {
+  if (operands.length === 1) {
+    return () => 0;
+  }
+  const listed = new Map<number, number>();
+  const runs: {
+    readonly from: number;
+    readonly to: number;
+    readonly slot: number;
+  }[] = [];
+  for (const [slot, operand] of operands.entries()) {
+    if (operand.positions === undefined) {
+      runs.push({ from: operand.from, to: operand.to, slot });
+      continue;
+    }
+    for (const position of operand.positions) {
+      observe?.(1);
+      listed.set(position, slot);
+    }
+  }
+  runs.sort((a, b) => a.from - b.from);
+
+  return (position) => {
+    const found = listed.get(position);
+    if (found !== undefined) {
+      return found;
+    }
+    let low = 0;
+    let high = runs.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if ((runs[middle]?.from ?? position) <= position) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    const run = runs[low - 1];
+
+    return run !== undefined && position <= run.to ? run.slot : 0;
+  };
+};
+
+/**
+ * Which placed fragment is innermost at each position, without visiting the positions a fragment covers: fragments are placed largest first, so the innermost at a position is the one placed last among those covering it. A segment tree over the positions records, on the nodes that exactly cover each placed span, when it was placed; the innermost at a position is the latest placement on the path from its leaf to the root. Placing and asking each visit a number of nodes that grows with the logarithm of the number of positions.
+ */
+const placementTree = (
+  size: number,
+): {
+  readonly place: (first: number, last: number, time: number) => void;
+  readonly at: (position: number) => number | undefined;
+} => {
+  const latest: (number | undefined)[] = Array.from(
+    { length: 2 * size },
+    () => undefined,
+  );
+
+  return {
+    place: (first, last, time) => {
+      let low = first + size;
+      let high = last + size + 1;
+      while (low < high) {
+        if ((low & 1) === 1) {
+          latest[low] = time;
+          low += 1;
+        }
+        if ((high & 1) === 1) {
+          high -= 1;
+          latest[high] = time;
+        }
+        low >>>= 1;
+        high >>>= 1;
+      }
+    },
+    at: (position) => {
+      let best: number | undefined;
+      for (let node = position + size; node >= 1; node >>>= 1) {
+        const time = latest[node];
+        if (time !== undefined && (best === undefined || time > best)) {
+          best = time;
+        }
+      }
+
+      return best;
+    },
+  };
+};
+
 /**
  * Wraps the scenario's messages in the fragments they fall inside: the authored ones first, then those derived from the model's structure.
  *
  * A fragment is drawn when it holds at least one message and the messages it holds are consecutive. Larger fragments are placed first; a fragment nests inside a placed one when all its messages lie in one of that fragment's operands, and is left out when it overlaps one without nesting. A derived fragment holding exactly the messages an authored one holds is not drawn: the authored fragment is the author's notation for the same structure.
  *
- * Each position records the innermost fragment placed over it, so placing a fragment reads its two ends and writes its own span, and the items are then built in one pass over the positions; the work is the number of messages times the depth fragments nest to.
+ * Fragments are compared and placed by the ends of their spans, and a segment tree answers which placed fragment is innermost at a position, so no span is ever expanded into its positions; the items are then built in one pass over the messages.
+ * @param path - The scenario; its `observe`, when given, is told of the work done over message positions.
  * @returns The items and the ids of the authored fragments drawn.
  */
 export const wrapFragments = <I extends IdSpace>(
-  model: Model<I>,
-  steps: readonly Step<I>[],
-  entries: readonly Entry<I>[],
-  onPath: ReadonlySet<I["element"]>,
+  path: ScenarioPath<I>,
 ): {
   readonly items: SequenceItem<I>[];
   readonly drawn: Set<I["fragment"]>;
 } => {
+  const { model, entries, onPath, observe } = path;
   const candidates = [
-    ...authoredCandidates(model.fragments, entries, onPath),
-    ...deriveCandidates(model, steps, entries, onPath),
+    ...authoredCandidates(model.fragments, entries, onPath, observe),
+    ...deriveCandidates(path),
   ];
 
   const spans: {
@@ -496,13 +640,12 @@ export const wrapFragments = <I extends IdSpace>(
     let first = Number.POSITIVE_INFINITY;
     let last = Number.NEGATIVE_INFINITY;
     let count = 0;
-    for (const { positions } of candidate.operands) {
-      count += positions.length;
-      const head = positions[0];
-      const tail = positions.at(-1);
-      if (head !== undefined && tail !== undefined) {
-        first = Math.min(first, head);
-        last = Math.max(last, tail);
+    for (const operand of candidate.operands) {
+      const extent = extentOf(operand);
+      if (extent !== undefined) {
+        count += extent.count;
+        first = Math.min(first, extent.first);
+        last = Math.max(last, extent.last);
       }
     }
     const key = `${String(first)}:${String(last)}`;
@@ -520,42 +663,37 @@ export const wrapFragments = <I extends IdSpace>(
     (a, b) => b.last - b.first - (a.last - a.first) || a.order - b.order,
   );
 
-  const innermost: (Placed<I> | undefined)[] = entries.map(() => undefined);
+  const tree = placementTree(entries.length);
   const placed: Placed<I>[] = [];
+  const innermost = (position: number): Placed<I> | undefined => {
+    const time = tree.at(position);
+
+    return time === undefined ? undefined : placed[time];
+  };
   for (const { candidate, first, last, order } of spans) {
-    const outer = innermost[first];
-    if (outer !== innermost[last]) {
+    const outer = innermost(first);
+    if (outer !== innermost(last)) {
       continue;
     }
     let parent: Placed<I>["parent"];
     if (outer !== undefined) {
       const slot = outer.slotOf(first);
-      const positions = outer.candidate.operands[slot]?.positions ?? [];
-      if (countBetween(positions, first, last) !== last - first + 1) {
+      const operand = outer.candidate.operands[slot];
+      if (operand === undefined || !holdsAll(operand, first, last)) {
         continue;
       }
       parent = { placed: outer, slot };
-    }
-    const owners = new Map<number, number>();
-    if (candidate.operands.length > 1) {
-      for (const [slot, { positions }] of candidate.operands.entries()) {
-        for (const position of positions) {
-          owners.set(position, slot);
-        }
-      }
     }
     const node: Placed<I> = {
       candidate,
       first,
       last,
-      slotOf: (position) => owners.get(position) ?? 0,
+      slotOf: slotIndex(candidate.operands, observe),
       parent,
       order,
     };
+    tree.place(first, last, placed.length);
     placed.push(node);
-    for (let position = first; position <= last; position += 1) {
-      innermost[position] = node;
-    }
   }
 
   // Each placed fragment's operands, and the top level, list what lies directly inside them in order: messages, and fragments at the position they start.
@@ -575,10 +713,11 @@ export const wrapFragments = <I extends IdSpace>(
     append(starting, node.first, node);
   }
   for (const entry of entries) {
+    observe?.(1);
     for (const node of starting.get(entry.index) ?? []) {
       contentOf(node.parent).push({ placed: node });
     }
-    const owner = innermost[entry.index];
+    const owner = innermost(entry.index);
     contentOf(
       owner === undefined
         ? undefined

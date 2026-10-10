@@ -1,5 +1,6 @@
 import type { Model, OpenIds } from "@exadev/process-graph-schema";
 import { describe, expect, it } from "vitest";
+import { sequenceObserved } from "./sequence.ts";
 import {
   applyModelDiff,
   diffFlowchart,
@@ -350,5 +351,147 @@ describe("chains through runs of message elements", () => {
     expect(edge?.through).toEqual(ids(size, "m-"));
     expect(edge?.transitions).toHaveLength(size + 1);
     expect(edge?.label).toBe(ids(size, "m-").join(", "));
+  });
+});
+
+/** Decisions in a line, each either doing its own step and going on to the next decision or skipping straight to the one shared end, and the path that does every step. Every decision's branches meet only at that end, so each draws an `opt` open until the path's last step. */
+const nestedSkips = (
+  count: number,
+): { readonly model: Model<OpenIds>; readonly path: string[] } => {
+  const decisions = ids(count, "d-");
+  const steps = ids(count, "a-");
+  const model: Model<OpenIds> = {
+    ...empty,
+    participants: [{ id: "shop", label: "Shop", kind: "system" }],
+    elements: [
+      { kind: "activity", id: "start", label: "Start", actor: "shop" },
+      ...decisions.flatMap((id, index) => [
+        { kind: "decision" as const, id, label: id, actor: "shop" },
+        {
+          kind: "activity" as const,
+          id: steps[index] ?? id,
+          label: steps[index] ?? id,
+          actor: "shop",
+        },
+      ]),
+      { kind: "activity", id: "end", label: "End", actor: "shop" },
+    ],
+    transitions: [
+      { id: "t-start", source: "start", target: "d-0" },
+      ...decisions.flatMap((id, index) => [
+        {
+          id: `t-do-${id}`,
+          source: id,
+          target: `a-${String(index)}`,
+          guard: "do",
+        },
+        { id: `t-skip-${id}`, source: id, target: "end", guard: "skip" },
+        {
+          id: `t-on-${id}`,
+          source: `a-${String(index)}`,
+          target: decisions[index + 1] ?? "end",
+        },
+      ]),
+    ],
+  };
+
+  return {
+    model,
+    path: [
+      "t-start",
+      ...decisions.flatMap((id) => [`t-do-${id}`, `t-on-${id}`]),
+    ],
+  };
+};
+
+const positionWork = (count: number): number => {
+  const { model, path } = nestedSkips(count);
+  let work = 0;
+  sequenceObserved(model, path, (positions) => {
+    work += positions;
+  });
+
+  return work;
+};
+
+describe("nested derived fragments", () => {
+  it("never expands a span into its positions, however deeply opts nest", () => {
+    expect(positionWork(2 * size)).toBeLessThanOrEqual(2 * positionWork(size));
+  });
+
+  it("nests one opt per decision, each inside the one before", () => {
+    const { model, path } = nestedSkips(2);
+
+    expect(sequenceObserved(model, path, undefined).items).toEqual([
+      {
+        kind: "message",
+        message: {
+          transition: "t-start",
+          from: "shop",
+          to: "shop",
+          label: "d-0",
+        },
+      },
+      {
+        kind: "fragment",
+        element: "d-0",
+        operator: "opt",
+        operands: [
+          {
+            guard: "do",
+            items: [
+              {
+                kind: "message",
+                message: {
+                  transition: "t-do-d-0",
+                  from: "shop",
+                  to: "shop",
+                  label: "a-0",
+                },
+              },
+              {
+                kind: "message",
+                message: {
+                  transition: "t-on-d-0",
+                  from: "shop",
+                  to: "shop",
+                  label: "d-1",
+                },
+              },
+              {
+                kind: "fragment",
+                element: "d-1",
+                operator: "opt",
+                operands: [
+                  {
+                    guard: "do",
+                    items: [
+                      {
+                        kind: "message",
+                        message: {
+                          transition: "t-do-d-1",
+                          from: "shop",
+                          to: "shop",
+                          label: "a-1",
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: "message",
+        message: {
+          transition: "t-on-d-1",
+          from: "shop",
+          to: "shop",
+          label: "End",
+        },
+      },
+    ]);
   });
 });

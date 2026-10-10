@@ -6,7 +6,12 @@ import type {
   Transition,
 } from "@exadev/process-graph-schema";
 import { actorMap, type ElementOf } from "./actors.ts";
-import { wrapFragments, type Entry, type Step } from "./fragments.ts";
+import {
+  wrapFragments,
+  type Entry,
+  type Observe,
+  type Step,
+} from "./fragments.ts";
 import { commonLoss, type Loss } from "./loss.ts";
 
 export interface SequenceMessage<I extends IdSpace> {
@@ -59,19 +64,15 @@ export interface SequenceDiagram<I extends IdSpace> {
 }
 
 /**
- * One path through the process as messages.
- *
- * A step between two elements with actors becomes a message, labelled by the transition's event when it has one and by the target's label otherwise. A step arriving at a `message` element draws that message, with its own `from`, `to`, `label` and `mode`, and the step leaving it continues the same message rather than drawing another. An element with no actor that the scenario passes through, such as a fork or join, passes on whoever reached it: a step leaving it is sent by the actor of the step that arrived. A step that still has no sender, or that arrives at an element with no actor, draws nothing and is reported as `skipped-steps`. Branches off the path are not drawn, which is why this direction is lossy and one-to-many.
- *
- * `messages` is the flat list. `items` is the same messages with fragments wrapped around the ones that fall inside them: the authored `fragments` the scenario passes through, and those its structure implies (an `alt` or `opt` at a decision, a `loop` back through a decision, a `par` at a fork), each derived fragment naming the decision or fork it comes from. A fragment that cannot be drawn faithfully is left out, and an authored one left out is reported in `loss`.
+ * `toSequence`, telling `observe` of the work done over message positions so a caller can measure it.
  * @param model - The model to project.
  * @param scenario - The transitions the path takes, in order.
- * @returns Lifelines in order of first appearance, the messages, the items and what was dropped.
- * @throws Error when a scenario step is not a declared transition.
+ * @param observe - Told of work done over message positions.
  */
-export const toSequence = <I extends IdSpace>(
+export const sequenceObserved = <I extends IdSpace>(
   model: Model<I>,
   scenario: readonly I["transition"][],
+  observe: Observe | undefined,
 ): SequenceDiagram<I> => {
   const actors = actorMap(model);
   const elements = new Map<I["element"], ElementOf<I>>(
@@ -195,7 +196,13 @@ export const toSequence = <I extends IdSpace>(
     (transition) => !taken.has(transition.id) && onPath.has(transition.source),
   );
 
-  const { items, drawn } = wrapFragments(model, steps, entries, onPath);
+  const { items, drawn } = wrapFragments({
+    model,
+    steps,
+    entries,
+    onPath,
+    ...(observe === undefined ? {} : { observe }),
+  });
 
   const loss: Loss<I>[] = [
     ...commonLoss(model, "sequence", {
@@ -222,3 +229,19 @@ export const toSequence = <I extends IdSpace>(
 
   return { lifelines, messages, items, loss };
 };
+
+/**
+ * One path through the process as messages.
+ *
+ * A step between two elements with actors becomes a message, labelled by the transition's event when it has one and by the target's label otherwise. A step arriving at a `message` element draws that message, with its own `from`, `to`, `label` and `mode`, and the step leaving it continues the same message rather than drawing another. An element with no actor that the scenario passes through, such as a fork or join, passes on whoever reached it: a step leaving it is sent by the actor of the step that arrived. A step that still has no sender, or that arrives at an element with no actor, draws nothing and is reported as `skipped-steps`. Branches off the path are not drawn, which is why this direction is lossy and one-to-many.
+ *
+ * `messages` is the flat list. `items` is the same messages with fragments wrapped around the ones that fall inside them: the authored `fragments` the scenario passes through, and those its structure implies (an `alt` or `opt` at a decision, a `loop` back through a decision, a `par` at a fork), each derived fragment naming the decision or fork it comes from. A fragment that cannot be drawn faithfully is left out, and an authored one left out is reported in `loss`.
+ * @param model - The model to project.
+ * @param scenario - The transitions the path takes, in order.
+ * @returns Lifelines in order of first appearance, the messages, the items and what was dropped.
+ * @throws Error when a scenario step is not a declared transition.
+ */
+export const toSequence = <I extends IdSpace>(
+  model: Model<I>,
+  scenario: readonly I["transition"][],
+): SequenceDiagram<I> => sequenceObserved(model, scenario, undefined);
