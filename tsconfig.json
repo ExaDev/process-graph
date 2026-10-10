@@ -9,6 +9,7 @@
     "commit-types.ts",
     "release.config.ts",
     "eslint.shared.ts",
+    "stryker.shared.ts",
     ".github/scripts/**/*.ts"
   ]
 }
