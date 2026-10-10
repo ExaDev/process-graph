@@ -6,7 +6,7 @@ import type {
 import { outgoingMap, type TransitionOf } from "./chains.ts";
 
 /** One operand of a fragment the projection derives from the model's structure: the guard of the branch it follows and the elements of that branch on the scenario path. */
-export interface DerivedOperand<I extends IdSpace> {
+interface DerivedOperand<I extends IdSpace> {
   readonly guard: string | undefined;
   readonly body: readonly I["element"][];
 }
