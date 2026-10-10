@@ -302,10 +302,10 @@ importers:
   packages/core/graph/domain:
     dependencies:
       '@exadev/process-graph-dag':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../dag
       '@exadev/process-graph-schema':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../schema
       trilean:
         specifier: 1.7.2
@@ -345,7 +345,7 @@ importers:
   packages/core/graph/projection:
     dependencies:
       '@exadev/process-graph-schema':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../schema
     devDependencies:
       '@arethetypeswrong/cli':
@@ -422,16 +422,16 @@ importers:
   packages/targets/process-graph:
     dependencies:
       '@exadev/process-graph-dag':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../../core/graph/dag
       '@exadev/process-graph-domain':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../../core/graph/domain
       '@exadev/process-graph-projection':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../../core/graph/projection
       '@exadev/process-graph-schema':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../../core/graph/schema
     devDependencies:
       '@arethetypeswrong/cli':
