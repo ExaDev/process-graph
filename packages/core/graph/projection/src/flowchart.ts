@@ -13,11 +13,11 @@ export interface FlowNode<I extends IdSpace> {
 export interface FlowEdge<I extends IdSpace> {
   readonly from: I["element"];
   readonly to: I["element"];
-  /** The guards along the edge joined with "and", or, when there are none, the labels of the messages it carries. */
+  /** On a single route, its guards joined with "and", or, when there are none, the labels of the messages it carries. On several merged routes, the labels of the messages it carries. */
   readonly label?: string;
-  /** The model transitions the edge stands for, in order. An edit to the edge maps back to the model through these. */
+  /** The model transitions the edge stands for: one, or every transition on some route through the message elements it carries, each once, in the order they were met. An edit to the edge maps back to the model through these. */
   readonly transitions: readonly I["transition"][];
-  /** The `message` elements the edge carries, in order, when it stands for a chain. */
+  /** The `message` elements the edge carries, each once, in the order they were met, when it stands for more than one transition. */
   readonly through?: readonly I["element"][];
 }
 
@@ -80,7 +80,7 @@ export const flowchartLoss = <I extends IdSpace>(
   ),
 ];
 
-/** The edge a chain of transitions draws: guards joined, or the carried messages' labels when no transition on it is guarded. */
+/** The edge a chain of transitions draws. On a single route its label is the route's guards joined with "and", or, when none is guarded, the carried messages' labels. Where several routes are merged the guards belong to different routes and cannot be joined, so the label is the carried messages' labels only. */
 const edgeOf = <I extends IdSpace>(
   from: I["element"],
   chain: Chain<I>,
@@ -95,7 +95,7 @@ const edgeOf = <I extends IdSpace>(
     return label === undefined ? [] : [label];
   });
   const label =
-    guards.length > 0
+    guards.length > 0 && !chain.merged
       ? guards.join(" and ")
       : carried.length > 0
         ? carried.join(", ")
@@ -111,7 +111,7 @@ const edgeOf = <I extends IdSpace>(
 };
 
 /**
- * Activities, decisions and terminators, joined by the transitions between them. A `message` element is not a node: a transition into it continues through it, so the edge runs from the step before the message to the step after it and carries the message (`through`). A message element no edge carries is reported as a `message-elements` loss. `state` elements and `history` pseudo-states have no flowchart shape and are reported as unrepresented, with the transitions that touch them.
+ * Activities, decisions and terminators, joined by the transitions between them. A `message` element is not a node: a transition into it continues through it, so the edge runs from the step before the message to the step after it and carries the message (`through`). There is one edge per transition leaving a node and drawn element it leads to, however many routes through message elements connect them. A message element no edge carries is reported as a `message-elements` loss. `state` elements and `history` pseudo-states have no flowchart shape and are reported as unrepresented, with the transitions that touch them.
  * @param model - The model to project.
  * @returns The nodes in model order, the edges in the order of the transitions they start with, and what was dropped.
  */

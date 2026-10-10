@@ -1,5 +1,6 @@
 import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import type { ElementOf } from "./actors.ts";
+import type { TransitionOf } from "./chains.ts";
 import type { ElementChange, ModelDiff, TransitionChange } from "./diff.ts";
 import { toFlowchart, type FlowEdge, type FlowNode } from "./flowchart.ts";
 import type { Swimlane } from "./swimlane.ts";
@@ -124,13 +125,20 @@ const diffFlow = <I extends IdSpace>(
   const transitions = new Map(
     model.transitions.map((transition) => [transition.id, transition]),
   );
+  /** The transitions of an edge that arrive at its drawn end: the edge's one transition, or the last step of each route through the messages it carries. */
+  const arriving = (edge: FlowEdge<I>): TransitionOf<I>[] =>
+    edge.transitions.flatMap((id) => {
+      const transition = transitions.get(id);
+
+      return transition?.target === edge.to ? [transition] : [];
+    });
   for (const edge of original.edges) {
     if (!editedKeys.has(edgeKey(edge))) {
-      // Removing an edge that carries a message removes every step of it, which leaves the message element unconnected: a choice, so inferred.
-      for (const transition of edge.transitions) {
+      // An edge that carries messages shares its earlier steps with every other edge through the same messages, so only the steps arriving at its end are removed, and which of them is a choice: inferred.
+      for (const transition of arriving(edge)) {
         transitionChanges.push({
           kind: "removed",
-          transition,
+          transition: transition.id,
           inferred: edge.transitions.length > 1,
         });
       }
@@ -162,10 +170,8 @@ const diffFlow = <I extends IdSpace>(
       });
       continue;
     }
-    const last = edge.transitions.at(-1);
     const head = first === undefined ? undefined : transitions.get(first);
-    const tail = last === undefined ? undefined : transitions.get(last);
-    if (head === undefined || tail === undefined) {
+    if (head === undefined) {
       continue;
     }
     const chain = edge.transitions.length > 1;
@@ -188,13 +194,16 @@ const diffFlow = <I extends IdSpace>(
         });
       }
       if (before.to !== edge.to) {
-        transitionChanges.push({
-          kind: "rewired",
-          transition: tail.id,
-          from: { source: tail.source, target: tail.target },
-          to: { source: tail.source, target: edge.to },
-          inferred: false,
-        });
+        // The arriving steps are shared with every other edge through the same messages, so moving them is a choice: inferred.
+        for (const tail of arriving(before)) {
+          transitionChanges.push({
+            kind: "rewired",
+            transition: tail.id,
+            from: { source: tail.source, target: tail.target },
+            to: { source: tail.source, target: edge.to },
+            inferred: true,
+          });
+        }
       }
     }
     if (before.label !== edge.label) {
@@ -220,7 +229,7 @@ const diffFlow = <I extends IdSpace>(
 /**
  * The inverse of `toFlowchart`: what an edited flowchart changes in the model, matched by element and transition id.
  *
- * A node not in the projection is an added element: a process an activity, a decision a decision, both certain; a terminator or bar a pseudo-state whose role is inferred from its edges. A projected node missing from the edit is removed, and a changed label renames the element. An edge is matched by the transitions it stands for: a new edge must carry one new transition id and is an added transition; a projected edge missing from the edit removes its transitions; moved ends rewire the transition (for an edge that carries a message, the first step's source or the last step's target); a changed label changes the guard.
+ * A node not in the projection is an added element: a process an activity, a decision a decision, both certain; a terminator or bar a pseudo-state whose role is inferred from its edges. A projected node missing from the edit is removed, and a changed label renames the element. An edge is matched by the transitions it stands for: a new edge must carry one new transition id and is an added transition; a projected edge missing from the edit removes its transition; moved ends rewire it; a changed label changes its guard. An edge that carries messages stands for every route through them, so its earlier steps are shared with other edges: moving its source rewires its first transition, which is certain, while removing it or moving its target acts on each step arriving at its end and is inferred.
  * @param model - The model the flowchart was projected from.
  * @param edited - The projected flowchart after editing. Its `loss` is not read.
  * @returns The changes, with no event changes, since a flowchart draws no events.
