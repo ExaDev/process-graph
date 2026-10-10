@@ -496,19 +496,23 @@ export const chainIndex = <I extends IdSpace>(
     );
   };
 
-  /** The union of every route from `start` to `target`, by a depth-first walk from `start` and a walk back from `target` over what it met. */
-  const union = (
-    first: TransitionOf<I>,
-    target: I["element"],
-  ): {
-    readonly transitions: readonly TransitionOf<I>[];
-    readonly through: readonly I["element"][];
-  } => {
-    const met: TransitionOf<I>[] = [first];
-    const entered: I["element"][] = [first.target];
-    const seen = new Set<I["element"]>([first.target]);
+  /** What a depth-first walk from a folded element meets: each transition and each folded element entered, numbered in the order met, and the transitions met indexed by the element they arrive at. Done once per element walked from, however many chains start there or end at its targets. */
+  interface Walk {
+    readonly order: ReadonlyMap<TransitionOf<I>, number>;
+    readonly entered: ReadonlyMap<I["element"], number>;
+    readonly into: ReadonlyMap<I["element"], readonly TransitionOf<I>[]>;
+  }
+  const walks = new Map<I["element"], Walk>();
+  const walkFrom = (start: I["element"]): Walk => {
+    const known = walks.get(start);
+    if (known !== undefined) {
+      return known;
+    }
+    const order = new Map<TransitionOf<I>, number>();
+    const entered = new Map<I["element"], number>([[start, 0]]);
+    const into = new Map<I["element"], TransitionOf<I>[]>();
     const stack: { readonly id: I["element"]; next: number }[] = [
-      { id: first.target, next: 0 },
+      { id: start, next: 0 },
     ];
     for (let top = stack.at(-1); top !== undefined; top = stack.at(-1)) {
       const transition = (outgoing.get(top.id) ?? [])[top.next];
@@ -517,31 +521,50 @@ export const chainIndex = <I extends IdSpace>(
         continue;
       }
       top.next += 1;
-      met.push(transition);
-      if (isFolded.has(transition.target) && !seen.has(transition.target)) {
-        seen.add(transition.target);
-        entered.push(transition.target);
+      order.set(transition, order.size);
+      append(into, transition.target, transition);
+      if (isFolded.has(transition.target) && !entered.has(transition.target)) {
+        entered.set(transition.target, entered.size);
         stack.push({ id: transition.target, next: 0 });
       }
     }
-    const into = new Map<I["element"], TransitionOf<I>[]>();
-    for (const transition of met) {
-      append(into, transition.target, transition);
-    }
+    const walk = { order, entered, into };
+    walks.set(start, walk);
+
+    return walk;
+  };
+
+  /** The union of every route from `first` to `target`: walking back from `target` over the shared walk's index of what arrives where, so the work is the size of this union, then put in the order the walk met each transition and element. */
+  const union = (
+    first: TransitionOf<I>,
+    target: I["element"],
+  ): {
+    readonly transitions: readonly TransitionOf<I>[];
+    readonly through: readonly I["element"][];
+  } => {
+    const walk = walkFrom(first.target);
     const leading = new Set<I["element"]>([target]);
     const back: I["element"][] = [target];
+    const transitions: TransitionOf<I>[] = [];
     for (let at = back.pop(); at !== undefined; at = back.pop()) {
-      for (const transition of into.get(at) ?? []) {
-        if (seen.has(transition.source) && !leading.has(transition.source)) {
+      for (const transition of walk.into.get(at) ?? []) {
+        transitions.push(transition);
+        if (!leading.has(transition.source)) {
           leading.add(transition.source);
           back.push(transition.source);
         }
       }
     }
+    const metAt = (transition: TransitionOf<I>): number =>
+      walk.order.get(transition) ?? 0;
+    const enteredAt = (element: I["element"]): number =>
+      walk.entered.get(element) ?? 0;
 
     return {
-      transitions: met.filter((transition) => leading.has(transition.target)),
-      through: entered.filter((id) => leading.has(id)),
+      transitions: [first, ...transitions.sort((a, b) => metAt(a) - metAt(b))],
+      through: [...leading]
+        .filter((element) => walk.entered.has(element))
+        .sort((a, b) => enteredAt(a) - enteredAt(b)),
     };
   };
 
