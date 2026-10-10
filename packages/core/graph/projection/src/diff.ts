@@ -234,6 +234,25 @@ const applyTransitionChange = <I extends IdSpace>(
     : { ...transition, effect: change.to };
 };
 
+/** The items of `items` grouped by the key `keyOf` gives each, every group in the order of `items`; one pass, so looking a group up afterwards costs nothing per item. */
+const groupBy = <Key, Item>(
+  items: readonly Item[],
+  keyOf: (item: Item) => Key,
+): ReadonlyMap<Key, readonly Item[]> => {
+  const groups = new Map<Key, Item[]>();
+  for (const item of items) {
+    const key = keyOf(item);
+    const group = groups.get(key);
+    if (group === undefined) {
+      groups.set(key, [item]);
+    } else {
+      group.push(item);
+    }
+  }
+
+  return groups;
+};
+
 /** The identifier a change is about, used to find what it applies to. */
 const subjectOf = <I extends IdSpace>(
   change: ElementChange<I>,
@@ -303,13 +322,19 @@ export const applyModelDiff = <I extends IdSpace>(
     ),
   );
 
+  // Each change list is grouped by the identifier it is about once, so every element, transition and event reads only its own changes.
+  const elementChanges = groupBy(diff.elements, subjectOf);
+  const transitionChanges = groupBy(diff.transitions, transitionSubjectOf);
+  const eventChanges = groupBy(diff.events, (change) => change.event);
+
   const elements = [
     ...model.elements
       .filter((element) => !removedElements.has(element.id))
       .map((element) =>
-        diff.elements
-          .filter((change) => subjectOf(change) === element.id)
-          .reduce(applyElementChange, element),
+        (elementChanges.get(element.id) ?? []).reduce(
+          applyElementChange,
+          element,
+        ),
       ),
     ...diff.elements.flatMap((change) =>
       change.kind === "added" ? [change.element] : [],
@@ -319,18 +344,20 @@ export const applyModelDiff = <I extends IdSpace>(
     ...model.transitions
       .filter((transition) => !removedTransitions.has(transition.id))
       .map((transition) =>
-        diff.transitions
-          .filter((change) => transitionSubjectOf(change) === transition.id)
-          .reduce(applyTransitionChange, transition),
+        (transitionChanges.get(transition.id) ?? []).reduce(
+          applyTransitionChange,
+          transition,
+        ),
       ),
     ...diff.transitions.flatMap((change) =>
       change.kind === "added" ? [change.transition] : [],
     ),
   ];
   const events = model.events.map((event) =>
-    diff.events
-      .filter((change) => change.event === event.id)
-      .reduce((renamed, change) => ({ ...renamed, name: change.to }), event),
+    (eventChanges.get(event.id) ?? []).reduce(
+      (renamed, change) => ({ ...renamed, name: change.to }),
+      event,
+    ),
   );
   const fragments = model.fragments.map((fragment) => ({
     ...fragment,
