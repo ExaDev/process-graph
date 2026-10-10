@@ -65,14 +65,14 @@
     "@stryker-mutator/typescript-checker": "10.0.0",
     "@stryker-mutator/vitest-runner": "10.0.0",
     "@types/node": "26.6.4",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "5.0.3",
     "eslint": "10.12.0",
     "publint": "0.3.25",
     "typescript": "6.0.3",
-    "vitest": "4.1.11"
+    "vitest": "5.0.3"
   },
   "dependencies": {
-    "@exadev/process-graph-schema": "1.0.1",
+    "@exadev/process-graph-schema": "1.0.2",
     "@orpc/client": "2.0.0-beta.41",
     "@orpc/contract": "2.0.0-beta.41",
     "@orpc/server": "2.0.0-beta.41",
@@ -80,7 +80,7 @@
     "zod": "4.6.5"
   },
   "peerDependencies": {
-    "vitest": "4.1.11"
+    "vitest": "5.0.3"
   },
   "peerDependenciesMeta": {
     "vitest": {
