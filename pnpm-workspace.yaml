@@ -29,6 +29,7 @@ minimumReleaseAgeExclude:
   - "@exadev/eslint-config"
   - "@exadev/json-compose"
   - "@exadev/process-graph-*"
+  - process-graph
   - cosmiconfig-extends
   - trilean
   - trilean-regex

@@ -20,6 +20,10 @@ const config: KnipConfig = {
       entry: ["src/index.{ts,tsx}"],
       project: ["src/**/*.{ts,tsx}!"],
     },
+    "packages/targets/*": {
+      entry: ["src/index.{ts,tsx}"],
+      project: ["src/**/*.{ts,tsx}!"],
+    },
   },
   ignoreDependencies: [
     // Resolved by semantic-release via the plugin-name strings in release.config.ts's own plugins array, not a static import knip can see.
