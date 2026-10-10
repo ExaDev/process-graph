@@ -250,3 +250,30 @@ export const sharedEndShape = (count: number): Shape => {
     path: [],
   };
 };
+
+/** Activities in a line, one authored fragment over all of them, and one authored fragment over each of them nested inside it. */
+export const authoredNestingShape = (count: number): Shape => {
+  const steps = ids(count, "x-");
+
+  return {
+    model: {
+      ...empty,
+      participants: actors,
+      elements: steps.map((id) => activity(id)),
+      transitions: steps.slice(1).map((id, index) => ({
+        id: `t-${id}`,
+        source: steps[index] ?? id,
+        target: id,
+      })),
+      fragments: [
+        { id: "outer", operator: "opt", operands: [{ body: steps }] },
+        ...steps.map((id) => ({
+          id: `f-${id}`,
+          operator: "opt" as const,
+          operands: [{ body: [id] }],
+        })),
+      ],
+    },
+    path: steps.slice(1).map((id) => `t-${id}`),
+  };
+};

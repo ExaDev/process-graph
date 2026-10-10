@@ -1,5 +1,5 @@
 /**
- * Counts the work a call does through the collection operations every projection is built from: each `push`, each set or map insertion and each set or map lookup counts one, so walks over linked structures that test membership as they go are counted too, and each array scan (`filter`, `map`, `flatMap`, `some`, `every`, `find`, `findIndex`, `includes`, `indexOf`) counts the length of the array it scans, so a scan of a whole list per item shows as quadratic. The operations are wrapped only while `run` runs and restored afterwards, even when it throws.
+ * Counts the work a call does through the collection operations every projection is built from: each step of an array's iterator (every `for...of`, spread and destructuring), each `push`, each set or map insertion and each set or map lookup counts one, so walks over linked structures that test membership as they go are counted too, and each array scan (`filter`, `map`, `flatMap`, `some`, `every`, `find`, `findIndex`, `includes`, `indexOf`) counts the length of the array it scans, so a scan of a whole list per item shows as quadratic. The operations are wrapped only while `run` runs and restored afterwards, even when it throws.
  * @param run - The call to measure.
  * @returns The work counted.
  */
@@ -52,6 +52,12 @@ export const workOf = (run: () => unknown): number => {
     wrap(Array.prototype, name, length);
   }
   wrap(Array.prototype, "push", one);
+  // Every `for...of`, spread and destructuring of an array steps its iterator, so each step counts once: a copy of a whole list made per item shows as quadratic, while taking its first item costs one.
+  const arrayIterator: unknown = Object.getPrototypeOf([][Symbol.iterator]());
+  if (typeof arrayIterator !== "object" || arrayIterator === null) {
+    throw new TypeError("The array iterator has no prototype");
+  }
+  wrap(arrayIterator, "next", one);
   wrap(Set.prototype, "add", one);
   wrap(Set.prototype, "has", one);
   wrap(Map.prototype, "set", one);
