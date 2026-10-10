@@ -8,6 +8,9 @@ import {
   toStateMachine,
 } from "./index.ts";
 
+/** Enough teeth that a list copied per message would hold far more references than the comb has elements. */
+const combLength = 300;
+
 /** Message layers between the drawn ends; the routes from one end to the other number `width` to the power of this, so enumerating them is out of reach long before the model is large. */
 const layers = 8;
 /** Message elements per layer, each joined to every one in the next layer. */
@@ -205,5 +208,158 @@ describe("a merged chain's labels", () => {
         through: ["d", "m-yes", "m-no"],
       },
     ]);
+  });
+});
+
+/** Messages in a line, each with its own exit to an activity, entered from one activity: the reachable targets grow by one at every message. */
+const comb = (
+  length: number,
+): { readonly model: Model<OpenIds>; readonly ends: string[] } => {
+  const teeth = Array.from({ length }, (_, index) => `m-${String(index)}`);
+  const exits = teeth.map((id) => `e-${id}`);
+
+  return {
+    model: {
+      participants: [],
+      events: [],
+      actions: [],
+      artefacts: [],
+      elements: [
+        { kind: "activity", id: "s", label: "S" },
+        ...teeth.map((id) => ({
+          kind: "message" as const,
+          id,
+          label: id,
+          from: "x",
+          to: "y",
+          mode: "async" as const,
+        })),
+        ...exits.map((id) => ({ kind: "activity" as const, id, label: id })),
+      ],
+      transitions: [
+        { id: "t-in", source: "s", target: "m-0" },
+        ...teeth.flatMap((id, index) => [
+          { id: `t-${id}-out`, source: id, target: `e-${id}` },
+          ...(index + 1 < length
+            ? [{ id: `t-${id}-on`, source: id, target: teeth[index + 1] ?? id }]
+            : []),
+        ]),
+      ],
+      fragments: [],
+      projections: [],
+    },
+    ends: exits,
+  };
+};
+
+/** Two combs of the same length entered from one message and joined again at a last message, whose teeth exit to the same activities, so merging their targets must remove duplicates. */
+const diamondOfCombs = (
+  length: number,
+): { readonly model: Model<OpenIds>; readonly ends: string[] } => {
+  const shared = Array.from({ length }, (_, index) => `e-${String(index)}`);
+  const arm = (side: string): string[] =>
+    shared.map((_, index) => `${side}-${String(index)}`);
+  const left = arm("l");
+  const right = arm("r");
+  const message = (id: string) => ({
+    kind: "message" as const,
+    id,
+    label: id,
+    from: "x",
+    to: "y",
+    mode: "async" as const,
+  });
+  const teeth = (side: readonly string[]) =>
+    side.flatMap((id, index) => [
+      { id: `t-${id}-out`, source: id, target: shared[index] ?? id },
+      {
+        id: `t-${id}-on`,
+        source: id,
+        target: side[index + 1] ?? "join",
+      },
+    ]);
+
+  return {
+    model: {
+      participants: [],
+      events: [],
+      actions: [],
+      artefacts: [],
+      elements: [
+        { kind: "activity", id: "s", label: "S" },
+        message("fork"),
+        ...left.map(message),
+        ...right.map(message),
+        message("join"),
+        ...shared.map((id) => ({ kind: "activity" as const, id, label: id })),
+        { kind: "activity", id: "last", label: "Last" },
+      ],
+      transitions: [
+        { id: "t-in", source: "s", target: "fork" },
+        { id: "t-left", source: "fork", target: left[0] ?? "join" },
+        { id: "t-right", source: "fork", target: right[0] ?? "join" },
+        ...teeth(left),
+        ...teeth(right),
+        { id: "t-last", source: "join", target: "last" },
+      ],
+      fragments: [],
+      projections: [],
+    },
+    ends: [...shared, "last"],
+  };
+};
+
+/** References the index stores building and reading the targets from the entry activity. */
+const storedReferences = (model: Model<OpenIds>): number => {
+  let stored = 0;
+  const messages = new Set(
+    model.elements.flatMap((element) =>
+      element.kind === "message" ? [element.id] : [],
+    ),
+  );
+  const index = chainIndex(model, {
+    folded: (element) => messages.has(element),
+    accepted: (element) => !messages.has(element),
+    observe: (references) => {
+      stored += references;
+    },
+  });
+  for (const first of model.transitions.filter(
+    (transition) => transition.source === "s",
+  )) {
+    index.from(first);
+  }
+
+  return stored;
+};
+
+/** Doubling a model of linear size may at most double what the index stores. */
+const doubling = 2;
+
+describe("the index's stored size", () => {
+  it("stays linear for a comb whose targets grow at every message", () => {
+    expect(
+      storedReferences(comb(doubling * combLength).model),
+    ).toBeLessThanOrEqual(doubling * storedReferences(comb(combLength).model));
+  });
+
+  it("stays linear for a diamond of combs", () => {
+    expect(
+      storedReferences(diamondOfCombs(doubling * combLength).model),
+    ).toBeLessThanOrEqual(
+      doubling * storedReferences(diamondOfCombs(combLength).model),
+    );
+  });
+
+  it("reaches every tooth of a comb in order", () => {
+    const { model, ends: teeth } = comb(combLength);
+
+    expect(toFlowchart(model).edges.map((edge) => edge.to)).toEqual(teeth);
+  });
+
+  it("reaches each shared end of a diamond of combs once, in order, then the end after the join", () => {
+    const { model, ends: reached } = diamondOfCombs(combLength);
+
+    expect(toFlowchart(model).edges.map((edge) => edge.to)).toEqual(reached);
   });
 });
