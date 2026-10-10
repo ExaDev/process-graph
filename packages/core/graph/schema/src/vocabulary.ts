@@ -29,6 +29,10 @@ export const fragmentOperators = [
 ] as const;
 export type FragmentOperator = (typeof fragmentOperators)[number];
 
+/** Where an element stands in a run: finished, still to do, or not known. Run state is supplied by sources and never stored in the model. */
+export const overlayStatuses = ["done", "open", "unknown"] as const;
+export type OverlayStatus = (typeof overlayStatuses)[number];
+
 export const notations = [
   "flowchart",
   "swimlane",

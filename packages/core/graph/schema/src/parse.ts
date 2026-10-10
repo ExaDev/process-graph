@@ -1,5 +1,6 @@
 import type { Model } from "./model.ts";
 import type { OpenIds } from "./ids.ts";
+import { toPointer } from "./pointer.ts";
 import { modelSchema } from "./schema.ts";
 import { validate, type IssueCode } from "./validate.ts";
 
@@ -39,15 +40,6 @@ export class ModelParseError extends Error {
     this.issues = issues;
   }
 }
-
-/** Encodes one path as an RFC 6901 JSON pointer, escaping `~` and `/` inside a segment. */
-const toPointer = (path: readonly PropertyKey[]): string =>
-  path
-    .map(
-      (segment) =>
-        `/${String(segment).replaceAll("~", "~0").replaceAll("/", "~1")}`,
-    )
-    .join("");
 
 /**
  * Loads a model from untrusted input, such as parsed JSON.

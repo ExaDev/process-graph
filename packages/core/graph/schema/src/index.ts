@@ -29,5 +29,13 @@ export type {
 export { inputsOf, outputsOf } from "./artefacts.ts";
 export { defineModel, type Model, type ModelParts } from "./model.ts";
 export { validate, type Issue, type IssueCode } from "./validate.ts";
+export {
+  OverlayParseError,
+  overlaySchema,
+  parseOverlay,
+  type Overlay,
+  type OverlayIssue,
+} from "./overlay.ts";
+export type { OverlayStatus } from "./vocabulary.ts";
 export { modelSchema } from "./schema.ts";
 export { ModelParseError, parseModel, type ModelIssue } from "./parse.ts";
