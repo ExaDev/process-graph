@@ -4,6 +4,7 @@ import { sequenceObserved } from "./sequence.ts";
 import { workOf } from "./test-support/work.ts";
 import {
   actors,
+  authoredNestingShape,
   authoredRepeatsShape,
   combShape,
   diamondShape,
@@ -512,7 +513,11 @@ const withEntity = ({
   path,
 });
 
-const shapes: readonly (readonly [string, (count: number) => Shape])[] = [
+/** A shape's name, how to build it at a size, and, where the default is too small for its quadratic part to show above the linear work around it, its own size. */
+const shapes: readonly (
+  | readonly [string, (count: number) => Shape]
+  | readonly [string, (count: number) => Shape, number]
+)[] = [
   ["a comb of messages", combShape],
   ["a diamond of combs", diamondShape],
   ["decisions nested to one meet", (count) => withEntity(nestedSkips(count))],
@@ -534,6 +539,12 @@ const shapes: readonly (readonly [string, (count: number) => Shape])[] = [
   ["repeated steps under many authored fragments", authoredRepeatsShape],
   ["a wide fork", wideForkShape],
   ["serial diamonds of messages", serialDiamondsShape],
+  // Each path into the end once read the whole list of steps arriving at it; that list grows with the paths, but only overtakes the per-path work at the larger size.
+  ["many paths converging on one end", sharedEndShape, size],
+  [
+    "an authored fragment over the path with one inside it per step",
+    authoredNestingShape,
+  ],
   ["branches sharing one tail", (count) => withEntity(sharedTail(count))],
   ["a decision with many ways round", (count) => withEntity(manyLoops(count))],
 ];
@@ -682,9 +693,9 @@ const doubled = 2;
 const tableSize = 100;
 
 describe("work at most doubles when a reported shape doubles", () => {
-  describe.each(shapes)("%s", (_shape, build) => {
-    const small = build(tableSize);
-    const large = build(doubled * tableSize);
+  describe.each(shapes)("%s", (_shape, build, own = tableSize) => {
+    const small = build(own);
+    const large = build(doubled * own);
 
     it.each(entries)("through %s", (_entry, enter) => {
       expect(workPerItem(large, enter)).toBeLessThan(
