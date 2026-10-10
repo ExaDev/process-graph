@@ -306,6 +306,55 @@ importers:
         specifier: 5.0.3
         version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0)(yaml@2.9.1))
 
+  packages/adapters/graph/sqlite-node:
+    dependencies:
+      '@exadev/process-graph-store-contract':
+        specifier: 0.0.0
+        version: link:../../../core/graph/store-contract
+      '@exadev/process-graph-store-sqlite':
+        specifier: 0.0.0
+        version: link:../store-sqlite
+      drizzle-orm:
+        specifier: 1.0.0-rc.4
+        version: 1.0.0-rc.4(zod@4.6.5)
+    devDependencies:
+      '@arethetypeswrong/cli':
+        specifier: 0.18.5
+        version: 0.18.5
+      '@orpc/client':
+        specifier: 2.0.0-beta.41
+        version: 2.0.0-beta.41
+      '@orpc/server':
+        specifier: 2.0.0-beta.41
+        version: 2.0.0-beta.41
+      '@stryker-mutator/core':
+        specifier: 10.0.0
+        version: 10.0.0(@types/node@26.6.4)
+      '@stryker-mutator/typescript-checker':
+        specifier: 10.0.0
+        version: 10.0.0(@stryker-mutator/core@10.0.0(@types/node@26.6.4))(typescript@6.0.3)
+      '@stryker-mutator/vitest-runner':
+        specifier: 10.0.0
+        version: 10.0.0(@stryker-mutator/core@10.0.0(@types/node@26.6.4))(vitest@5.0.3)
+      '@types/node':
+        specifier: 26.6.4
+        version: 26.6.4
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
+      eslint:
+        specifier: 10.12.0
+        version: 10.12.0(jiti@2.7.0)(supports-color@7.2.0)
+      publint:
+        specifier: 0.3.25
+        version: 0.3.25
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 5.0.3
+        version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0)(yaml@2.9.1))
+
   packages/adapters/graph/store-sqlite:
     dependencies:
       '@exadev/process-graph-domain':
