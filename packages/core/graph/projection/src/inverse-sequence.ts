@@ -1,5 +1,6 @@
 import type { IdSpace, Model } from "@exadev/process-graph-schema";
 import { actorMap } from "./actors.ts";
+import { Occurrences } from "./occurrences.ts";
 import type {
   ElementChange,
   EventChange,
@@ -58,27 +59,22 @@ export const diffSequence = <I extends IdSpace>(
   );
   const actors = actorMap(model);
 
-  const pending = new Map<I["transition"], SequenceMessage<I>[]>();
-  for (const message of original.messages) {
-    pending.set(message.transition, [
-      ...(pending.get(message.transition) ?? []),
-      message,
-    ]);
-  }
+  const pending = new Occurrences(
+    original.messages,
+    (message: SequenceMessage<I>) => message.transition,
+  );
 
   const elementChanges: ElementChange<I>[] = [];
   const transitionChanges: TransitionChange<I>[] = [];
   const eventChanges: EventChange<I>[] = [];
-  /** Where each edited message arrives, by position, for placing a new step after it. */
-  const arrivals: { readonly actor: I["actor"]; readonly at: I["element"] }[] =
-    [];
+  /** Where the latest edited message to each actor arrived, for placing a new step that actor sends. */
+  const arrivals = new Map<I["actor"], I["element"]>();
   /** A new step just placed, and where it left from, so the next drawn step can be rewired after it. */
   let inserted:
     { readonly from: I["element"]; readonly element: I["element"] } | undefined;
 
   for (const message of edited.messages) {
-    const queue = pending.get(message.transition);
-    const before = queue?.shift();
+    const before = pending.next(message.transition);
     const transition = transitions.get(message.transition);
     if (before === undefined || transition === undefined) {
       if (transition !== undefined) {
@@ -92,9 +88,7 @@ export const diffSequence = <I extends IdSpace>(
           `New message "${message.transition}" must name the element it arrives at in \`element\``,
         );
       }
-      const source = arrivals.findLast(
-        ({ actor }) => actor === message.from,
-      )?.at;
+      const source = arrivals.get(message.from);
       if (source === undefined) {
         throw new Error(
           `New message "${message.transition}" has no earlier message to "${message.from}" to leave from`,
@@ -117,7 +111,7 @@ export const diffSequence = <I extends IdSpace>(
         transition: { id: message.transition, source, target },
         inferred: true,
       });
-      arrivals.push({ actor: message.to, at: target });
+      arrivals.set(message.to, target);
       inserted = { from: source, element: target };
       continue;
     }
@@ -137,10 +131,7 @@ export const diffSequence = <I extends IdSpace>(
       });
     }
     inserted = undefined;
-    arrivals.push({
-      actor: message.to,
-      at: before.element ?? transition.target,
-    });
+    arrivals.set(message.to, before.element ?? transition.target);
 
     if (before.label !== message.label) {
       const trigger =
@@ -211,10 +202,8 @@ export const diffSequence = <I extends IdSpace>(
     }
   }
 
-  for (const [transition, left] of pending) {
-    if (left.length > 0) {
-      transitionChanges.push({ kind: "removed", transition, inferred: true });
-    }
+  for (const transition of pending.unread()) {
+    transitionChanges.push({ kind: "removed", transition, inferred: true });
   }
 
   return {
