@@ -12,6 +12,7 @@ import {
   ids,
   serialDiamondsShape,
   sharedEndShape,
+  sharedSuffixShape,
   sourcesIntoRunShape,
   twoBranchesShape,
   wideForkShape,
@@ -544,6 +545,13 @@ const shapes: readonly (
   ["many paths converging on one end", sharedEndShape, size],
   // Every edge into the activities is a merged chain over the same two branches; reading their lists once walked those branches again per edge, which shows at the larger size.
   ["two branches leading to many common ends", twoBranchesShape, size],
+  // Every diamond's entrance also leads into a shared run; walks once entered that run from every start whether or not it led anywhere.
+  ["diamonds sharing a run that leads nowhere", sharedSuffixShape(false), size],
+  [
+    "diamonds sharing a run half of which leads somewhere",
+    sharedSuffixShape(true),
+    size,
+  ],
   [
     "an authored fragment over the path with one inside it per step",
     authoredNestingShape,
@@ -633,88 +641,139 @@ const workPerItem = (shape: Shape, enter: (shape: Shape) => number): number => {
 };
 
 /** The edit-list shapes, measured through the inverses that read them. */
-const edits: readonly (readonly [string, (count: number) => () => unknown])[] =
+/** An edit to measure: the call, and how many items its input holds (the model and the edited view as read), so work is measured per item as for the projections. */
+interface Edit {
+  readonly run: () => unknown;
+  readonly input: number;
+}
+
+/** Items in a model: its elements and transitions. */
+const modelSize = (model: Model<OpenIds>): number =>
+  model.elements.length + model.transitions.length;
+
+/** Items in a flowchart as an inverse reads it: its nodes, and each edge with its lists and label. */
+const viewSize = (flow: ReturnType<typeof toFlowchart<OpenIds>>): number =>
+  flow.nodes.length +
+  flow.edges.reduce(
+    (total, edge) =>
+      total +
+      1 +
+      edge.transitions.length +
+      (edge.through?.length ?? 0) +
+      (edge.label?.length ?? 0),
+    0,
+  );
+
+const edits: readonly (readonly [string, (count: number) => Edit])[] = [
   [
-    [
-      "diffFlowchart adding a ring of bars",
-      (count) => {
-        const bars = ids(count, "bar-");
-        const edited = {
-          nodes: bars.map((id) => ({
-            id,
-            label: "Fork",
-            shape: "bar" as const,
-          })),
-          edges: bars.map((id, index) => ({
-            from: id,
-            to: bars[(index + 1) % count] ?? id,
-            transitions: [`t-${id}`],
-          })),
-        };
+    "diffFlowchart adding a ring of bars",
+    (count) => {
+      const bars = ids(count, "bar-");
+      const edited = {
+        nodes: bars.map((id) => ({
+          id,
+          label: "Fork",
+          shape: "bar" as const,
+        })),
+        edges: bars.map((id, index) => ({
+          from: id,
+          to: bars[(index + 1) % count] ?? id,
+          transitions: [`t-${id}`],
+        })),
+      };
 
-        return () => diffFlowchart(empty, edited);
-      },
-    ],
-    [
-      "diffFlowchart deleting every edge of sources whose messages share one end",
-      (count) => {
-        const { model } = sharedEndShape(count);
-        const { nodes } = toFlowchart(model);
+      return {
+        run: () => diffFlowchart(empty, edited),
+        input: edited.nodes.length + edited.edges.length,
+      };
+    },
+  ],
+  [
+    "diffFlowchart deleting every edge of sources whose messages share one end",
+    (count) => {
+      const { model } = sharedEndShape(count);
+      const { nodes } = toFlowchart(model);
 
-        return () => diffFlowchart(model, { nodes, edges: [] });
-      },
-    ],
-    [
-      "diffStateMachine deleting every transition of sources whose messages share one end",
-      (count) => {
-        const { model } = sharedEndShape(count);
-        const { states } = toStateMachine(model, "order");
+      return {
+        run: () => diffFlowchart(model, { nodes, edges: [] }),
+        input: modelSize(model),
+      };
+    },
+  ],
+  [
+    "diffStateMachine deleting every transition of sources whose messages share one end",
+    (count) => {
+      const { model } = sharedEndShape(count);
+      const { states } = toStateMachine(model, "order");
 
-        return () =>
+      return {
+        run: () =>
           diffStateMachine(model, {
             subject: "order",
             states,
             transitions: [],
-          });
-      },
-    ],
-    [
-      "diffFlowchart reading an unchanged flowchart of merged edges over two branches",
+          }),
+        input: modelSize(model),
+      };
+    },
+  ],
+  [
+    "diffFlowchart reading an unchanged flowchart of merged edges over two branches",
+    (count) => {
+      const { model } = twoBranchesShape(count);
+      const flow = toFlowchart(model);
+
+      return {
+        run: () => diffFlowchart(model, flow),
+        input: modelSize(model) + viewSize(flow),
+      };
+    },
+  ],
+  ...[false, true].map(
+    (livePart): readonly [string, (count: number) => Edit] => [
+      `diffFlowchart reading an unchanged flowchart of diamonds sharing a run ${livePart ? "half of which leads somewhere" : "that leads nowhere"}`,
       (count) => {
-        const { model } = twoBranchesShape(count);
+        const { model } = sharedSuffixShape(livePart)(count);
         const flow = toFlowchart(model);
 
-        return () => diffFlowchart(model, flow);
+        return {
+          run: () => diffFlowchart(model, flow),
+          input: modelSize(model) + viewSize(flow),
+        };
       },
     ],
-    [
-      "applyModelDiff renaming every activity",
-      (count) => {
-        const activities = ids(count, "a-");
-        const model: Model<OpenIds> = {
-          ...empty,
-          elements: activities.map((id) => ({
-            kind: "activity",
-            id,
-            label: id,
-          })),
-        };
-        const diff: ModelDiff<OpenIds> = {
-          elements: activities.map((id) => ({
-            kind: "renamed",
-            element: id,
-            from: id,
-            to: `${id}!`,
-            inferred: false,
-          })),
-          transitions: [],
-          events: [],
-        };
+  ),
+  [
+    "applyModelDiff renaming every activity",
+    (count) => {
+      const activities = ids(count, "a-");
+      const model: Model<OpenIds> = {
+        ...empty,
+        elements: activities.map((id) => ({
+          kind: "activity",
+          id,
+          label: id,
+        })),
+      };
+      const diff: ModelDiff<OpenIds> = {
+        elements: activities.map((id) => ({
+          kind: "renamed",
+          element: id,
+          from: id,
+          to: `${id}!`,
+          inferred: false,
+        })),
+        transitions: [],
+        events: [],
+      };
 
-        return () => applyModelDiff(model, diff);
-      },
-    ],
-  ];
+      return {
+        run: () => applyModelDiff(model, diff),
+        input: modelSize(model) + diff.elements.length,
+      };
+    },
+  ],
+];
 
 const doubled = 2;
 /** Each projected shape's smaller size in the table: large enough that quadratic work doubles per item while linear work stays level, small enough that a shape whose output is itself quadratic stays quick to build with every collection call counted. */
@@ -737,6 +796,8 @@ describe("work at most doubles when a reported shape doubles", () => {
     const small = prepare(size);
     const large = prepare(doubled * size);
 
-    expect(workOf(large)).toBeLessThan(growthLimit * workOf(small));
+    expect(workOf(large.run) / large.input).toBeLessThan(
+      (growthLimit / doubled) * (workOf(small.run) / small.input),
+    );
   });
 });

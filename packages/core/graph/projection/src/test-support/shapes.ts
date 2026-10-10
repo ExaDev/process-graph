@@ -304,3 +304,49 @@ export const twoBranchesShape = (count: number): Shape => {
     path: [],
   };
 };
+
+/**
+ * Sources each entering a small diamond of messages that meets again at its own activity, every diamond's entrance also leading into one shared run of messages. The run leads nowhere unless `livePart` is set, when its middle message also leads to one more activity.
+ */
+export const sharedSuffixShape =
+  (livePart: boolean) =>
+  (count: number): Shape => {
+    const sources = ids(count, "s-");
+    const run = ids(count, "run-");
+    const middle = run[Math.floor(count / 2)] ?? "run-0";
+
+    return {
+      model: {
+        ...empty,
+        participants: actors,
+        elements: [
+          ...sources.map((id) => activity(id, "customer")),
+          ...sources.flatMap((id) =>
+            [`a-${id}`, `b-${id}`, `c-${id}`].map(messageElement),
+          ),
+          ...run.map(messageElement),
+          ...sources.map((id) => activity(`e-${id}`)),
+          ...(livePart ? [activity("tail")] : []),
+        ],
+        transitions: [
+          ...sources.flatMap((id) => [
+            { id: `t-${id}`, source: id, target: `a-${id}` },
+            { id: `t-${id}-b`, source: `a-${id}`, target: `b-${id}` },
+            { id: `t-${id}-c`, source: `a-${id}`, target: `c-${id}` },
+            { id: `t-${id}-b-e`, source: `b-${id}`, target: `e-${id}` },
+            { id: `t-${id}-c-e`, source: `c-${id}`, target: `e-${id}` },
+            { id: `t-${id}-run`, source: `a-${id}`, target: "run-0" },
+          ]),
+          ...run.slice(1).map((id, index) => ({
+            id: `t-${id}`,
+            source: run[index] ?? id,
+            target: id,
+          })),
+          ...(livePart
+            ? [{ id: "t-tail", source: middle, target: "tail" }]
+            : []),
+        ],
+      },
+      path: [],
+    };
+  };
