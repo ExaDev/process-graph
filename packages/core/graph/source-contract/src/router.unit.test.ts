@@ -107,6 +107,47 @@ describe.each([
   });
 });
 
+describe("the scope listing", () => {
+  test("a pager without one answers NOT_IMPLEMENTED", async () => {
+    const client = inProcessClient(
+      createGraphSourceRouter({ source: "fake", page: fake.page }),
+    );
+    const notImplemented = {
+      code: "NOT_IMPLEMENTED",
+      defined: true,
+      data: {},
+    };
+    await expect(client.v1.scopes.roots({})).rejects.toMatchObject(
+      notImplemented,
+    );
+    await expect(
+      client.v1.scopes.children({ scope: "fake:acme" }),
+    ).rejects.toMatchObject(notImplemented);
+  });
+
+  test("passes the filter to the pager", async () => {
+    const seen: PageRequest["filter"][] = [];
+    const recording: GraphSourcePager = {
+      source: "fake",
+      page: async (request: PageRequest) => {
+        seen.push(request.filter);
+
+        return await fake.page(request);
+      },
+    };
+    const client = inProcessClient(createGraphSourceRouter(recording));
+    const filter = { labels: ["bug"] };
+    await client.v1.sync.page({ scope, filter });
+    for await (const page of await client.v1.sync.stream({ scope, filter })) {
+      expect(page.activities).toEqual([]);
+    }
+    expect(seen.length).toBeGreaterThan(1);
+    expect(seen.every((received) => received?.labels?.[0] === "bug")).toBe(
+      true,
+    );
+  });
+});
+
 describe("the abort signal", () => {
   test("reaches the pager, and aborting it mid-stream ends the stream", async () => {
     const seen: (AbortSignal | undefined)[] = [];
