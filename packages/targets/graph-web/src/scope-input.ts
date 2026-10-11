@@ -12,8 +12,11 @@ export type ScopeInput =
 
 const githubHost = "github.com";
 
+/** The first path segment of a Projects v2 board's address, by whether an organisation or a user owns it. */
+const boardOwnerSegments: ReadonlySet<string> = new Set(["orgs", "users"]);
+
 /**
- * The path segments of a GitHub web address that name an account or a repository: `https://github.com/owner` and `https://github.com/owner/repo`, with anything after the repository (`/issues/12`, `/pulls`) ignored.
+ * The scope path a GitHub web address names: `https://github.com/owner` an owner, `https://github.com/owner/repo` a repository, with anything after it (`/issues/12`, `/pulls`) ignored, and `https://github.com/orgs/owner/projects/1` or `/users/owner/projects/1` a Projects v2 board, with any view after it ignored.
  */
 const fromGitHubUrl = (text: string): string | undefined => {
   if (!URL.canParse(text)) {
@@ -23,17 +26,28 @@ const fromGitHubUrl = (text: string): string | undefined => {
   if (url.hostname !== githubHost) {
     return undefined;
   }
-  const [owner, name] = url.pathname.split("/").filter((part) => part !== "");
+  const [first, second, third, fourth] = url.pathname
+    .split("/")
+    .filter((part) => part !== "");
+  if (
+    first !== undefined &&
+    boardOwnerSegments.has(first) &&
+    second !== undefined &&
+    third === "projects" &&
+    fourth !== undefined
+  ) {
+    return `${second}/projects/${fourth}`;
+  }
 
-  return owner === undefined
+  return first === undefined
     ? undefined
-    : name === undefined
-      ? owner
-      : `${owner}/${name}`;
+    : second === undefined
+      ? first
+      : `${first}/${second}`;
 };
 
 /**
- * Reads what a person typed as a scope. A source-qualified scope is taken as it is; a GitHub web address, `owner/repo` or `owner` is read as a GitHub scope and checked as the GitHub source checks it.
+ * Reads what a person typed as a scope. A source-qualified scope is taken as it is; a GitHub web address (of an owner, a repository or a Projects v2 board), `owner/repo`, `owner/projects/number` or `owner` is read as a GitHub scope and checked as the GitHub source checks it.
  * @param text - The text, trimmed of surrounding space.
  * @returns The scope, or a sentence saying why the text is not one.
  */
@@ -58,7 +72,7 @@ export const readScopeInput = (text: string): ScopeInput => {
       }
 
       return {
-        problem: `"${trimmed}" is not a GitHub organisation, user or repository: write owner or owner/repo.`,
+        problem: `"${trimmed}" is not a GitHub organisation, user, repository or project board: write owner, owner/repo or the link to a board.`,
       };
     }
   }
