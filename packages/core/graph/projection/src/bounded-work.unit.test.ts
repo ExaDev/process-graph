@@ -782,28 +782,33 @@ const doubled = 2;
 /** Each projected shape's smaller size in the table: large enough that quadratic work doubles per item while linear work stays level, small enough that a shape whose output is itself quadratic stays quick to build with every collection call counted. */
 const tableSize = 100;
 
-describe("work at most doubles when a reported shape doubles", () => {
-  describe.each(shapes)("%s", (_shape, build, own = tableSize) => {
-    const small = build(own);
-    const large = build(doubled * own);
+// These cases count reads through a proxy at a size and its double, so how long they take is the machine's, not a property of the code: a clock bound only fails them under load, as with coverage instrumentation on a busy runner. No per-test timeout applies; the CI job's own timeout still ends a hang.
+describe(
+  "work at most doubles when a reported shape doubles",
+  { timeout: 0 },
+  () => {
+    describe.each(shapes)("%s", (_shape, build, own = tableSize) => {
+      const small = build(own);
+      const large = build(doubled * own);
 
-    it.each(entries)("through %s", (_entry, enter) => {
-      expect(workPerItem(large, enter)).toBeLessThan(
-        (growthLimit / doubled) * workPerItem(small, enter),
+      it.each(entries)("through %s", (_entry, enter) => {
+        expect(workPerItem(large, enter)).toBeLessThan(
+          (growthLimit / doubled) * workPerItem(small, enter),
+        );
+      });
+    });
+
+    it.each(edits)("%s", (_edit, prepare) => {
+      // Edits re-project the model before reading the edit, a fixed cost per item that a rescan per edited item only overtakes at the larger size.
+      const small = prepare(size);
+      const large = prepare(doubled * size);
+
+      expect(workOf(large.run) / large.input).toBeLessThan(
+        (growthLimit / doubled) * (workOf(small.run) / small.input),
       );
     });
-  });
-
-  it.each(edits)("%s", (_edit, prepare) => {
-    // Edits re-project the model before reading the edit, a fixed cost per item that a rescan per edited item only overtakes at the larger size.
-    const small = prepare(size);
-    const large = prepare(doubled * size);
-
-    expect(workOf(large.run) / large.input).toBeLessThan(
-      (growthLimit / doubled) * (workOf(small.run) / small.input),
-    );
-  });
-});
+  },
+);
 
 describe("folding never multiplies edges", () => {
   it.each([1, 2])(
