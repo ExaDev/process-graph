@@ -120,6 +120,29 @@ describe("every human-readable and diagram output of the command line", () => {
     },
   );
 
+  test.each(Object.keys(viewArgs))(
+    "show --view %s --format json writes the hostile text as JSON escapes, parsing back to the source's text, the same as --json writes it",
+    async (view) => {
+      const args = [
+        "show",
+        "--view",
+        view,
+        "--format",
+        "json",
+        ...(viewArgs[view] ?? []),
+      ];
+      const text = await harness.run(...args);
+      const json = await harness.run(...args, "--json");
+
+      expect(text.code).toBe(exitCodes.success);
+      expect(unsafeIn(text.stdout)).toEqual([]);
+      expect(text.stdout).not.toContain("\\u{");
+      expect(text.stdout).toBe(json.stdout);
+      // Parsed, the escapes are the source's own characters again: the right-to-left override every view carries comes back raw.
+      expect(JSON.stringify(JSON.parse(text.stdout))).toContain("\u202E");
+    },
+  );
+
   test("--json writes nothing unsafe raw and carries the text unchanged once parsed", async () => {
     await harness.run("set", "prepare", "done");
     const { stdout } = await harness.run("ready", "--json");

@@ -13,7 +13,9 @@ import {
 } from "@exadev/process-graph-cli";
 import { afterEach, describe, expect, test } from "vitest";
 import { App } from "./app.tsx";
-import { testPorts, type TestPorts } from "./test-support/ports.ts";
+import { createFakeGraphSource } from "@exadev/process-graph-source-contract";
+import { isUnsafeCharacter } from "@exadev/process-graph-export";
+import { pageOf, testPorts, type TestPorts } from "./test-support/ports.ts";
 import { parseViewState } from "./url-state.ts";
 
 afterEach(cleanup);
@@ -145,6 +147,65 @@ describe("downloads", () => {
       expect(shown.text).toContain("Build the endpoint");
     },
   );
+
+  test("save a hostile title in JSON as escapes only, parsing back to the title, exactly as the command line's show writes it", async () => {
+    // A C1 control sequence introducer, a right-to-left override, a zero-width space, a line separator, a private-use character and ESC.
+    const hostile = "Pay\u009B2J \u202Edrawkcab\u200B\u2028\uE000\u001B[0m";
+    const ports = testPorts({
+      token: "t",
+      search: acme,
+      pager: createFakeGraphSource({
+        source: "github",
+        scopes: {
+          "github:acme": [
+            pageOf([
+              {
+                id: "github:acme/api#1",
+                label: hostile,
+                repository: "github:acme/api",
+                state: "open",
+                blockedBy: [],
+              },
+            ]),
+          ],
+        },
+      }),
+    });
+    render(<App ports={ports.ports} />);
+    fireEvent.click(screen.getByRole("button", { name: "Sync" }));
+    await waitFor(() => {
+      expect(document.querySelector("[data-progress]")?.textContent).toContain(
+        "Sync finished",
+      );
+    });
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Download the swimlane as JSON",
+      }),
+    );
+
+    const [file] = ports.downloads;
+    const text = file?.text ?? "";
+    expect(Array.from(text).filter(isUnsafeCharacter)).toEqual([]);
+    expect(text).toContain(
+      "\\u009b2J \\u202edrawkcab\\u200b\\u2028\\ue000\\u001b[0m",
+    );
+    const parsed: unknown = JSON.parse(text);
+    expect(JSON.stringify(parsed)).toContain(
+      JSON.stringify(hostile).slice(1, -1),
+    );
+    const shown = await show(
+      {
+        store: ports.ports.store,
+        modelId,
+        facts: () => ({ found: false }),
+        signal: undefined,
+      },
+      { view: "swimlane", format: "json" },
+    );
+    expect(text).toBe(shown.text);
+  });
 
   test("follow the sequence the view draws", async () => {
     const ports = await synced(`${acme}&view=sequence`);
