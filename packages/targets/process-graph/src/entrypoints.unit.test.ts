@@ -19,6 +19,7 @@ import * as githubNodeEntry from "./source/github/node.ts";
 import * as storeEntry from "./store.ts";
 import * as storeNodeEntry from "./store/node.ts";
 import * as uiEntry from "./ui.ts";
+import * as versionModule from "./version.ts";
 
 /** One subpath entry point and the bundled packages whose exports it carries flat. */
 interface Subpath {
@@ -78,7 +79,10 @@ const subpaths: readonly Subpath[] = [
   {
     name: "cli",
     entry: cliEntry,
-    layers: [["cli", cliPackage]],
+    layers: [
+      ["cli", cliPackage],
+      ["version", versionModule],
+    ],
   },
 ];
 

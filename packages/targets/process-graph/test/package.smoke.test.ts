@@ -201,6 +201,32 @@ describe("each subpath, imported from the installed package", () => {
     });
   });
 
+  test("process-graph/package.json and process-graph/cli's version name the installed package's version", () => {
+    const installedManifest: unknown = JSON.parse(
+      readFileSync(join(installed, "package.json"), "utf8"),
+    );
+    if (
+      typeof installedManifest !== "object" ||
+      installedManifest === null ||
+      !("version" in installedManifest) ||
+      typeof installedManifest.version !== "string"
+    ) {
+      throw new Error("the installed manifest has no version");
+    }
+
+    expect(
+      evaluate(`
+        import manifest from "process-graph/package.json" with { type: "json" };
+        import { version } from "process-graph/cli";
+        console.log(JSON.stringify({ name: manifest.name, manifest: manifest.version, cli: version }));
+      `),
+    ).toEqual({
+      name: "process-graph",
+      manifest: installedManifest.version,
+      cli: installedManifest.version,
+    });
+  });
+
   test("process-graph/cli runs a command through the Node ports", () => {
     expect(
       evaluate(`

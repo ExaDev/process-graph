@@ -1,7 +1,10 @@
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
+import { buildConstants } from "./build-constants.ts";
 
 export default defineConfig({
+  // The values tsdown writes into the bundle, so source under test reads what the built package carries.
+  define: { ...buildConstants },
   test: {
     projects: [
       {
