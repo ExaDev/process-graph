@@ -124,6 +124,7 @@
     "@exadev/process-graph-cli": "1.2.0",
     "@exadev/process-graph-dag": "1.1.1",
     "@exadev/process-graph-domain": "1.2.1",
+    "@exadev/process-graph-export": "0.0.0",
     "@exadev/process-graph-layout": "1.0.5",
     "@exadev/process-graph-projection": "1.1.2",
     "@exadev/process-graph-react": "1.1.2",

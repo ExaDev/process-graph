@@ -69,6 +69,7 @@
   "dependencies": {
     "@exadev/process-graph-dag": "workspace:*",
     "@exadev/process-graph-domain": "workspace:*",
+    "@exadev/process-graph-export": "workspace:*",
     "@exadev/process-graph-projection": "workspace:*",
     "@exadev/process-graph-schema": "workspace:*",
     "@exadev/process-graph-source-contract": "workspace:*",

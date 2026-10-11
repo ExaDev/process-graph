@@ -10,6 +10,7 @@ import {
   type FilterState,
   type SyncFilter,
 } from "@exadev/process-graph-source-contract";
+import { terminalJson, terminalText } from "@exadev/process-graph-export";
 import { Argument, Command, InvalidArgumentError, Option } from "commander";
 import type { ComputedValue } from "trilean";
 import {
@@ -64,7 +65,6 @@ import {
   type ViewName,
 } from "./show.ts";
 import { directionNames, sync, SyncInterruptedError } from "./sync.ts";
-import { terminalJson, terminalText } from "./terminal-text.ts";
 import { validateDocument, validateStored } from "./validate.ts";
 
 /** How the program presents itself. */

@@ -1,4 +1,4 @@
-import { terminalText } from "../terminal-text.ts";
+import { terminalText } from "./terminal-text.ts";
 
 /**
  * The Mermaid entity code for a character that would end or change the meaning of a label: quotes, statement and edge-label delimiters, the entity marker itself and HTML.
