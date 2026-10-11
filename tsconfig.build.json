@@ -26,6 +26,9 @@
       "path": "packages/core/graph/store-contract/tsconfig.build.json"
     },
     {
+      "path": "packages/core/graph/sync/tsconfig.build.json"
+    },
+    {
       "path": "packages/adapters/graph/store-sqlite/tsconfig.build.json"
     },
     {

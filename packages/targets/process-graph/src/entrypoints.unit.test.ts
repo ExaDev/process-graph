@@ -8,6 +8,7 @@ import * as githubIssuesNodePackage from "@exadev/process-graph-source-github-is
 import * as sqliteNodePackage from "@exadev/process-graph-sqlite-node";
 import * as storeContractPackage from "@exadev/process-graph-store-contract";
 import * as storeSqlitePackage from "@exadev/process-graph-store-sqlite";
+import * as syncPackage from "@exadev/process-graph-sync";
 import * as uiPackage from "@exadev/process-graph-ui";
 import * as uiThemePackage from "@exadev/process-graph-ui/theme";
 import { describe, expect, test } from "vitest";
@@ -19,6 +20,7 @@ import * as githubEntry from "./source/github.ts";
 import * as githubNodeEntry from "./source/github/node.ts";
 import * as storeEntry from "./store.ts";
 import * as storeNodeEntry from "./store/node.ts";
+import * as syncEntry from "./sync.ts";
 import * as uiEntry from "./ui.ts";
 import * as uiThemeEntry from "./ui/theme.ts";
 import * as versionModule from "./version.ts";
@@ -62,6 +64,11 @@ const subpaths: readonly Subpath[] = [
     name: "store/node",
     entry: storeNodeEntry,
     layers: [["sqlite-node", sqliteNodePackage]],
+  },
+  {
+    name: "sync",
+    entry: syncEntry,
+    layers: [["sync", syncPackage]],
   },
   {
     name: "react",

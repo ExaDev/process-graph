@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "rewriteRelativeImportExtensions": true
+  },
+  "references": [
+    {
+      "path": "../source-contract/tsconfig.build.json"
+    },
+    {
+      "path": "../store-contract/tsconfig.build.json"
+    }
+  ]
+}

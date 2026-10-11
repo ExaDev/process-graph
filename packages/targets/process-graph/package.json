@@ -48,6 +48,10 @@
       "types": "./dist/store/wasm/worker.d.ts",
       "import": "./dist/store/wasm/worker.js"
     },
+    "./sync": {
+      "types": "./dist/sync.d.ts",
+      "import": "./dist/sync.js"
+    },
     "./react": {
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js"
@@ -131,6 +135,7 @@
     "@exadev/process-graph-sqlite-wasm": "1.0.6",
     "@exadev/process-graph-store-contract": "1.2.1",
     "@exadev/process-graph-store-sqlite": "1.2.1",
+    "@exadev/process-graph-sync": "0.0.0",
     "@exadev/process-graph-ui": "1.1.0",
     "@orpc/client": "2.0.0-beta.41",
     "@orpc/contract": "2.0.0-beta.41",

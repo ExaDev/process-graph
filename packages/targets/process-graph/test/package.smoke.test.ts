@@ -181,6 +181,35 @@ describe("each subpath, imported from the installed package", () => {
     ).toEqual(["function", "function"]);
   });
 
+  test("process-graph/sync syncs a source into a store, its relations included", () => {
+    expect(
+      evaluate(`
+        import { createRouterClient } from "@orpc/server";
+        import { createFakeGraphSource, createGraphSourceRouter } from "process-graph/source/github";
+        import { createFakeGraphStore, createGraphStoreRouter } from "process-graph/store";
+        import { syncScopes } from "process-graph/sync";
+        const activity = (id, label) => ({ kind: "activity", id, source: id, label, actor: "fake:team" });
+        const source = createRouterClient(createGraphSourceRouter(createFakeGraphSource({
+          source: "fake",
+          scopes: {
+            "fake:team": [{
+              participants: [{ id: "fake:team", label: "team", kind: "system" }],
+              activities: [activity("fake:1", "Parent"), activity("fake:2", "Child")],
+              transitions: [],
+              relations: [{ kind: "child-of", from: "fake:2", to: "fake:1" }],
+              overlay: {},
+              gaps: [],
+            }],
+          },
+        })));
+        const store = createRouterClient(createGraphStoreRouter(createFakeGraphStore()));
+        const result = await syncScopes({ store, sources: () => source, modelId: "team", scopes: ["fake:team"] });
+        const { children } = await store.v1.query.children({ modelId: "team", element: "fake:1" });
+        console.log(JSON.stringify({ relations: result.relations, children }));
+      `),
+    ).toEqual({ relations: 1, children: ["fake:2"] });
+  });
+
   test("process-graph/react, ui and react-flow are separate subpaths, the styled components apart from the headless ones", () => {
     expect(
       evaluate(`
