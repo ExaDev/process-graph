@@ -18,11 +18,11 @@ import { ElementCard, GraphTheme, Legend } from "@exadev/process-graph-ui";
 
 `vars` is the theme contract (`createThemeContract`): one CSS custom property for each value in `ThemeValues` (colours, each status's colour, spacing, radii, type and stroke widths). Every style reads the contract and nothing else. `lightTheme` and `darkTheme` are the classes that assign `lightValues` and `darkValues`; `GraphTheme` puts one of them on a `div` with `surfaceRoot`, which sets the page colours and type the components inherit.
 
-A consumer restyles the components without forking them by assigning the contract itself, in its own Vanilla Extract build:
+A consumer restyles the components without forking them by assigning the contract itself, in its own Vanilla Extract build. The `./theme` entry (`process-graph/ui/theme`) carries `vars`, the two theme classes and their values without the components, so a `.css.ts` file that imports it loads no React:
 
 ```ts
 import { createTheme } from "@vanilla-extract/css";
-import { vars, lightValues } from "@exadev/process-graph-ui";
+import { vars, lightValues } from "@exadev/process-graph-ui/theme";
 
 export const brandTheme = createTheme(vars, {
   ...lightValues,

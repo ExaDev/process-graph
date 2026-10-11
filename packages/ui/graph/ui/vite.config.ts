@@ -10,9 +10,9 @@ export default defineConfig({
   oxc: { jsx: { runtime: "automatic" } },
   build: {
     lib: {
-      entry: "src/index.ts",
+      // The theme entry is its own file so that importing it loads no component code; what the two share is emitted once as a chunk.
+      entry: { index: "src/index.ts", theme: "src/theme.ts" },
       formats: ["es"],
-      fileName: "index",
       cssFileName: "style",
     },
     rolldownOptions: {
