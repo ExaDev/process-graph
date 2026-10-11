@@ -149,11 +149,11 @@ describe("factNamesIn", () => {
   it("lists each named fact a condition reads once, in the order met, and no reserved key", () => {
     expect(
       factNamesIn({
-        kind: "and",
+        kind: "allOf",
         operands: [
           holds("approved"),
           {
-            kind: "or",
+            kind: "anyOf",
             operands: [
               fails("budgeted"),
               holds("approved"),
