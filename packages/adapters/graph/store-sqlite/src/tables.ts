@@ -193,3 +193,25 @@ export const relations = sqliteTable(
     index("relations_by_to").on(table.modelId, table.kind, table.to),
   ],
 );
+
+/** What is known about whether an artefact is provided, one row per artefact the model's fact record names: `provided` is true when it is provided and false when it is known not to be. An artefact with no row is unknown. */
+export const artefactFacts = sqliteTable(
+  "artefact_facts",
+  {
+    modelId: text("model_id").notNull(),
+    artefact: text("artefact").notNull(),
+    provided: integer("provided", { mode: "boolean" }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.modelId, table.artefact] })],
+);
+
+/** The value of each named fact a model's fact record holds, as JSON text, typed `unknown` because `rows.ts` checks it with trilean's value schema on every read. A name with no row is unknown. */
+export const namedFacts = sqliteTable(
+  "named_facts",
+  {
+    modelId: text("model_id").notNull(),
+    name: text("name").notNull(),
+    value: text("value", { mode: "json" }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.modelId, table.name] })],
+);
