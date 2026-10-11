@@ -19,6 +19,7 @@ import {
   stateMachineToMermaid,
   swimlaneToMermaid,
 } from "./mermaid.ts";
+import { isUnsafeCharacter } from "./terminal-text.ts";
 import { viewText } from "./view.ts";
 
 /** An order taken by a shop, followed through its states, with a payment provider the model names as an actor without declaring it, as a model loaded from a store can. */
@@ -101,5 +102,35 @@ describe("viewText", () => {
     expect(text).toContain('\n  "lanes": [');
     const parsed: unknown = JSON.parse(text);
     expect(parsed).toEqual(toSwimlane(model));
+  });
+
+  test("writes every unsafe character of a hostile title as a JSON escape, and parses back to the same projection", () => {
+    // A C1 control sequence introducer, a right-to-left override, a zero-width space format character, a line separator, a private-use character and ESC.
+    const hostile = "Pay\u009B2J \u202Edrawkcab\u200B\u2028\uE000\u001B[0m";
+    const titled: Model<OpenIds> = {
+      ...model,
+      elements: model.elements.map((element) =>
+        element.id === "pay" && element.kind === "activity"
+          ? { ...element, label: hostile }
+          : element,
+      ),
+    };
+    const projected = project(titled, { id: "lanes", notation: "swimlane" });
+
+    const text = viewText(titled, projected, "json");
+
+    expect(Array.from(text).filter(isUnsafeCharacter)).toEqual([]);
+    for (const escape of [
+      "\\u009b",
+      "\\u202e",
+      "\\u200b",
+      "\\u2028",
+      "\\ue000",
+      "\\u001b",
+    ]) {
+      expect(text).toContain(escape);
+    }
+    const parsed: unknown = JSON.parse(text);
+    expect(parsed).toEqual(projected.view);
   });
 });
