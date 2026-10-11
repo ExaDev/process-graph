@@ -1,6 +1,6 @@
 {
   "name": "process-graph",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A process and dependency graph model with projections into flowcharts, swimlanes, state machines and sequence diagrams, and reasoning over a run: one install for the model, projection, domain and DAG packages.",
   "type": "module",
   "repository": {
@@ -58,7 +58,7 @@
   ],
   "dependencies": {
     "@exadev/process-graph-dag": "1.0.2",
-    "@exadev/process-graph-domain": "1.0.3",
+    "@exadev/process-graph-domain": "1.1.0",
     "@exadev/process-graph-projection": "1.0.3",
     "@exadev/process-graph-schema": "1.1.0"
   },

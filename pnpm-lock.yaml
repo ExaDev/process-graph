@@ -292,7 +292,7 @@ importers:
         version: 26.6.4
       '@vitest/coverage-v8':
         specifier: 5.0.3
-        version: 5.0.3(vitest@5.0.3)
+        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
       eslint:
         specifier: 10.12.0
         version: 10.12.0(jiti@2.7.0)(supports-color@7.2.0)
@@ -304,15 +304,15 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.0.3(@types/node@26.6.4)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/adapters/graph/sqlite-node:
     dependencies:
       '@exadev/process-graph-store-contract':
-        specifier: 1.0.1
+        specifier: 1.0.2
         version: link:../../../core/graph/store-contract
       '@exadev/process-graph-store-sqlite':
-        specifier: 1.0.1
+        specifier: 1.0.2
         version: link:../store-sqlite
       drizzle-orm:
         specifier: 1.0.0-rc.4
@@ -358,10 +358,10 @@ importers:
   packages/adapters/graph/sqlite-wasm:
     dependencies:
       '@exadev/process-graph-store-contract':
-        specifier: 1.0.1
+        specifier: 1.0.2
         version: link:../../../core/graph/store-contract
       '@exadev/process-graph-store-sqlite':
-        specifier: 1.0.1
+        specifier: 1.0.2
         version: link:../store-sqlite
       '@orpc/client':
         specifier: 2.0.0-beta.41
@@ -407,13 +407,13 @@ importers:
   packages/adapters/graph/store-sqlite:
     dependencies:
       '@exadev/process-graph-domain':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../../../core/graph/domain
       '@exadev/process-graph-schema':
         specifier: 1.1.0
         version: link:../../../core/graph/schema
       '@exadev/process-graph-store-contract':
-        specifier: 1.0.1
+        specifier: 1.0.2
         version: link:../../../core/graph/store-contract
       '@orpc/server':
         specifier: 2.0.0-beta.41
@@ -693,7 +693,7 @@ importers:
         version: 26.6.4
       '@vitest/coverage-v8':
         specifier: 5.0.3
-        version: 5.0.3(vitest@5.0.3)
+        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
       eslint:
         specifier: 10.12.0
         version: 10.12.0(jiti@2.7.0)(supports-color@7.2.0)
@@ -705,12 +705,12 @@ importers:
         version: 6.0.3
       vitest:
         specifier: 5.0.3
-        version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.0.3(@types/node@26.6.4)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/core/graph/store-contract:
     dependencies:
       '@exadev/process-graph-domain':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../domain
       '@exadev/process-graph-schema':
         specifier: 1.1.0
@@ -768,7 +768,7 @@ importers:
         specifier: 1.0.2
         version: link:../../core/graph/dag
       '@exadev/process-graph-domain':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../../core/graph/domain
       '@exadev/process-graph-projection':
         specifier: 1.0.3

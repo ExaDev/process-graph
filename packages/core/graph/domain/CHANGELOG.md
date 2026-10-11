@@ -1,3 +1,14 @@
+## [1.1.0](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-domain@1.0.3...@exadev/process-graph-domain@1.1.0) (2026-10-11)
+
+### Features
+
+* **domain:** explain why an element has its status ([8213619](https://github.com/ExaDev/process-graph/commit/82136198500d33578986ea943bb24f09fa7d4b47))
+* **domain:** export the status basis type ([036d161](https://github.com/ExaDev/process-graph/commit/036d1619e14ac93903d103a6b539d8b7b9e62d61))
+
+### Bug Fixes
+
+* **domain:** report nothing blocking a done or skipped element ([2f61585](https://github.com/ExaDev/process-graph/commit/2f61585661cac84e119eba92ce1ddb25e1577f84))
+
 ## [1.0.3](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-domain@1.0.2...@exadev/process-graph-domain@1.0.3) (2026-10-10)
 
 
