@@ -4,6 +4,10 @@ import { toFlowchart } from "./flowchart.ts";
 import { toSequence } from "./sequence.ts";
 import { toStateMachine } from "./state-machine.ts";
 import { toSwimlane } from "./swimlane.ts";
+import { fanThroughShape } from "./test-support/shapes.ts";
+
+/** The smallest fan where folding multiplies: three times three exceeds three plus three. */
+const fanned = 3;
 
 /** Carries every kind of information a projection can drop: positions, extensions, a message element, a fragment, and an activity that does not affect the subject. */
 const rich = defineModel({
@@ -259,5 +263,26 @@ describe("loss reports", () => {
     expect(toSequence(partial, ["t1", "t2"]).loss).toEqual([
       { kind: "skipped-steps", transitions: ["t1"] },
     ]);
+  });
+
+  it("reports a message whose folding would multiply edges as unrepresented, with its transitions", () => {
+    // Three sources through one message to three ends: folding would draw nine edges where the model has six transitions.
+    const { model } = fanThroughShape(1)(fanned);
+
+    expect(toFlowchart(model).edges).toEqual([]);
+    expect(toFlowchart(model).loss).toEqual([
+      {
+        kind: "unrepresented-elements",
+        notation: "flowchart",
+        elements: [{ element: "m-0", kind: "message" }],
+        transitions: ["t-s-0", "t-s-1", "t-s-2", "t-e-0", "t-e-1", "t-e-2"],
+      },
+    ]);
+    expect(toStateMachine(model, "order").loss).toContainEqual({
+      kind: "unrepresented-elements",
+      notation: "stateMachine",
+      elements: [{ element: "m-0", kind: "message" }],
+      transitions: ["t-s-0", "t-s-1", "t-s-2", "t-e-0", "t-e-1", "t-e-2"],
+    });
   });
 });

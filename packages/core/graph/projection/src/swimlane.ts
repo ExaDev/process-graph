@@ -65,6 +65,10 @@ export const toSwimlane = <I extends IdSpace>(model: Model<I>): Swimlane<I> => {
     lanes,
     unassigned,
     handoffs: handoffs(model),
-    loss: flowchartLoss(model, "swimlane", flow.nodes, parts.carried),
+    loss: flowchartLoss(model, "swimlane", {
+      nodes: flow.nodes,
+      carried: parts.carried,
+      unfolded: parts.index.unfolded,
+    }),
   };
 };

@@ -350,3 +350,40 @@ export const sharedSuffixShape =
       path: [],
     };
   };
+
+/** Sources all entering one message, or a run of `through` messages, that leads to as many activities as there are sources: folding it would draw every source to every activity. */
+export const fanThroughShape =
+  (through: number) =>
+  (count: number): Shape => {
+    const sources = ids(count, "s-");
+    const ends = ids(count, "e-");
+    const run = ids(through, "m-");
+    const first = run[0] ?? "m-0";
+    const last = run.at(-1) ?? first;
+
+    return {
+      model: {
+        ...empty,
+        participants: actors,
+        elements: [
+          ...sources.map((id) => activity(id, "customer")),
+          ...run.map(messageElement),
+          ...ends.map((id) => activity(id)),
+        ],
+        transitions: [
+          ...sources.map((id) => ({
+            id: `t-${id}`,
+            source: id,
+            target: first,
+          })),
+          ...run.slice(1).map((id, index) => ({
+            id: `t-${id}`,
+            source: run[index] ?? id,
+            target: id,
+          })),
+          ...ends.map((id) => ({ id: `t-${id}`, source: last, target: id })),
+        ],
+      },
+      path: [],
+    };
+  };

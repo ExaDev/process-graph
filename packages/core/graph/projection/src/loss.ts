@@ -5,8 +5,9 @@ import type {
   PseudoRole,
 } from "@exadev/process-graph-schema";
 
-/** What an element that a notation cannot draw is: an element kind, or the role of a pseudo-state. */
-export type UnrepresentedKind = "activity" | "decision" | "state" | PseudoRole;
+/** What an element that a notation cannot draw is: an element kind, or the role of a pseudo-state. A `message` element is one only when the notation would fold it but folding it would multiply edges. */
+export type UnrepresentedKind =
+  "activity" | "decision" | "state" | "message" | PseudoRole;
 
 /** An element a projection could not draw, and what it was. */
 export interface UnrepresentedElement<I extends IdSpace> {
@@ -69,10 +70,12 @@ export const unrepresentedLoss = <I extends IdSpace>(
   model: Model<I>,
   notation: Notation,
   accounted: ReadonlySet<I["element"]>,
+  unfolded: ReadonlySet<I["element"]>,
 ): readonly Loss<I>[] => {
   const elements: UnrepresentedElement<I>[] = [];
   for (const element of model.elements) {
-    if (element.kind === "message" || accounted.has(element.id)) {
+    const message = element.kind === "message" && !unfolded.has(element.id);
+    if (message || accounted.has(element.id)) {
       continue;
     }
     elements.push({

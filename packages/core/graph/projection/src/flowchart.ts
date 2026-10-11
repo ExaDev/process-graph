@@ -64,24 +64,35 @@ const flowNode = <I extends IdSpace>(
   return undefined;
 };
 
+/** What a flowchart-shaped projection drew, for working out what it dropped. */
+export interface Drawn<I extends IdSpace> {
+  readonly nodes: readonly FlowNode<I>[];
+  /** The message elements some edge carries, which are shown. */
+  readonly carried: ReadonlySet<I["element"]>;
+  /** The message elements left unfolded because folding them would multiply edges, reported as unrepresented instead. */
+  readonly unfolded: ReadonlySet<I["element"]>;
+}
+
 /**
  * What a flowchart-shaped projection drops: the common losses, then the elements the flowchart has no node for (`state` elements and `history` pseudo-states) and the transitions that touch them.
  * @param model - The model projected.
  * @param notation - The notation the result is for, `flowchart` or `swimlane`.
- * @param nodes - The nodes the projection drew.
- * @param carried - The message elements some edge carries, which are shown.
+ * @param drawn - What the projection drew.
  */
 export const flowchartLoss = <I extends IdSpace>(
   model: Model<I>,
   notation: "flowchart" | "swimlane",
-  nodes: readonly FlowNode<I>[],
-  carried: ReadonlySet<I["element"]>,
+  drawn: Drawn<I>,
 ): readonly Loss<I>[] => [
-  ...commonLoss(model, notation, { fragments: new Set(), messages: carried }),
+  ...commonLoss(model, notation, {
+    fragments: new Set(),
+    messages: new Set([...drawn.carried, ...drawn.unfolded]),
+  }),
   ...unrepresentedLoss(
     model,
     notation,
-    new Set<I["element"]>(nodes.map((node) => node.id)),
+    new Set<I["element"]>(drawn.nodes.map((node) => node.id)),
+    drawn.unfolded,
   ),
 ];
 
@@ -193,7 +204,11 @@ export const flowchartParts = <I extends IdSpace>(
     flowchart: {
       nodes,
       edges,
-      loss: flowchartLoss(model, "flowchart", nodes, carried),
+      loss: flowchartLoss(model, "flowchart", {
+        nodes,
+        carried,
+        unfolded: index.unfolded,
+      }),
     },
     origins,
     index,
