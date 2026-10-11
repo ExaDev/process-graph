@@ -5,8 +5,12 @@ export { statuses, type Branch, type Status } from "./status.ts";
 export {
   artefactKey,
   elementStatusKey,
+  emptyFactRecord,
   evaluateBranches,
+  factsFrom,
+  layeredFacts,
   UnsupportedConditionError,
+  type FactRecord,
   type Facts,
 } from "./facts.ts";
 export { controlDag, illegalCycles, loopTransitions } from "./control.ts";
