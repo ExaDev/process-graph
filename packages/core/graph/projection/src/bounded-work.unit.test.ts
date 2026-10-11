@@ -12,6 +12,7 @@ import {
   ids,
   serialDiamondsShape,
   sharedEndShape,
+  fanThroughShape,
   sharedSuffixShape,
   sourcesIntoRunShape,
   twoBranchesShape,
@@ -502,7 +503,7 @@ describe("nested derived fragments", () => {
 });
 
 /**
- * Every shape a review has found quadratic work in, at a size and its double, through every entry point that reads it. The work, counted by `workOf` over the collection operations the projections are built from, is measured per item of input and output: work linear in what goes in and comes out keeps that ratio level as the shape doubles, while work quadratic in either doubles it. Some outputs are themselves quadratic in their model, such as a state machine whose every state leads to every other through one folded decision; measuring against the output keeps those honest without hiding quadratic work behind a linear output. The bound sits midway, at `growthLimit` over `doubled`, because linear work with a fixed saving drifts slightly upwards. A newly found quadratic shape is a new row.
+ * Every shape a review has found quadratic work in, at a size and its double, through every entry point that reads it. The work, counted by `workOf` over the collection operations the projections are built from, is measured per item of input and output: work linear in what goes in and comes out keeps that ratio level as the shape doubles, while work quadratic in either doubles it. Some outputs are themselves larger than their model, such as an edge's lists and label when many edges share a long route; measuring against the output keeps those honest without hiding quadratic work behind a linear output. The bound sits midway, at `growthLimit` over `doubled`, because linear work with a fixed saving drifts slightly upwards. A newly found quadratic shape is a new row.
  */
 const withEntity = ({
   model,
@@ -545,6 +546,8 @@ const shapes: readonly (
   ["many paths converging on one end", sharedEndShape, size],
   // Every edge into the activities is a merged chain over the same two branches; reading their lists once walked those branches again per edge, which shows at the larger size.
   ["two branches leading to many common ends", twoBranchesShape, size],
+  ["many sources through one message to many ends", fanThroughShape(1)],
+  ["many sources through two messages to many ends", fanThroughShape(2)],
   // Every diamond's entrance also leads into a shared run; walks once entered that run from every start whether or not it led anywhere.
   ["diamonds sharing a run that leads nowhere", sharedSuffixShape(false), size],
   [
@@ -800,4 +803,22 @@ describe("work at most doubles when a reported shape doubles", () => {
       (growthLimit / doubled) * (workOf(small.run) / small.input),
     );
   });
+});
+
+describe("folding never multiplies edges", () => {
+  it.each([1, 2])(
+    "draws no more edges or hand-offs than the model has transitions when many sources pass %i message(s) to many ends",
+    (through) => {
+      for (const count of [size, doubled * size]) {
+        const { model } = fanThroughShape(through)(count);
+        const bound = model.transitions.length;
+
+        expect(toFlowchart(model).edges.length).toBeLessThanOrEqual(bound);
+        expect(handoffs(model).length).toBeLessThanOrEqual(bound);
+        expect(
+          toStateMachine(model, "order").transitions.length,
+        ).toBeLessThanOrEqual(bound);
+      }
+    },
+  );
 });
