@@ -58,14 +58,15 @@ The Mermaid emitters name nodes by their position in the view, since Mermaid doe
 
 ## Exit status
 
-| Status | Meaning                                                                                                                                        |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0      | Success; for `validate` and `cycles`, nothing wrong was found.                                                                                 |
-| 1      | A failure not listed below, such as a store that cannot be opened.                                                                             |
-| 2      | A usage error: an unknown command or option, a missing argument, a value outside its choices, or a view with nothing to follow.                |
-| 3      | The model, an element or another identifier named on the command line does not exist.                                                          |
-| 4      | The model has problems: `validate` found issues, `cycles` found one, a reasoning command met an illegal cycle, or the store rejected a change. |
-| 5      | A source refused the sync: credentials, a rate limit or a scope it does not accept.                                                            |
+| Status | Meaning                                                                                                                                                                   |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0      | Success; for `validate` and `cycles`, nothing wrong was found.                                                                                                            |
+| 1      | A failure not listed below, such as a store that cannot be opened.                                                                                                        |
+| 2      | A usage error: an unknown command or option, a missing argument, a value outside its choices, or a view with nothing to follow.                                           |
+| 3      | The model, an element or another identifier named on the command line does not exist.                                                                                     |
+| 4      | The model has problems: `validate` found issues, `cycles` found one, a reasoning command met an illegal cycle, or the store rejected a change.                            |
+| 5      | A source refused the sync: credentials, a rate limit or a scope it does not accept.                                                                                       |
+| 6      | The `process-graph` bin could not start: optional peer dependencies the command line needs are not installed beside it. It names them and the command that installs them. |
 
 ## Sources and tokens
 

@@ -7,6 +7,7 @@
  * - `notFound`: the model, an element or another identifier named on the command line does not exist.
  * - `invalidModel`: the model has problems: `validate` found issues, `cycles` found an illegal cycle, a reasoning command met an illegal cycle, or the store rejected a change that would leave the model invalid.
  * - `sourceFailure`: a source refused the sync: bad credentials, a rate limit or a scope it does not accept.
+ * - `missingPeers`: the `process-graph` bin could not start because optional peer dependencies the command line needs are not installed beside it.
  */
 export const exitCodes = {
   success: 0,
@@ -15,6 +16,7 @@ export const exitCodes = {
   notFound: 3,
   invalidModel: 4,
   sourceFailure: 5,
+  missingPeers: 6,
 } as const;
 
 /** One of the exit statuses in `exitCodes`. */
