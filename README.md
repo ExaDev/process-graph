@@ -71,7 +71,7 @@ The internal packages, private and bundled into `process-graph`:
 | [`graph-react-flow`](packages/ui/graph/react-flow/README.md)                           | React Flow views of the model: flowchart, swimlane with lanes as group nodes, and state machine, laid out by `graph-layout`, showing each status and the critical path; sequence projections drawn by `graph-ui`.                                 |
 | [`graph-cli`](packages/targets/graph-cli/README.md)                                    | The command line and its library entry: sync GitHub issues into the SQLite store, ready, blocked, impact, critical path, cycles, hand-offs and status explanations, and every view drawn in Mermaid or Graphviz DOT.                              |
 
-The web app, private and deployed rather than published:
+The web app, private and not bundled into `process-graph`:
 
 | Package                                             | What it is                                                                                                                                                                                            |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
