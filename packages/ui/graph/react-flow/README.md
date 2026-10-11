@@ -37,7 +37,7 @@ const lanes = { id: "lanes", notation: "swimlane" } as const;
 | `nodeTypes`   | The node components: `element` (graph-ui's element card with its handles) and `lane` (graph-ui's lane filling its group). |
 | `edgeTypes`   | The edge component: `transition`, a stepped line with an arrowhead and its label.                                         |
 
-`ProcessFlow` takes the run (`{ model, overlay, facts }`), a flowchart, swimlane or state machine projection, and an accessible `label`. Optionally: `layout`, the options passed to `graph-layout` (direction, spacing and the engine); `filter`, an `ElementFilter` that hides the elements it leaves out and every edge with a hidden end; `colorMode`, React Flow's own; and `onSelect`, called with each element a click or key selects. Keep the run's parts, the projection and the layout options stable between renders: a change lays the view out again.
+`ProcessFlow` takes the run (`{ model, overlay, facts }`), a flowchart, swimlane or state machine projection, and an accessible `label`. Optionally: `layout`, the options passed to `graph-layout` (direction, spacing and the engine); `filter`, an `ElementFilter` that hides the elements it leaves out and every edge with a hidden end; `colorMode`, React Flow's own; `onSelect`, called with each element a click or key selects; and `selected`, for an owner that keeps the selection so the canvas and its other views share it (the key present, even as `undefined`, makes the canvas show it and only report changes through `onSelect`). Keep the run's parts, the projection and the layout options stable between renders: a change lays the view out again.
 
 ## Layout
 

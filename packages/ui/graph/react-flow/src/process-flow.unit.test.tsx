@@ -153,4 +153,46 @@ describe("ProcessFlow", () => {
     expect(onSelect.mock.calls).toEqual([["start"], ["a-submit"]]);
     expect(document.activeElement).toBe(nodeOf(container, "a-submit"));
   });
+
+  test("shows the owner's selection and leaves changing it to the owner", async () => {
+    const onSelect = vi.fn<(id: string | undefined) => void>();
+    const { engine } = stubEngine();
+    const layout = { engine };
+    const draw = (selected: OrderIds["element"] | undefined) => (
+      <div style={{ width: 1200, height: 800 }}>
+        <ProcessFlow
+          run={run}
+          projection={swimlane}
+          label="Order process"
+          layout={layout}
+          onSelect={onSelect}
+          selected={selected}
+        />
+      </div>
+    );
+    const { container, rerender } = render(draw("a-pack"));
+    await waitFor(() => {
+      nodeOf(container, "a-pack");
+    });
+
+    expect(nodeOf(container, "a-pack").classList.contains("selected")).toBe(
+      true,
+    );
+
+    fireEvent.click(nodeOf(container, "a-submit"));
+
+    expect(onSelect).toHaveBeenLastCalledWith("a-submit");
+    expect(nodeOf(container, "a-submit").classList.contains("selected")).toBe(
+      false,
+    );
+
+    rerender(draw("a-submit"));
+
+    expect(nodeOf(container, "a-submit").classList.contains("selected")).toBe(
+      true,
+    );
+    expect(nodeOf(container, "a-pack").classList.contains("selected")).toBe(
+      false,
+    );
+  });
 });
