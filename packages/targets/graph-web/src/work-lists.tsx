@@ -21,7 +21,7 @@ import { Tabs } from "./tabs.tsx";
 import { listTabs, type ListTab } from "./url-state.ts";
 
 /** Each list's tab label. */
-export const listLabels: Readonly<Record<ListTab, string>> = {
+const listLabels: Readonly<Record<ListTab, string>> = {
   ready: "Ready",
   blocked: "Blocked",
   path: "Critical path",
@@ -31,7 +31,7 @@ export const listLabels: Readonly<Record<ListTab, string>> = {
 };
 
 /** What every list reads: the run, each element's status and label, the filter, and the shared selection. */
-export interface ListContext {
+interface ListContext {
   readonly run: Run<OpenIds>;
   readonly statuses: ReadonlyMap<string, Status>;
   readonly labelOf: (id: string) => string;

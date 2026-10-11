@@ -244,7 +244,3 @@ export const listbox = style({
   flexDirection: "column",
   gap: vars.space.small,
 });
-
-export const progress = style({
-  width: "100%",
-});

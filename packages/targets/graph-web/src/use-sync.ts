@@ -6,7 +6,7 @@ import type { SyncCheckpoint, SyncRecord } from "./sync-record.ts";
 import { runSync, type SyncProgress } from "./sync.ts";
 
 /** Where the sync of the shown model stands in this page. */
-export type SyncState =
+type SyncState =
   | { readonly phase: "idle" }
   | { readonly phase: "running"; readonly progress: SyncProgress | undefined }
   | { readonly phase: "finished"; readonly progress: SyncProgress }

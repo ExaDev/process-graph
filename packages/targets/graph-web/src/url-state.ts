@@ -52,7 +52,7 @@ export const defaultViewState: ViewState = {
 /**
  * The query parameters, one name per part of the state. A repeatable part repeats its parameter, in order: `?scope=github:a&scope=github:b/c`.
  */
-export const parameters = {
+const parameters = {
   scope: "scope",
   view: "view",
   selected: "select",
