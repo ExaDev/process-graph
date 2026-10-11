@@ -17,7 +17,7 @@ import type {
   WhyResult,
 } from "./queries.ts";
 import type { ElementSummary } from "./session.ts";
-import type { SyncResult } from "./sync.ts";
+import type { SyncInterruption, SyncResult } from "./sync.ts";
 import type { ValidateResult } from "./validate.ts";
 
 /**
@@ -172,6 +172,26 @@ export const renderSync = (result: SyncResult): string =>
       (gap) => `gap\t${gap.reason}\t${gap.target}\t${gap.message}`,
     ),
   ]);
+
+/**
+ * A sync a source interrupted: the source's failure, whether the pages read before it were saved, and the commands that carry on, `resume with: sync <scopes> --after <cursor>` for the failing source and `then: sync <scopes>` for the sources not reached.
+ * @param message - The source's failure.
+ * @param interruption - Where the sync carries on.
+ * @returns The lines for standard error, without a final line break.
+ */
+export const renderSyncInterruption = (
+  message: string,
+  interruption: SyncInterruption,
+): string => {
+  const { resume, remaining, saved } = interruption;
+
+  return [
+    message,
+    ...(saved ? ["the pages read before the failure are saved"] : []),
+    `resume with: sync ${resume.scopes.join(" ")}${resume.after === undefined ? "" : ` --after ${resume.after}`}`,
+    ...(remaining.length === 0 ? [] : [`then: sync ${remaining.join(" ")}`]),
+  ].join("\n");
+};
 
 /** `validate`: `valid`, or each issue as its code, its JSON pointer when it has one, and its message. */
 export const renderValidate = (result: ValidateResult): string =>

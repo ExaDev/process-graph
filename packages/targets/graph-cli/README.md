@@ -101,6 +101,8 @@ process.exitCode = await runCli(args, nodePorts(), {
 
 The operation behind each command is exported on its own and returns plain data rather than text, for hosts that want results, such as tools served over MCP: `sync`, `ready`, `blocked`, `impactOf`, `path`, `cycles`, `handoffsOf`, `why`, `show`, `add`, `setState`, `setArtefact`, `setFact`, `factsOf`, `validateStored` and `validateDocument`, each taking a `GraphSession` (a store client, a model id, the host's facts and a signal). The emitters `flowchartToMermaid`, `swimlaneToMermaid`, `stateMachineToMermaid`, `sequenceToMermaid` and their `...ToDot` counterparts are pure functions of a projection.
 
+When a source fails part way, `sync` throws a `SyncInterruptedError`: a `CliError` with the source's failure as its message and exit status (a token port that cannot supply a token is a source failure, status 5), the error underneath it as its `cause`, and where to carry on as data rather than text: `resume`, the `SyncRequest` that continues the failing source after the cursor of its last page read, `remaining`, the scopes of the sources not reached, and `saved`, whether the pages read before the failure were written. The command line renders those as the `resume with:` and `then:` commands it prints.
+
 `add` reads the model and saves it whole, so a write another process makes between the two is overwritten; the store checks every save, so a duplicate identifier or a dangling reference is rejected and nothing changes.
 
 ## Commands
