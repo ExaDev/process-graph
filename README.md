@@ -6,6 +6,14 @@ A process and dependency graph model, with the reasoning, command line and React
 
 TypeScript, ESM, pnpm workspaces, Turborepo, Vitest, ESLint with `@exadev/eslint-config`, semantic-release.
 
+## Install
+
+```sh
+pnpm add process-graph
+```
+
+The root entry needs `zod` and `trilean`, which install with it; each other subpath names the optional peers to install beside it in the [`process-graph` README](packages/targets/process-graph/README.md). A project with an install age gate, such as pnpm's `minimumReleaseAge`, must exempt `trilean` and its own dependency `trilean-regex` as well as `process-graph`, since both are ExaDev packages released alongside it and are often younger than the gate; with pnpm, add all three to `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`.
+
 ## Getting started
 
 Node and pnpm versions are pinned in `.tool-versions` and `package.json`'s `packageManager`; install through mise.
