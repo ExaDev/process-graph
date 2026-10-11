@@ -55,7 +55,8 @@ The package is built from the repository's internal packages, which are bundled 
 | `process-graph/ui/style.css`         | The compiled styles for `process-graph/ui`.                                                                                                                                        | Browser               |
 | `process-graph/react-flow`           | React Flow views of a flowchart, swimlane or state machine, laid out by `process-graph/layout`.                                                                                    | Browser               |
 | `process-graph/react-flow/style.css` | The compiled styles for `process-graph/react-flow`, React Flow's own included.                                                                                                     | Browser               |
-| `process-graph/cli`                  | The command line as a library: `runCli` over injected ports, `nodePorts` for a Node process, and each command's operation returning plain data.                                    | Node                  |
+| `process-graph/cli`                  | The command line as a library: `runCli` over injected ports, `nodePorts` for a Node process, each command's operation returning plain data, and `version`, this package's own.     | Node                  |
+| `process-graph/package.json`         | The package's manifest, for reading its version or anything else it declares.                                                                                                      | Any                   |
 
 `zod` and `trilean`, which the root entry needs, are dependencies. The libraries only other subpaths need are optional peer dependencies, so installing `process-graph` for its root entry pulls in nothing else; install the peers of each subpath you import beside it:
 

@@ -6,6 +6,7 @@ import {
   missingPeers,
   missingPeersMessage,
 } from "./missing-peers.ts";
+import { version } from "./version.ts";
 
 /** This package's manifest, beside `dist/`. */
 const manifest = new URL("../package.json", import.meta.url);
@@ -25,8 +26,8 @@ const declaredPeers = (): Map<string, string> => {
 
   return new Map(
     Object.entries(parsed.peerDependencies).flatMap(
-      ([name, version]: [string, unknown]) =>
-        typeof version === "string" ? [[name, version] as const] : [],
+      ([name, specifier]: [string, unknown]) =>
+        typeof specifier === "string" ? [[name, specifier] as const] : [],
     ),
   );
 };
@@ -62,10 +63,9 @@ if (missing.length > 0) {
   process.exitCode = exitCodes.missingPeers;
 } else {
   // Imported only once its peers are known to resolve, so a missing one is reported above rather than as an import failure.
-  const { packageVersion, runProcess } =
-    await import("@exadev/process-graph-cli");
+  const { runProcess } = await import("@exadev/process-graph-cli");
   process.exitCode = await runProcess({
     name: "process-graph",
-    version: packageVersion(manifest),
+    version,
   });
 }
