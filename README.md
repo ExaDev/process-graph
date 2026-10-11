@@ -62,6 +62,7 @@ Configuration lives at exactly one of two levels: in the package (`eslint.config
 | [`graph-ui`](packages/ui/graph/ui/README.md)                                           | Styled components over `graph-react` and an SVG sequence diagram, in Vanilla Extract with a typed theme contract and light and dark themes, shipped as compiled CSS.                                                                              |
 | [`graph-react-flow`](packages/ui/graph/react-flow/README.md)                           | React Flow views of the model: flowchart, swimlane with lanes as group nodes, and state machine, laid out by `graph-layout`, showing each status and the critical path; sequence projections drawn by `graph-ui`.                                 |
 | [`process-graph`](packages/targets/process-graph/README.md)                            | The primary entry point: re-exports the schema, projection and domain APIs flat and the DAG API as the `dag` namespace.                                                                                                                           |
+| [`graph-web`](packages/targets/graph-web/README.md)                                    | The web app: an installable, offline-first PWA that syncs GitHub issues into SQLite on the device and shows the work in every view, with what is ready, what is blocked and why, linkable by address.                                             |
 
 ## Conventions
 

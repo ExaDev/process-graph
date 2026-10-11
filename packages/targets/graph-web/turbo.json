@@ -1,0 +1,17 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "_build": {
+      "inputs": ["$TURBO_EXTENDS$", "index.html", "build/**", "vite.config.ts"]
+    },
+    "_test:e2e": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!dist/**",
+        "!test-results/**",
+        "!playwright-report/**"
+      ]
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "name": "@exadev/process-graph-web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The process-graph web app: an installable, offline-first PWA that syncs GitHub issues into a SQLite store on the origin private file system and shows the work as a flowchart, swimlane, state machine or sequence diagram, with what is ready, what is blocked and why.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ExaDev/process-graph.git",
+    "directory": "packages/targets/graph-web"
+  },
+  "homepage": "https://github.com/ExaDev/process-graph/tree/main/packages/targets/graph-web#readme",
+  "bugs": {
+    "url": "https://github.com/ExaDev/process-graph/issues"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "turbo run _build",
+    "_build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview",
+    "lint": "turbo run _lint",
+    "_lint": "eslint . --cache --max-warnings 0",
+    "_lint:fix": "eslint . --fix --cache --max-warnings 0",
+    "typecheck": "turbo run _typecheck",
+    "_typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "test": "turbo run _test",
+    "_test": "vitest run --project unit",
+    "test:coverage": "turbo run _test:coverage",
+    "_test:coverage": "vitest run --project unit --coverage",
+    "test:smoke": "turbo run _test:smoke",
+    "_test:smoke": "vitest run --project smoke",
+    "test:e2e": "turbo run _test:e2e",
+    "_test:e2e": "playwright test"
+  },
+  "keywords": [
+    "process-model",
+    "pwa",
+    "offline",
+    "github-issues",
+    "react"
+  ],
+  "dependencies": {
+    "@exadev/process-graph-domain": "1.1.1",
+    "@exadev/process-graph-projection": "1.1.0",
+    "@exadev/process-graph-react": "0.0.0",
+    "@exadev/process-graph-react-flow": "0.0.0",
+    "@exadev/process-graph-schema": "1.1.0",
+    "@exadev/process-graph-source-contract": "1.0.1",
+    "@exadev/process-graph-source-github-issues": "1.0.1",
+    "@exadev/process-graph-sqlite-wasm": "1.0.2",
+    "@exadev/process-graph-store-contract": "1.0.3",
+    "@exadev/process-graph-ui": "0.0.0",
+    "@orpc/client": "2.0.0-beta.41",
+    "@orpc/server": "2.0.0-beta.41",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@resvg/resvg-js": "2.6.2",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "26.6.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vanilla-extract/css": "1.21.2",
+    "@vanilla-extract/vite-plugin": "5.2.6",
+    "@vitest/coverage-v8": "5.0.3",
+    "eslint": "10.12.0",
+    "happy-dom": "20.14.5",
+    "typescript": "6.0.3",
+    "vite": "8.3.2",
+    "vite-plugin-pwa": "2.0.0",
+    "vitest": "5.0.3",
+    "workbox-window": "7.4.1"
+  }
+}
