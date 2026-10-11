@@ -4,6 +4,7 @@ import {
   createGraphSourceRouter,
   type FakePage,
   type GraphSourcePager,
+  type ScopeEntry,
 } from "@exadev/process-graph-source-contract";
 import {
   createFakeGraphStore,
@@ -189,6 +190,27 @@ const webPage: FakePage = pageOf([
   },
 ]);
 
+const entry = (scope: string, label: string): ScopeEntry => ({
+  scope,
+  label,
+  archived: false,
+});
+
+/** What the fake source's `scopes.roots` lists: the viewer and an organisation. */
+const fakeRoots: readonly ScopeEntry[] = [
+  entry("github:alice", "alice"),
+  entry("github:acme", "acme"),
+];
+
+/** What the fake source's `scopes.children` lists inside each owner. */
+const fakeChildren: Readonly<Record<string, readonly ScopeEntry[]>> = {
+  "github:acme": [
+    entry("github:acme/api", "acme/api"),
+    { ...entry("github:acme/legacy", "acme/legacy"), archived: true },
+    entry("github:acme/web", "acme/web"),
+  ],
+};
+
 /** The fake GitHub source's scopes. */
 export const fakeScopes: Readonly<Record<string, readonly FakePage[]>> = {
   "github:acme": [apiPage, webPage],
@@ -236,7 +258,14 @@ export const testPorts = (options: TestPortOptions = {}): TestPorts => {
   );
   const pager =
     options.pager ??
-    createFakeGraphSource({ source: "github", scopes: fakeScopes });
+    createFakeGraphSource({
+      source: "github",
+      scopes: fakeScopes,
+      roots: fakeRoots,
+      children: fakeChildren,
+      // Smaller than the owner's repository listing, so a listing pages.
+      listingPageSize: 2,
+    });
 
   const ports: AppPorts = {
     store: createRouterClient(createGraphStoreRouter(createFakeGraphStore())),

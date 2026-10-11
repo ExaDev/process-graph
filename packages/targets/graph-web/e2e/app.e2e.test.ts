@@ -252,3 +252,54 @@ test("says when GitHub's rate limit resets", async ({ page }) => {
     "1 Jan 2100",
   );
 });
+
+test("syncs a Projects v2 board pasted as its link, passing over its draft items", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await syncScopes(page, fixtureToken, [
+    "https://github.com/orgs/acme/projects/1",
+  ]);
+  await syncFinished(page);
+
+  expect(new URL(page.url()).searchParams.getAll("scope")).toEqual([
+    "github:acme/projects/1",
+  ]);
+  // The board's issues, and the issues they wait on, which are read whatever board they are on.
+  await expect(card(page, "github:acme/web#2")).toHaveAttribute(
+    "data-status",
+    "blocked",
+  );
+  await expect(card(page, "github:acme/api#2")).toHaveAttribute(
+    "data-status",
+    "ready",
+  );
+  await expect(card(page, "github:acme/web#1")).toBeVisible();
+});
+
+test("suggests the organisations the token reaches and their repositories", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Token", { exact: true }).fill(fixtureToken);
+  await page.getByRole("button", { name: "Save on this device" }).click();
+  const suggestions = page.getByRole("region", { name: "Suggestions" });
+  await suggestions
+    .getByRole("button", { name: "Show my account and organisations" })
+    .click();
+  await expect(
+    suggestions
+      .getByRole("list", { name: "Your scopes" })
+      .getByRole("listitem"),
+  ).toHaveText([/^Alice/u, /^acme/u, /^partner/u]);
+  await suggestions
+    .getByRole("button", { name: "Show the repositories of github:acme" })
+    .click();
+  await suggestions
+    .getByRole("button", { name: "Add github:acme/web" })
+    .click();
+
+  expect(new URL(page.url()).searchParams.getAll("scope")).toEqual([
+    "github:acme/web",
+  ]);
+});
