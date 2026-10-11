@@ -40,6 +40,7 @@ import {
   type ViewName,
 } from "./show.ts";
 import { sync } from "./sync.ts";
+import { terminalJson, terminalText } from "./terminal-text.ts";
 import { validateDocument, validateStored } from "./validate.ts";
 
 /** How the program presents itself. */
@@ -120,6 +121,13 @@ export const runCli = async (
   identity: ProgramIdentity,
 ): Promise<ExitCode> => {
   let exitCode: ExitCode = exitCodes.success;
+  // The one boundary every byte the command line writes crosses: results, diagrams, help, usage errors and failures all carry text from sources (titles, labels, actor names), which must never act on the terminal they are written to.
+  const writeOut = (text: string): void => {
+    ports.stdout(terminalText(text));
+  };
+  const writeErr = (text: string): void => {
+    ports.stderr(terminalText(text));
+  };
 
   const program = new Command(identity.name);
   program
@@ -127,7 +135,7 @@ export const runCli = async (
       "Sync work from its sources into a process model, and ask what is ready, blocked, on the critical path or handed off, why, and what it looks like as a diagram.",
     )
     .version(identity.version)
-    .configureOutput({ writeOut: ports.stdout, writeErr: ports.stderr })
+    .configureOutput({ writeOut, writeErr })
     .configureHelp({ showGlobalOptions: true })
     .exitOverride()
     .option(
@@ -142,11 +150,7 @@ export const runCli = async (
 
   /** Writes a command's result, as JSON or text, and records its exit status. */
   const respond = (globals: GlobalOptions, outcome: Outcome): void => {
-    ports.stdout(
-      globals.json
-        ? `${JSON.stringify(outcome.json, null, 2)}\n`
-        : outcome.text,
-    );
+    writeOut(globals.json ? terminalJson(outcome.json) : outcome.text);
     exitCode = outcome.exitCode ?? exitCodes.success;
   };
 
@@ -623,7 +627,7 @@ export const runCli = async (
   } catch (error) {
     const failure = failureOf(error);
     if (failure.message !== "") {
-      ports.stderr(`${failure.message}\n`);
+      writeErr(`${failure.message}\n`);
     }
 
     return failure.exitCode;

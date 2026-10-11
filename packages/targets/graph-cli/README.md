@@ -54,6 +54,8 @@ Without `--data` or `PROCESS_GRAPH_DATA`, the store is `process-graph/graph.sqli
 
 Text output is stable and made for scripts: a list is one item per line with tab-separated fields (an element is its identifier and label), and an empty list prints nothing. `--json` writes the same result as one JSON document; for `show` it is the projection when the format is `json`, and otherwise the view, the format and the diagram text. Errors go to standard error as one message, with no stack trace.
 
+Text from a source can carry characters that act on a terminal: escape sequences that clear the screen or set the clipboard, other control characters, and the Unicode controls that reorder or hide text. Everything the command line writes, results, diagrams, help and errors alike, writes each of them as a visible escape of its code point, `\u{1b}` for ESC or `\u{202e}` for a right-to-left override, and keeps line breaks, tabs and every other character, accented, CJK and emoji included, as they are. In Mermaid and DOT the escape sits inside the label's own escaping, so the diagram stays valid. `--json` writes the same characters as JSON `\u` escapes, so the parsed values are exactly the source's.
+
 The Mermaid emitters name nodes by their position in the view, since Mermaid does not accept identifiers such as `github:org/repo#12`, and write every character Mermaid reads as syntax in a label as its entity code. The DOT emitters keep the model identifiers as node names. Hand-offs are drawn as thick (Mermaid) or bold (DOT) edges, and an empty swimlane lane is still drawn. DOT has no sequence notation, so a sequence diagram in DOT is a grid of lifelines with one row per message, each message numbered and prefixed with the fragments around it.
 
 ## Exit status
