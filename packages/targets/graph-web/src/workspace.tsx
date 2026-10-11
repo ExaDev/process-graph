@@ -14,6 +14,12 @@ import {
   type Run,
 } from "@exadev/process-graph-react";
 import { ProcessView } from "@exadev/process-graph-react-flow";
+import {
+  exportFormats,
+  viewText,
+  type ExportFormat,
+} from "@exadev/process-graph-export";
+import { project } from "@exadev/process-graph-projection";
 import type { OpenIds, OverlayStatus } from "@exadev/process-graph-schema";
 import type { StoredModel } from "@exadev/process-graph-store-contract";
 import { FilterPanel, Legend } from "@exadev/process-graph-ui";
@@ -21,10 +27,12 @@ import { useCallback, useId, useMemo, type ReactElement } from "react";
 import { AddForm } from "./add-form.tsx";
 import { withAddition, type Addition } from "./addition.ts";
 import {
+  button,
   canvas,
   list,
   muted,
   notice,
+  row,
   section,
   sidebar,
   workspace,
@@ -38,6 +46,22 @@ import { viewKinds, type ViewKind, type ViewState } from "./url-state.ts";
 import { ViewBoundary } from "./view-boundary.tsx";
 import { resolveView } from "./views.ts";
 import { WorkLists } from "./work-lists.tsx";
+
+/** Each export format's name on its button, and the file it is saved as. */
+const exportFiles: Readonly<
+  Record<
+    ExportFormat,
+    {
+      readonly label: string;
+      readonly extension: string;
+      readonly type: string;
+    }
+  >
+> = {
+  mermaid: { label: "Mermaid", extension: "mmd", type: "text/plain" },
+  dot: { label: "DOT", extension: "dot", type: "text/vnd.graphviz" },
+  json: { label: "JSON", extension: "json", type: "application/json" },
+};
 
 /** Each view's tab label. */
 const viewLabels: Readonly<Record<ViewKind, string>> = {
@@ -226,6 +250,32 @@ const Workspace = (props: WorkspaceProps): ReactElement => {
             </div>
           )}
         </div>
+        {resolved.projection === undefined ? null : (
+          <div className={row} data-screen="export">
+            <span className={muted}>Download this view as</span>
+            {exportFormats.map((format) => (
+              <button
+                key={format}
+                type="button"
+                className={button}
+                aria-label={`Download the ${viewLabels[state.view].toLowerCase()} as ${exportFiles[format].label}`}
+                onClick={() => {
+                  ports.download({
+                    name: `process-graph-${state.view}.${exportFiles[format].extension}`,
+                    type: exportFiles[format].type,
+                    text: viewText(
+                      run.model,
+                      project(run.model, resolved.projection),
+                      format,
+                    ),
+                  });
+                }}
+              >
+                {exportFiles[format].label}
+              </button>
+            ))}
+          </div>
+        )}
         <Legend critical />
       </div>
       <div className={sidebar}>

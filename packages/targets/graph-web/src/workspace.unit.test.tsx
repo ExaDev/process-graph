@@ -6,6 +6,11 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import {
+  show,
+  type FormatName,
+  type ViewName,
+} from "@exadev/process-graph-cli";
 import { afterEach, describe, expect, test } from "vitest";
 import { App } from "./app.tsx";
 import { testPorts, type TestPorts } from "./test-support/ports.ts";
@@ -94,6 +99,69 @@ describe("the process view", () => {
         (line) => line.textContent,
       ),
     ).toEqual(["acme/api", "acme/web"]);
+  });
+});
+
+describe("downloads", () => {
+  test.each<readonly [string, FormatName, ViewName, string]>([
+    ["Swimlane", "mermaid", "swimlane", "process-graph-swimlane.mmd"],
+    ["Swimlane", "dot", "swimlane", "process-graph-swimlane.dot"],
+    ["Swimlane", "json", "swimlane", "process-graph-swimlane.json"],
+    ["Flowchart", "mermaid", "flowchart", "process-graph-flowchart.mmd"],
+    ["Flowchart", "dot", "flowchart", "process-graph-flowchart.dot"],
+  ])(
+    "save the %s view as %s, exactly the text the command line's show writes for it",
+    async (tab, format, view, name) => {
+      const ports = await synced();
+      fireEvent.click(screen.getByRole("tab", { name: tab }));
+      const label = { mermaid: "Mermaid", dot: "DOT", json: "JSON" }[format];
+
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: `Download the ${tab.toLowerCase()} as ${label}`,
+        }),
+      );
+
+      const shown = await show(
+        {
+          store: ports.ports.store,
+          modelId,
+          facts: () => ({ found: false }),
+          signal: undefined,
+        },
+        { view, format },
+      );
+      expect(ports.downloads).toEqual([
+        {
+          name,
+          type: {
+            mermaid: "text/plain",
+            dot: "text/vnd.graphviz",
+            json: "application/json",
+          }[format],
+          text: shown.text,
+        },
+      ]);
+      expect(shown.text).toContain("Build the endpoint");
+    },
+  );
+
+  test("follow the sequence the view draws", async () => {
+    const ports = await synced(`${acme}&view=sequence`);
+    await screen.findByRole("figure");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Download the sequence as Mermaid" }),
+    );
+
+    const [file] = ports.downloads;
+    expect(file?.text.startsWith("sequenceDiagram\n")).toBe(true);
+    expect(file?.text).toContain("acme/web");
+  });
+
+  test("are not offered for a view the model cannot be drawn as", async () => {
+    await synced(`${acme}&view=state`);
+
+    expect(document.querySelector('[data-screen="export"]')).toBeNull();
   });
 });
 

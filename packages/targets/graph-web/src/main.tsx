@@ -13,6 +13,7 @@ import { registerSW } from "virtual:pwa-register";
 import { App } from "./app.tsx";
 import {
   browserAddressBar,
+  browserDownload,
   browserOnline,
   localSyncRecords,
   localThemePreference,
@@ -55,6 +56,7 @@ const ports: AppPorts = {
   online: browserOnline(window),
   prefersDark: systemPrefersDark(window),
   updates: serviceWorkerUpdates(registerSW),
+  download: browserDownload(document),
 };
 
 createRoot(root).render(

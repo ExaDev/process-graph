@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   browserAddressBar,
+  browserDownload,
   browserOnline,
   localSyncRecords,
   localThemePreference,
@@ -123,5 +124,45 @@ describe("service worker updates", () => {
     updates.apply();
     await Promise.resolve();
     expect(update).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("downloads", () => {
+  test("hand the text over as a file with its name and type, then release it", async () => {
+    const blobs: Blob[] = [];
+    const created = vi
+      .spyOn(URL, "createObjectURL")
+      .mockImplementation((blob) => {
+        if (blob instanceof Blob) {
+          blobs.push(blob);
+        }
+
+        return "blob:process-graph/1";
+      });
+    const revoked = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => undefined);
+    const clicked: { readonly href: string; readonly download: string }[] = [];
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(function record(this: HTMLAnchorElement) {
+        clicked.push({ href: this.href, download: this.download });
+      });
+
+    browserDownload(document)({
+      name: "process-graph-swimlane.mmd",
+      type: "text/plain",
+      text: "flowchart LR\n",
+    });
+
+    expect(clicked).toEqual([
+      { href: "blob:process-graph/1", download: "process-graph-swimlane.mmd" },
+    ]);
+    expect(await blobs[0]?.text()).toBe("flowchart LR\n");
+    expect(blobs[0]?.type).toBe("text/plain");
+    expect(revoked).toHaveBeenCalledWith("blob:process-graph/1");
+    created.mockRestore();
+    revoked.mockRestore();
+    click.mockRestore();
   });
 });
