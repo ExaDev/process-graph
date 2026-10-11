@@ -33,7 +33,7 @@ graphStoreConformance({
 });
 
 describe("a store on a database file", () => {
-  test("keeps its models and revisions when the file is opened again", async () => {
+  test("keeps its models, run state, facts and revisions when the file is opened again", async () => {
     const directory = mkdtempSync(join(tmpdir(), "graph-store-sqlite-"));
     const path = join(directory, "graph.sqlite3");
     try {
@@ -50,6 +50,13 @@ describe("a store on a database file", () => {
       await writer.v1.overlay.set({
         modelId: "orders",
         overlay: { ship: "done" },
+      });
+      await writer.v1.facts.set({
+        modelId: "orders",
+        facts: {
+          artefacts: { basket: true, receipt: false },
+          values: { approved: { kind: "boolean", value: true } },
+        },
       });
       first.close();
 
@@ -68,9 +75,13 @@ describe("a store on a database file", () => {
 
       expect(stored).toStrictEqual({
         modelId: "orders",
-        revision: revision + 1,
+        revision: revision + 2,
         model: everyFieldModel,
         overlay: { ship: "done" },
+        facts: {
+          artefacts: { basket: true, receipt: false },
+          values: { approved: { kind: "boolean", value: true } },
+        },
       });
       expect(next.revision).toBeGreaterThan(stored.revision);
     } finally {

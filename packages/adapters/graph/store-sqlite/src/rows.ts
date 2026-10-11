@@ -6,13 +6,17 @@ import {
   type OpenIds,
   type Overlay,
 } from "@exadev/process-graph-schema";
+import type { FactRecord } from "@exadev/process-graph-domain";
+import { factRecordSchema } from "@exadev/process-graph-store-contract";
 import type {
   actions,
+  artefactFacts,
   artefacts,
   elements,
   events,
   fragments,
   models,
+  namedFacts,
   overlay,
   participants,
   projections,
@@ -271,3 +275,47 @@ export const overlayFromRows = (
   overlaySchema.parse(
     Object.fromEntries(rows.map(({ element, status }) => [element, status])),
   );
+
+/**
+ * Reassembles a fact record from its rows, parsing it with the contract's `factRecordSchema`, so every stored value is checked to be a trilean value.
+ * @param artefactRows - The model's artefact fact rows.
+ * @param valueRows - The model's named fact rows.
+ * @returns The fact record.
+ */
+export const factsFromRows = (
+  artefactRows: readonly (typeof artefactFacts.$inferSelect)[],
+  valueRows: readonly (typeof namedFacts.$inferSelect)[],
+): FactRecord =>
+  factRecordSchema.parse({
+    artefacts: Object.fromEntries(
+      artefactRows.map(({ artefact, provided }) => [artefact, provided]),
+    ),
+    values: Object.fromEntries(
+      valueRows.map(({ name, value }) => [name, value]),
+    ),
+  });
+
+/**
+ * Flattens a fact record into rows for one model.
+ * @param modelId - The model the facts are about.
+ * @param facts - The record.
+ * @returns The artefact fact rows and the named fact rows.
+ */
+export const factRows = (
+  modelId: string,
+  facts: FactRecord,
+): {
+  readonly artefacts: readonly (typeof artefactFacts.$inferInsert)[];
+  readonly values: readonly (typeof namedFacts.$inferInsert)[];
+} => ({
+  artefacts: Object.entries(facts.artefacts).map(([artefact, provided]) => ({
+    modelId,
+    artefact,
+    provided,
+  })),
+  values: Object.entries(facts.values).map(([name, value]) => ({
+    modelId,
+    name,
+    value,
+  })),
+});

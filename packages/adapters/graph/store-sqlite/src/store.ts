@@ -1,15 +1,23 @@
-import { loopTransitions } from "@exadev/process-graph-domain";
+import {
+  emptyFactRecord,
+  loopTransitions,
+  type FactRecord,
+} from "@exadev/process-graph-domain";
 import type { Model, OpenIds, Overlay } from "@exadev/process-graph-schema";
 import {
   ChangeFeed,
   checkStored,
   emptyModel,
+  factIssues,
+  factsWithin,
   GraphStoreError,
   mergeBoundItems,
+  mergeFacts,
   mergeRelations,
   overlayWithin,
   relationIssues,
   relationsWithin,
+  withoutFacts,
   type ChangeKind,
   type GraphStore,
   type Relation,
@@ -34,6 +42,8 @@ import {
   ready,
 } from "./queries.ts";
 import {
+  factRows,
+  factsFromRows,
   fromRows,
   overlayFromRows,
   toRows,
@@ -41,11 +51,13 @@ import {
 } from "./rows.ts";
 import {
   actions,
+  artefactFacts,
   artefacts,
   elements,
   events,
   fragments,
   models,
+  namedFacts,
   overlay as overlayTable,
   participants,
   projections,
@@ -66,6 +78,9 @@ const recordTables = [
   projections,
   relationsTable,
 ] as const;
+
+/** The tables that hold a model's fact record, both keyed by `modelId`. */
+const factTables = [artefactFacts, namedFacts] as const;
 
 /** The name of the store-wide revision sequence's row in `sequences`. */
 const revisionSequence = "revision";
@@ -165,6 +180,40 @@ export const createSqliteGraphStore = (
       .where(eq(relationsTable.modelId, modelId))
       .orderBy(asc(relationsTable.position));
 
+  const readFacts = async (modelId: string): Promise<FactRecord> =>
+    factsFromRows(
+      await db
+        .select()
+        .from(artefactFacts)
+        .where(eq(artefactFacts.modelId, modelId))
+        .orderBy(asc(artefactFacts.artefact)),
+      await db
+        .select()
+        .from(namedFacts)
+        .where(eq(namedFacts.modelId, modelId))
+        .orderBy(asc(namedFacts.name)),
+    );
+
+  /** Replaces a model's fact rows with a record's; run inside the caller's transaction. */
+  const replaceFacts = async (
+    modelId: string,
+    facts: FactRecord,
+  ): Promise<void> => {
+    await sequentially(
+      factTables.map(
+        (table) => async () =>
+          db.delete(table).where(eq(table.modelId, modelId)),
+      ),
+    );
+    const rows = factRows(modelId, facts);
+    if (rows.artefacts.length > 0) {
+      await db.insert(artefactFacts).values([...rows.artefacts]);
+    }
+    if (rows.values.length > 0) {
+      await db.insert(namedFacts).values([...rows.values]);
+    }
+  };
+
   const read = async (modelId: string): Promise<StoredModel> => {
     const [model] = await db
       .select()
@@ -222,6 +271,7 @@ export const createSqliteGraphStore = (
       revision: model.revision,
       model: fromRows(rows),
       overlay: await readOverlay(modelId),
+      facts: await readFacts(modelId),
     };
   };
 
@@ -269,20 +319,25 @@ export const createSqliteGraphStore = (
     readonly model: Model<OpenIds>;
     readonly overlay: Overlay<OpenIds>;
     readonly relations: readonly Relation[];
+    readonly facts: FactRecord;
     readonly signal: AbortSignal | undefined;
   }
 
-  /** Replaces a model's rows, overlay and relations in one transaction and publishes the change once it commits. */
+  /** Replaces a model's rows, overlay, relations and facts in one transaction and publishes the change once it commits. */
   const write = async ({
     modelId,
     kind,
     model,
     overlay,
     relations,
+    facts,
     signal,
   }: Write): Promise<number> => {
     checkStored(model, overlay);
-    const issues = relationIssues(model, relations);
+    const issues = [
+      ...relationIssues(model, relations),
+      ...factIssues(model, facts),
+    ];
     if (issues.length > 0) {
       throw new GraphStoreError({ kind: "invalid", issues });
     }
@@ -319,11 +374,44 @@ export const createSqliteGraphStore = (
           })),
         );
       }
+      await replaceFacts(modelId, facts);
       signal?.throwIfAborted();
 
       return taken;
     });
     feed.publish({ modelId, kind, revision });
+
+    return revision;
+  };
+
+  /** Replaces a model's fact record in one transaction, after checking it names only artefacts the model declares, and publishes the change once it commits. */
+  const writeFacts = async ({
+    modelId,
+    model,
+    facts,
+    signal,
+  }: {
+    readonly modelId: string;
+    readonly model: Model<OpenIds>;
+    readonly facts: FactRecord;
+    readonly signal: AbortSignal | undefined;
+  }): Promise<number> => {
+    const issues = factIssues(model, facts);
+    if (issues.length > 0) {
+      throw new GraphStoreError({ kind: "invalid", issues });
+    }
+    const revision = await inTransaction(db, async () => {
+      const taken = await nextRevision();
+      await db
+        .update(models)
+        .set({ revision: taken })
+        .where(eq(models.id, modelId));
+      await replaceFacts(modelId, facts);
+      signal?.throwIfAborted();
+
+      return taken;
+    });
+    feed.publish({ modelId, kind: "facts", revision });
 
     return revision;
   };
@@ -353,6 +441,10 @@ export const createSqliteGraphStore = (
             model,
             stored ? await readRelations(modelId) : [],
           ),
+          facts: factsWithin(
+            model,
+            stored ? await readFacts(modelId) : emptyFactRecord,
+          ),
           signal,
         });
       }),
@@ -368,6 +460,7 @@ export const createSqliteGraphStore = (
           await db
             .delete(overlayTable)
             .where(eq(overlayTable.modelId, modelId));
+          await replaceFacts(modelId, emptyFactRecord);
           await db.delete(models).where(eq(models.id, modelId));
           signal?.throwIfAborted();
 
@@ -412,11 +505,47 @@ export const createSqliteGraphStore = (
 
         return revision;
       }),
+    readFacts: async ({ modelId }) =>
+      operation(async () => {
+        const revision = await revisionOf(modelId);
+        if (revision === undefined) {
+          throw new GraphStoreError({ kind: "not-found", modelId });
+        }
+
+        return { modelId, revision, facts: await readFacts(modelId) };
+      }),
+    setFacts: async ({ modelId, facts, signal }) =>
+      operation(async () => {
+        const stored = await read(modelId);
+
+        return writeFacts({
+          modelId,
+          model: stored.model,
+          facts: mergeFacts(stored.facts, facts),
+          signal,
+        });
+      }),
+    clearFacts: async ({ modelId, facts, signal }) =>
+      operation(async () => {
+        const stored = await read(modelId);
+
+        return writeFacts({
+          modelId,
+          model: stored.model,
+          facts: withoutFacts(stored.facts, facts),
+          signal,
+        });
+      }),
     upsertItems: async ({ modelId, items, signal }) =>
       operation(async () => {
         const stored =
           (await revisionOf(modelId)) === undefined
-            ? { model: emptyModel, overlay: {}, relations: [] }
+            ? {
+                model: emptyModel,
+                overlay: {},
+                relations: [],
+                facts: emptyFactRecord,
+              }
             : {
                 ...(await read(modelId)),
                 relations: await readRelations(modelId),
@@ -427,6 +556,7 @@ export const createSqliteGraphStore = (
           kind: "items",
           ...mergeBoundItems(stored.model, stored.overlay, items),
           relations: mergeRelations(stored.relations, items.relations ?? []),
+          facts: stored.facts,
           signal,
         });
       }),
