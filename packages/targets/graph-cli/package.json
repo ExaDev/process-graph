@@ -62,14 +62,14 @@
     "graphviz"
   ],
   "dependencies": {
-    "@exadev/process-graph-dag": "1.0.2",
-    "@exadev/process-graph-domain": "1.0.3",
-    "@exadev/process-graph-projection": "1.0.3",
+    "@exadev/process-graph-dag": "1.1.0",
+    "@exadev/process-graph-domain": "1.1.1",
+    "@exadev/process-graph-projection": "1.1.0",
     "@exadev/process-graph-schema": "1.1.0",
-    "@exadev/process-graph-source-contract": "1.0.1",
-    "@exadev/process-graph-source-github-issues": "1.0.1",
-    "@exadev/process-graph-sqlite-node": "1.0.0",
-    "@exadev/process-graph-store-contract": "1.0.1",
+    "@exadev/process-graph-source-contract": "1.1.0",
+    "@exadev/process-graph-source-github-issues": "1.1.0",
+    "@exadev/process-graph-sqlite-node": "1.0.4",
+    "@exadev/process-graph-store-contract": "1.1.0",
     "@orpc/server": "2.0.0-beta.41",
     "commander": "15.0.0"
   },
