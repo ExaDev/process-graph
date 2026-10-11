@@ -1,9 +1,12 @@
-import { illegalCycles, type Status } from "@exadev/process-graph-domain";
+import {
+  factsFrom,
+  illegalCycles,
+  type Status,
+} from "@exadev/process-graph-domain";
 import {
   elementLabel,
   emptyFilter,
   filterOptions,
-  noFacts,
   useCriticalPath,
   useModel,
   useStatuses,
@@ -27,6 +30,7 @@ import {
   workspace,
 } from "./app.css.ts";
 import { ElementDetails } from "./element-details.tsx";
+import type { ArtefactState, FactState } from "./run-facts.tsx";
 import { failureOf } from "./failure.ts";
 import type { AppPorts } from "./ports.ts";
 import { Tabs } from "./tabs.tsx";
@@ -138,6 +142,30 @@ const Workspace = (props: WorkspaceProps): ReactElement => {
     },
     [ports.store, modelId],
   );
+  const setArtefact = useCallback(
+    async (id: string, value: ArtefactState): Promise<void> => {
+      await (value === "unknown"
+        ? ports.store.v1.facts.clear({ modelId, facts: { artefacts: [id] } })
+        : ports.store.v1.facts.set({
+            modelId,
+            facts: { artefacts: { [id]: value === "provided" } },
+          }));
+    },
+    [ports.store, modelId],
+  );
+  const setFact = useCallback(
+    async (name: string, value: FactState): Promise<void> => {
+      await (value === "unknown"
+        ? ports.store.v1.facts.clear({ modelId, facts: { values: [name] } })
+        : ports.store.v1.facts.set({
+            modelId,
+            facts: {
+              values: { [name]: { kind: "boolean", value: value === "true" } },
+            },
+          }));
+    },
+    [ports.store, modelId],
+  );
   const add = useCallback(
     async (addition: Addition): Promise<void> => {
       await ports.store.v1.models.save({
@@ -213,7 +241,10 @@ const Workspace = (props: WorkspaceProps): ReactElement => {
             element={selectedElement}
             labelOf={labelOf}
             scopes={state.scopes}
+            facts={props.stored.facts}
             onSetState={setState}
+            onSetArtefact={setArtefact}
+            onSetFact={setFact}
             onAddScope={onAddScope}
           />
         )}
@@ -264,7 +295,11 @@ const Workspace = (props: WorkspaceProps): ReactElement => {
 const LoadedModel = (props: LoadedModelProps): ReactElement => {
   const { stored } = props;
   const run = useMemo<Run<OpenIds>>(
-    () => ({ model: stored.model, overlay: stored.overlay, facts: noFacts }),
+    () => ({
+      model: stored.model,
+      overlay: stored.overlay,
+      facts: factsFrom(stored.facts),
+    }),
     [stored],
   );
   const cycles = useMemo(() => illegalCycles(run.model), [run.model]);
