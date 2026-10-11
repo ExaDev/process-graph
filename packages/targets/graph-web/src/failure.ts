@@ -1,3 +1,4 @@
+import { InterruptedSyncError } from "@exadev/process-graph-sync";
 import { ORPCError } from "@orpc/client";
 
 /**
@@ -34,11 +35,14 @@ const stringField = (data: unknown, field: string): string | undefined => {
 };
 
 /**
- * Classifies what a source or store call threw.
+ * Classifies what a source or store call threw. A sync a source interrupted is classified by the source's own failure.
  * @param error - The thrown value.
  * @returns The failure to show.
  */
 export const failureOf = (error: unknown): Failure => {
+  if (error instanceof InterruptedSyncError) {
+    return failureOf(error.cause);
+  }
   if (error instanceof ORPCError) {
     if (error.code === "UNAUTHORIZED") {
       return { kind: "unauthorised", message: error.message };
