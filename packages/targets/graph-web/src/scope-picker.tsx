@@ -2,6 +2,7 @@ import { useId, useState, type SubmitEvent, type ReactElement } from "react";
 import {
   button,
   chip,
+  chipList,
   field,
   input,
   muted,
@@ -64,7 +65,7 @@ export const ScopePicker = (props: ScopePickerProps): ReactElement => {
       {scopes.length === 0 ? (
         <p className={muted}>Nothing chosen yet.</p>
       ) : (
-        <ul aria-label="Chosen scopes" className={row}>
+        <ul aria-label="Chosen scopes" className={chipList}>
           {scopes.map((scope) => (
             <li key={scope} className={chip} data-scope={scope}>
               {scope}
