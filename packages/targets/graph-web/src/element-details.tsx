@@ -21,7 +21,7 @@ import {
   sectionHeading,
 } from "./app.css.ts";
 import { failureOf } from "./failure.ts";
-import { githubIssueOf } from "./github-issue.ts";
+import { githubIssueOf, type GitHubIssue } from "./github-issue.ts";
 import { useHierarchy, type HierarchyClient } from "./hierarchy.ts";
 import { RunFacts, type ArtefactState, type FactState } from "./run-facts.tsx";
 
@@ -50,8 +50,8 @@ export interface ElementDetailsProps {
   readonly onSetFact: (name: string, state: FactState) => Promise<void>;
   /** Sets the element's run state in the store, as the command line's `set` does. */
   readonly onSetState: (id: string, state: OverlayStatus) => Promise<void>;
-  /** Adds a scope and syncs it, so work outside the scope can be expanded on demand. */
-  readonly onAddScope: (scope: string) => void;
+  /** Adds scopes and syncs them, so work outside the scope can be expanded on demand. */
+  readonly onAddScopes: (scopes: readonly string[]) => void;
   /** The store, for the element's place in the hierarchy its source reports. */
   readonly store: HierarchyClient;
   readonly modelId: string;
@@ -60,6 +60,67 @@ export interface ElementDetailsProps {
   /** Selects another element, as a parent or child link does. */
   readonly onSelect: (id: string) => void;
 }
+
+/** The GitHub issue an element is bound to, if it is one. */
+const issueOfElement = (
+  element: Element<string, OpenIds> | undefined,
+): GitHubIssue | undefined =>
+  element?.kind === "activity" && element.source !== undefined
+    ? githubIssueOf(element.source)
+    : undefined;
+
+/**
+ * Whether the scopes leave out an issue: neither its repository nor its owner is one of them.
+ * @param scopes - The scopes.
+ * @param issue - The issue.
+ */
+const outsideOf = (scopes: readonly string[], issue: GitHubIssue): boolean =>
+  !scopes.includes(issue.repositoryScope) && !scopes.includes(issue.ownerScope);
+
+/**
+ * The repositories outside the scopes of the work an element is linked to: what it depends on and what depends on it, its parents and its sub-tasks. Each is named once, sorted, as a scope to add.
+ * @param run - The run, whose transitions link the element.
+ * @param id - The element.
+ * @param related - Its parents and sub-tasks, from the hierarchy the store keeps.
+ * @param scopes - The scopes the model was synced from.
+ */
+const linkedScopesOutside = (
+  run: Run<OpenIds>,
+  id: string,
+  related: readonly string[],
+  scopes: readonly string[],
+): readonly string[] => {
+  const linked = [
+    ...run.model.transitions.flatMap((transition) =>
+      transition.source === id
+        ? [transition.target]
+        : transition.target === id
+          ? [transition.source]
+          : [],
+    ),
+    ...related,
+  ];
+
+  return [
+    ...new Set(
+      linked.flatMap((other) => {
+        const issue = issueOfElement(
+          run.model.elements.find((element) => element.id === other),
+        );
+
+        return issue !== undefined && outsideOf(scopes, issue)
+          ? [issue.repositoryScope]
+          : [];
+      }),
+    ),
+  ].sort();
+};
+
+/** Joins names into a sentence's list: "a", "a and b", "a, b and c". */
+const listFormat = new Intl.ListFormat("en-GB", {
+  style: "long",
+  type: "conjunction",
+});
 
 interface RelativesProps {
   readonly heading: string;
@@ -100,7 +161,7 @@ const Relatives = (props: RelativesProps): ReactElement => {
 };
 
 /**
- * The selected element: why it has its status, what blocks it and what it holds up (the command line's `why`, `blocked` and `impact`), what it is a sub-task of and its own sub-tasks (`ancestors` and `children`), each a link that selects it, its issue on GitHub, controls to set its run state, controls to record the artefacts it consumes or produces and the facts its conditions read (`set artefact`, `set fact`), and, for an issue in a repository outside the scope, a control that adds that repository to the scope.
+ * The selected element: why it has its status, what blocks it and what it holds up (the command line's `why`, `blocked` and `impact`), what it is a sub-task of and its own sub-tasks (`ancestors` and `children`), each a link that selects it, its issue on GitHub, controls to set its run state, controls to record the artefacts it consumes or produces and the facts its conditions read (`set artefact`, `set fact`),, for an issue in a repository outside the scope, a control that adds that repository to the scope, and one that loads in one step every repository outside the scope that the work it is linked to lives in.
  * @param props - The run, the element and the actions.
  * @returns The details.
  */
@@ -114,7 +175,7 @@ export const ElementDetails = (props: ElementDetailsProps): ReactElement => {
     onSetState,
     onSetArtefact,
     onSetFact,
-    onAddScope,
+    onAddScopes,
     store,
     modelId,
     revision,
@@ -132,14 +193,18 @@ export const ElementDetails = (props: ElementDetailsProps): ReactElement => {
       "unreachable: useWhyStatus explains every element it is given",
     );
   }
-  const issue =
-    element.kind === "activity" && element.source !== undefined
-      ? githubIssueOf(element.source)
-      : undefined;
-  const outside =
-    issue !== undefined &&
-    !scopes.includes(issue.repositoryScope) &&
-    !scopes.includes(issue.ownerScope);
+  const issue = issueOfElement(element);
+  const outside = issue !== undefined && outsideOf(scopes, issue);
+  const expansion =
+    hierarchy.status === "loaded"
+      ? linkedScopesOutside(
+          run,
+          id,
+          [...hierarchy.parents, ...hierarchy.children],
+          scopes,
+        )
+      : [];
+  const expansionId = useId();
 
   return (
     <div className={section} data-screen="details">
@@ -176,6 +241,25 @@ export const ElementDetails = (props: ElementDetailsProps): ReactElement => {
           )}
         </>
       ) : null}
+      {expansion.length === 0 ? null : (
+        <div className={row} data-screen="expand">
+          <button
+            type="button"
+            className={button}
+            aria-describedby={expansionId}
+            onClick={() => {
+              onAddScopes(expansion);
+            }}
+          >
+            Load what this links to
+          </button>
+          <span id={expansionId} className={muted}>
+            {`Adds ${listFormat.format(
+              expansion.map((scope) => scope.slice(scope.indexOf(":") + 1)),
+            )} to the scope and syncs ${expansion.length === 1 ? "it" : "them"}.`}
+          </span>
+        </div>
+      )}
       <section aria-labelledby={headingId} className={row}>
         <h3 id={headingId} className={sectionHeading}>
           Run state
@@ -219,7 +303,7 @@ export const ElementDetails = (props: ElementDetailsProps): ReactElement => {
               type="button"
               className={button}
               onClick={() => {
-                onAddScope(issue.repositoryScope);
+                onAddScopes([issue.repositoryScope]);
               }}
             >
               Add {issue.repository} to the scope

@@ -205,7 +205,7 @@ describe("the sync", () => {
     await syncNow();
 
     expect(document.querySelector("[data-progress]")?.textContent).toBe(
-      "Sync finished. 2 pages read: 5 issues and 4 dependencies written.",
+      "Sync finished. 2 pages read: 6 issues and 4 dependencies written.",
     );
     expect(
       (await cardOf("github:acme/web#2")).getAttribute("data-status"),
@@ -265,7 +265,7 @@ describe("the sync", () => {
     );
     await waitFor(() => {
       expect(document.querySelector("[data-progress]")?.textContent).toBe(
-        "Sync finished. 1 page read: 4 issues and 3 dependencies written.",
+        "Sync finished. 1 page read: 5 issues and 3 dependencies written.",
       );
     });
     expect(ports.records.get("github:acme")?.checkpoint).toBeUndefined();

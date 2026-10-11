@@ -275,37 +275,83 @@ describe("the details", () => {
 
   test("link an element's parent and sub-tasks, each selecting it", async () => {
     const ports = await synced(`${acme}&select=github%3Aacme%2Fweb%231`);
+    /** The buttons of one side of the hierarchy, once it is read. */
+    const relatives = async (
+      relation: "parent" | "child",
+    ): Promise<HTMLElement> =>
+      waitFor(() => {
+        const found = document.querySelector(`[data-hierarchy="${relation}"]`);
+        if (!(found instanceof HTMLElement)) {
+          throw new Error(`no ${relation} is listed yet`);
+        }
 
-    const parents = await waitFor(() => {
-      const found = document.querySelector('[data-hierarchy="parent"]');
-      if (!(found instanceof HTMLElement)) {
-        throw new Error("no parent is listed yet");
-      }
+        return found;
+      });
+    const names = (side: HTMLElement): readonly string[] =>
+      within(side)
+        .getAllByRole("button")
+        .map((button) => button.textContent);
 
-      return found;
-    });
+    const parents = await relatives("parent");
     expect(within(parents).getByRole("heading").textContent).toBe("Part of");
-    expect(document.querySelector('[data-hierarchy="child"]')).toBeNull();
+    expect(names(parents)).toEqual(["Ship the release"]);
+    const children = await relatives("child");
+    expect(within(children).getByRole("heading").textContent).toBe("Sub-tasks");
+    expect(names(children)).toEqual(["Document the page"]);
     fireEvent.click(
       within(parents).getByRole("button", { name: "Ship the release" }),
     );
 
     expect(addressOf(ports).selected).toBe("github:acme/web#2");
-    const children = await waitFor(() => {
-      const found = document.querySelector('[data-hierarchy="child"]');
-      if (!(found instanceof HTMLElement)) {
-        throw new Error("no sub-task is listed yet");
-      }
-
-      return found;
+    await waitFor(() => {
+      expect(document.querySelector('[data-hierarchy="parent"]')).toBeNull();
     });
-    expect(within(children).getByRole("heading").textContent).toBe("Sub-tasks");
+    expect(names(await relatives("child"))).toEqual(["Build the page"]);
+  });
+
+  test("load every repository outside the scope that an element's linked work lives in, in one step, and sync them", async () => {
+    const ports = await synced(`${acme}&select=github%3Aacme%2Fweb%231`);
+    const expand = await screen.findByRole("button", {
+      name: "Load what this links to",
+    });
+
     expect(
-      within(children)
-        .getAllByRole("button")
-        .map((button) => button.textContent),
-    ).toEqual(["Build the page"]);
-    expect(document.querySelector('[data-hierarchy="parent"]')).toBeNull();
+      document.getElementById(expand.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe("Adds partner/docs and partner/sdk to the scope and syncs them.");
+    fireEvent.click(expand);
+
+    expect(addressOf(ports).scopes).toEqual([
+      "github:acme",
+      "github:partner/docs",
+      "github:partner/sdk",
+    ]);
+    const expanded = "github:acme github:partner/docs github:partner/sdk";
+    await waitFor(() => {
+      expect(ports.records.get(expanded)).toEqual({
+        modelId: expanded,
+        gaps: [],
+      });
+    });
+    // An issue nothing links to arrives only with a sync of its repository.
+    const stored = await ports.ports.store.v1.models.load({
+      modelId: expanded,
+    });
+    expect(stored.model.elements.map((element) => element.id)).toContain(
+      "github:partner/docs#2",
+    );
+  });
+
+  test("offer no expansion once the work an element is linked to is all in the scope", async () => {
+    await synced(
+      `?scope=github%3Aacme&scope=github%3Apartner&select=github%3Aacme%2Fweb%231`,
+    );
+    await screen.findByRole("button", { name: "Mark done" });
+    await waitFor(() => {
+      expect(document.querySelector('[data-hierarchy="child"]')).not.toBeNull();
+    });
+
+    expect(document.querySelector('[data-screen="expand"]')).toBeNull();
   });
 
   test("say when a link selects an element the model does not have", async () => {

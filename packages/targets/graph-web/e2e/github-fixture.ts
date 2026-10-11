@@ -15,6 +15,8 @@ interface FixtureIssue {
   readonly state: "OPEN" | "CLOSED";
   readonly blockedBy: readonly (readonly [string, string, number])[];
   readonly assignees: readonly string[];
+  /** The issue this one is a sub-issue of, by owner, repository and number. */
+  readonly parent?: readonly [string, string, number];
 }
 
 /** The accounts the fixture knows, and the repositories each owns, by name. */
@@ -25,12 +27,12 @@ const accounts: Readonly<
   >
 > = {
   acme: { type: "Organization", repositories: ["api", "web"] },
-  partner: { type: "Organization", repositories: ["sdk"] },
+  partner: { type: "Organization", repositories: ["docs", "sdk"] },
   alice: { type: "User", repositories: [] },
 };
 
 /**
- * The issues. `acme` holds the work: a schema, the endpoint on it, the page on the endpoint and the release on the page. The page also waits on an SDK in another organisation's repository, so a sync of `acme` follows that dependency across organisations into `partner/sdk`, which is outside the scope.
+ * The issues. `acme` holds the work: a schema, the endpoint on it, the page on the endpoint and the release on the page. The page also waits on an SDK in another organisation's repository, and has a sub-issue documenting it in a third, so a sync of `acme` follows both links across organisations into `partner/sdk` and `partner/docs`, which are outside the scope. `partner/docs` also holds an issue nothing links to, which only a sync of that repository reads.
  */
 export const fixtureIssues: readonly FixtureIssue[] = [
   {
@@ -78,6 +80,25 @@ export const fixtureIssues: readonly FixtureIssue[] = [
     number: 1,
     title: "Publish the SDK",
     state: "OPEN",
+    blockedBy: [],
+    assignees: [],
+  },
+  {
+    owner: "partner",
+    repository: "docs",
+    number: 1,
+    title: "Document the page",
+    state: "CLOSED",
+    blockedBy: [],
+    assignees: [],
+    parent: ["acme", "web", 1],
+  },
+  {
+    owner: "partner",
+    repository: "docs",
+    number: 2,
+    title: "Proofread the guide",
+    state: "CLOSED",
     blockedBy: [],
     assignees: [],
   },
@@ -187,7 +208,7 @@ const sameIssue =
     candidate[1] === repository &&
     candidate[2] === number;
 
-/** An issue as a listing or a board item returns it: its fields and the first page of each connection. `blocking` is the inverse of every issue's `blockedBy`, as GitHub keeps the two. */
+/** An issue as a listing or a board item returns it: its fields and the first page of each connection. `blocking` is the inverse of every issue's `blockedBy`, as GitHub keeps the two, and `subIssues` the inverse of every issue's `parent`. */
 const issueOf = (issue: FixtureIssue) => ({
   ...refOf(issue.owner, issue.repository, issue.number),
   assignees: connection(issue.assignees.map((login) => ({ login }))),
@@ -205,7 +226,15 @@ const issueOf = (issue: FixtureIssue) => ({
       )
       .map((other) => refOf(other.owner, other.repository, other.number)),
   ),
-  subIssues: connection([]),
+  subIssues: connection(
+    fixtureIssues
+      .filter(
+        (other) =>
+          other.parent !== undefined &&
+          sameIssue(issue.owner, issue.repository, issue.number)(other.parent),
+      )
+      .map((other) => refOf(other.owner, other.repository, other.number)),
+  ),
 });
 
 const notFound = (data: unknown, message: string): Answer => ({
