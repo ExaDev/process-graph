@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { exitCodes } from "@exadev/process-graph-cli/exit-codes";
 import { describe, expect, inject, test } from "vitest";
 
 // Every test here runs against the packed tarball installed into a throwaway project by `consumer.global-setup.ts`, never against src/ or the workspace: this is the check that catches a wrong exports map, a declaration or import that still names a private workspace package, or a manifest that ships a specifier no consumer can install.
@@ -255,4 +256,73 @@ describe("the installed bin", () => {
       spawnSync(bin, ["--version"], { cwd: consumer, encoding: "utf8" }),
     ).toMatchObject({ status: 0, stdout: `${String(version)}\n` });
   });
+});
+
+describe("the installed bin without its optional peers", () => {
+  const bareConsumer = inject("bareConsumer");
+  const bin = join(bareConsumer, "node_modules", ".bin", "process-graph");
+  const installedManifest: unknown = JSON.parse(
+    readFileSync(
+      join(bareConsumer, "node_modules", "process-graph", "package.json"),
+      "utf8",
+    ),
+  );
+  if (
+    typeof installedManifest !== "object" ||
+    installedManifest === null ||
+    !("peerDependencies" in installedManifest) ||
+    typeof installedManifest.peerDependencies !== "object" ||
+    installedManifest.peerDependencies === null
+  ) {
+    throw new Error("the installed manifest declares no peerDependencies");
+  }
+  const peers = new Map(Object.entries(installedManifest.peerDependencies));
+  const commandLinePeers = [
+    "@orpc/client",
+    "@orpc/contract",
+    "@orpc/server",
+    "commander",
+    "drizzle-orm",
+  ];
+  const specifiers = commandLinePeers
+    .map((name) => `${name}@${String(peers.get(name))}`)
+    .join(" ");
+  const named = `process-graph: the command line needs these optional peer dependencies, which are not installed: ${commandLinePeers.join(", ")}.`;
+
+  test.each([
+    {
+      manager: "no package manager",
+      userAgent: undefined,
+      command: "npm install",
+    },
+    {
+      manager: "pnpm",
+      userAgent: "pnpm/12.4.1 npm/? node/v26.8.1 linux x64",
+      command: "pnpm add",
+    },
+  ])(
+    "run by $manager, names every missing peer and the $command that installs them, and exits with the missing-peers status and no stack trace",
+    ({ userAgent, command }) => {
+      // The inherited user agent is dropped, since the test runner itself runs under pnpm.
+      const environment = Object.fromEntries(
+        Object.entries(process.env).filter(
+          ([name]) => name !== "npm_config_user_agent",
+        ),
+      );
+      const result = spawnSync(bin, ["--help"], {
+        cwd: bareConsumer,
+        encoding: "utf8",
+        env:
+          userAgent === undefined
+            ? environment
+            : { ...environment, npm_config_user_agent: userAgent },
+      });
+
+      expect(result).toMatchObject({
+        status: exitCodes.missingPeers,
+        stdout: "",
+        stderr: `${named}\nInstall them beside process-graph: ${command} ${specifiers}\n`,
+      });
+    },
+  );
 });
