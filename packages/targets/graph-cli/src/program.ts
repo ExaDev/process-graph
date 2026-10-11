@@ -20,7 +20,9 @@ import { CliError, failureOf } from "./errors.ts";
 import { exitCodes, type ExitCode } from "./exit-codes.ts";
 import type { CliPorts } from "./ports.ts";
 import {
+  ancestors,
   blocked,
+  children,
   cycles,
   handoffsOf,
   impactOf,
@@ -30,7 +32,9 @@ import {
 } from "./queries.ts";
 import {
   renderAdded,
+  renderAncestors,
   renderBlocked,
+  renderChildren,
   renderFacts,
   renderCycles,
   renderHandoffs,
@@ -248,11 +252,10 @@ export const runCli = async (
         const { after } = options;
         await withSession(async (session) => {
           try {
-            const result = await sync(
-              session,
-              ports.source,
-              typeof after === "string" ? { scopes, after } : { scopes },
-            );
+            const result = await sync(session, ports.source, {
+              scopes,
+              ...(typeof after === "string" ? { after } : {}),
+            });
 
             return { json: result, text: renderSync(result) };
           } catch (error) {
@@ -302,6 +305,34 @@ export const runCli = async (
         const result = await impactOf(session, id);
 
         return { json: result, text: renderImpact(result) };
+      })(command);
+    });
+
+  program
+    .command("children")
+    .description(
+      "list an element's sub-tasks: the work a source reports as its children",
+    )
+    .argument("<id>", "the element")
+    .action(async (id: string, _options: unknown, command: Command) => {
+      await withSession(async (session) => {
+        const result = await children(session, id);
+
+        return { json: result, text: renderChildren(result) };
+      })(command);
+    });
+
+  program
+    .command("ancestors")
+    .description(
+      "list what an element is a sub-task of, nearest first, with how many levels up each is",
+    )
+    .argument("<id>", "the element")
+    .action(async (id: string, _options: unknown, command: Command) => {
+      await withSession(async (session) => {
+        const result = await ancestors(session, id);
+
+        return { json: result, text: renderAncestors(result) };
       })(command);
     });
 

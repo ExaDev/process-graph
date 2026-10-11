@@ -16,7 +16,8 @@ import { createRouterClient } from "@orpc/server";
 import { afterEach, describe, expect, test } from "vitest";
 import { exitCodes } from "./exit-codes.ts";
 import type { GraphSession } from "./session.ts";
-import { sync, SyncInterruptedError, type SourceLookup } from "./sync.ts";
+import type { SourceLookup } from "@exadev/process-graph-sync";
+import { sync, SyncInterruptedError } from "./sync.ts";
 import { githubLikeSource } from "./test-support/fixtures.ts";
 import { createHarness, type Harness } from "./test-support/harness.ts";
 

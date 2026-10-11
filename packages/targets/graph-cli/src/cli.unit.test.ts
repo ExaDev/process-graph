@@ -1,6 +1,7 @@
 import {
   createFakeGraphSource,
   GraphSourceError,
+  type FakePage,
   type GraphSourcePager,
 } from "@exadev/process-graph-source-contract";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -35,7 +36,7 @@ describe("sync", () => {
     expect(result).toEqual({
       code: exitCodes.success,
       stdout:
-        'synced 4 activities, 4 transitions and 4 participants into "default" at revision 1\n' +
+        'synced 4 activities, 4 transitions, 3 relations and 4 participants into "default" at revision 4\n' +
         "gap\tnot-found\tgithub:acme/missing\tgithub:acme/missing does not exist\n",
       stderr: "",
     });
@@ -46,10 +47,11 @@ describe("sync", () => {
 
     expect(JSON.parse(result.stdout)).toEqual({
       modelId: "default",
-      revision: 1,
+      revision: 2,
       participants: 4,
       activities: 4,
       transitions: 4,
+      relations: 2,
       gaps: [],
     });
   });
@@ -59,7 +61,7 @@ describe("sync", () => {
     const again = await harness.run("sync", "github:acme/web");
 
     expect(again.stdout).toBe(
-      'synced 1 activities, 0 transitions and 2 participants into "default" at revision 2\n',
+      'synced 1 activities, 0 transitions, 1 relations and 2 participants into "default" at revision 4\n',
     );
     expect((await harness.run("ready")).stdout).toBe(`${api}\tBuild the API\n`);
   });
@@ -148,6 +150,95 @@ describe("sync", () => {
     );
     expect((await harness.run("ready")).stdout).toBe(`${api}\tBuild the API\n`);
   });
+});
+
+describe("hierarchy", () => {
+  const epic = {
+    kind: "activity",
+    id: "github:acme/app#10",
+    source: "github:acme/app#10",
+    label: "Launch",
+    actor: "github:acme/app",
+  } as const;
+  const task = (number: string, label: string) =>
+    ({
+      kind: "activity",
+      id: `github:acme/app#${number}`,
+      source: `github:acme/app#${number}`,
+      label,
+      actor: "github:acme/app",
+    }) as const;
+  const story = task("11", "Sign-up flow");
+  const subtask = task("12", "Validate the email");
+  // The sub-task arrives a page before its parent, as a sub-issue in another repository can.
+  const pages: readonly FakePage[] = [
+    {
+      participants: [
+        { id: "github:acme/app", label: "acme/app", kind: "system" },
+      ],
+      activities: [subtask],
+      transitions: [],
+      relations: [{ kind: "child-of", from: subtask.id, to: story.id }],
+      overlay: { [subtask.id]: "open" },
+      gaps: [],
+    },
+    {
+      participants: [
+        { id: "github:acme/app", label: "acme/app", kind: "system" },
+      ],
+      activities: [epic, story],
+      transitions: [],
+      relations: [{ kind: "child-of", from: story.id, to: epic.id }],
+      overlay: { [epic.id]: "open", [story.id]: "open" },
+      gaps: [],
+    },
+  ];
+
+  beforeEach(async () => {
+    harness.remove();
+    harness = createHarness(
+      createFakeGraphSource({
+        source: "github",
+        scopes: { "github:acme/app": pages },
+      }),
+    );
+    await harness.run("sync", "github:acme/app");
+  });
+
+  test("children lists an element's sub-tasks from the relations sync kept", async () => {
+    expect(await harness.run("children", epic.id)).toEqual({
+      code: exitCodes.success,
+      stdout: `${story.id}\tSign-up flow\n`,
+      stderr: "",
+    });
+    expect((await harness.run("children", subtask.id)).stdout).toBe("");
+  });
+
+  test("ancestors lists what an element is a sub-task of, nearest first, with the distance", async () => {
+    expect((await harness.run("ancestors", subtask.id)).stdout).toBe(
+      `${story.id}\tSign-up flow\t1\n${epic.id}\tLaunch\t2\n`,
+    );
+    expect(
+      JSON.parse((await harness.run("ancestors", subtask.id, "--json")).stdout),
+    ).toEqual({
+      element: { id: subtask.id, label: "Validate the email" },
+      ancestors: [
+        { id: story.id, label: "Sign-up flow", distance: 1 },
+        { id: epic.id, label: "Launch", distance: 2 },
+      ],
+    });
+  });
+
+  test.each(["children", "ancestors"])(
+    "%s of an element the model lacks is not found",
+    async (command) => {
+      expect(await harness.run(command, "github:acme/app#99")).toEqual({
+        code: exitCodes.notFound,
+        stdout: "",
+        stderr: 'no element "github:acme/app#99" in the model\n',
+      });
+    },
+  );
 });
 
 describe("reasoning over a synced model", () => {
@@ -247,7 +338,7 @@ describe("reasoning over a synced model", () => {
 
   test("set changes an element's run state and the reasoning follows it", async () => {
     expect((await harness.run("set", api, "done")).stdout).toBe(
-      `set ${api} to done at revision 2\n`,
+      `set ${api} to done at revision 4\n`,
     );
     expect((await harness.run("ready")).stdout).toBe(`${ui}\tBuild the UI\n`);
   });

@@ -75,6 +75,7 @@
     "@exadev/process-graph-source-github-issues": "workspace:*",
     "@exadev/process-graph-sqlite-node": "workspace:*",
     "@exadev/process-graph-store-contract": "workspace:*",
+    "@exadev/process-graph-sync": "workspace:*",
     "@orpc/server": "catalog:",
     "commander": "catalog:",
     "trilean": "catalog:"

@@ -28,6 +28,9 @@
       "path": "../../core/graph/store-contract/tsconfig.build.json"
     },
     {
+      "path": "../../core/graph/sync/tsconfig.build.json"
+    },
+    {
       "path": "../../adapters/graph/source-github-issues/tsconfig.build.json"
     },
     {

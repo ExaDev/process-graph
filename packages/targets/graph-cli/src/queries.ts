@@ -14,6 +14,7 @@ import {
 import { handoffs, type Handoff } from "@exadev/process-graph-projection";
 import type { OpenIds } from "@exadev/process-graph-schema";
 import {
+  callOptions,
   labelOf,
   loadRun,
   requireElement,
@@ -83,6 +84,25 @@ export interface WhyResult {
   readonly artefacts: readonly ArtefactBasis<OpenIds>[];
   /** The element, then every unfinished need reached from it, in model order. */
   readonly chain: readonly WhyLink[];
+}
+
+/** An element of a hierarchy walk, with how many `child-of` relations away it is. */
+export interface HierarchyLink extends ElementSummary {
+  readonly distance: number;
+}
+
+/** An element's sub-tasks: the elements related to it by `child-of`. */
+export interface ChildrenResult {
+  readonly element: ElementSummary;
+  /** Its direct children, in model order. */
+  readonly children: readonly ElementSummary[];
+}
+
+/** What an element is a sub-task of, up to the top of its hierarchy. */
+export interface AncestorsResult {
+  readonly element: ElementSummary;
+  /** Its parent, its parent's parent and so on, nearest first, each once with the fewest relations it takes to reach it. */
+  readonly ancestors: readonly HierarchyLink[];
 }
 
 /** Each element counts as one step, so the critical path is the longest chain of elements. */
@@ -227,5 +247,55 @@ export const why = async (
     transitions: explained.transitions,
     artefacts: explained.artefacts,
     chain,
+  };
+};
+
+/**
+ * An element's direct sub-tasks, from the `child-of` relations a sync keeps, as the store's hierarchy query answers.
+ * @param session - The store and model.
+ * @param id - The element asked about.
+ * @throws CliError with `notFound` when the model or the element does not exist.
+ */
+export const children = async (
+  session: GraphSession,
+  id: string,
+): Promise<ChildrenResult> => {
+  const { model } = await loadRun(session);
+  const element = requireElement(model, id);
+  const found = await session.store.v1.query.children(
+    { modelId: session.modelId, element: id },
+    callOptions(session.signal),
+  );
+
+  return {
+    element: { id, label: labelOf(element) },
+    children: summarise(model, found.children),
+  };
+};
+
+/**
+ * The elements an element is a sub-task of, nearest first, from the `child-of` relations a sync keeps, as the store's hierarchy query answers.
+ * @param session - The store and model.
+ * @param id - The element asked about.
+ * @throws CliError with `notFound` when the model or the element does not exist.
+ */
+export const ancestors = async (
+  session: GraphSession,
+  id: string,
+): Promise<AncestorsResult> => {
+  const { model } = await loadRun(session);
+  const element = requireElement(model, id);
+  const found = await session.store.v1.query.ancestors(
+    { modelId: session.modelId, element: id },
+    callOptions(session.signal),
+  );
+
+  return {
+    element: { id, label: labelOf(element) },
+    ancestors: found.ancestors.map((link) => ({
+      id: link.element,
+      label: labelOf(requireElement(model, link.element)),
+      distance: link.distance,
+    })),
   };
 };
