@@ -2,6 +2,7 @@
   "name": "@exadev/process-graph-layout",
   "version": "1.0.3",
   "description": "Layered layout of a projected process view into positions keyed by element id, in the model's views shape.",
+  "private": true,
   "type": "module",
   "repository": {
     "type": "git",

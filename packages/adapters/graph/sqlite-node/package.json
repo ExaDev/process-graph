@@ -2,6 +2,7 @@
   "name": "@exadev/process-graph-sqlite-node",
   "version": "1.0.4",
   "description": "The SQLite graph store on Node's built-in node:sqlite through drizzle-orm/node-sqlite, for the command line and servers.",
+  "private": true,
   "type": "module",
   "repository": {
     "type": "git",

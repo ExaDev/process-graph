@@ -2,6 +2,7 @@
   "name": "@exadev/process-graph-dag",
   "version": "1.1.0",
   "description": "Model-independent dependency-graph primitives over a node set and a needs accessor: layers, ancestors, descendants, cycles, transitive reduction and the critical path.",
+  "private": true,
   "type": "module",
   "repository": {
     "type": "git",
