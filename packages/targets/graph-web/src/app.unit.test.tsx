@@ -124,8 +124,70 @@ describe("the scope picker", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     expect(screen.getByRole("alert").textContent).toBe(
-      '"acme/api/extra" is not a GitHub organisation, user or repository: write owner or owner/repo.',
+      '"acme/api/extra" is not a GitHub organisation, user, repository or project board: write owner, owner/repo or the link to a board.',
     );
+  });
+});
+
+describe("the scope suggestions", () => {
+  test("list what the token reaches on request, an owner's repositories under it, and add one to the address", async () => {
+    const ports = testPorts({
+      token: "t",
+      search: "?scope=github%3Aacme%2Fapi",
+    });
+    renderApp(ports);
+    const suggestions = screen.getByRole("region", { name: "Suggestions" });
+    const suggested = (name: string) =>
+      within(suggestions)
+        .getAllByRole("list", { name })
+        .flatMap((list) => within(list).queryAllByRole("listitem"))
+        .map((item) => item.getAttribute("data-suggestion"));
+
+    expect(within(suggestions).queryByRole("list")).toBeNull();
+    fireEvent.click(
+      within(suggestions).getByRole("button", {
+        name: "Show my account and organisations",
+      }),
+    );
+    await waitFor(() => {
+      expect(suggested("Your scopes")).toEqual(["github:alice", "github:acme"]);
+    });
+
+    fireEvent.click(
+      within(suggestions).getByRole("button", {
+        name: "Show the repositories of github:acme",
+      }),
+    );
+    await waitFor(() => {
+      expect(suggested("Inside github:acme")).toEqual(["github:acme/legacy"]);
+    });
+    // The fake source lists two entries a page, so the third repository is on the next.
+    fireEvent.click(within(suggestions).getByRole("button", { name: "More" }));
+    await waitFor(() => {
+      // The repository already chosen is not offered again.
+      expect(suggested("Inside github:acme")).toEqual([
+        "github:acme/legacy",
+        "github:acme/web",
+      ]);
+    });
+    expect(
+      suggestions.querySelector('[data-suggestion="github:acme/legacy"]')
+        ?.textContent,
+    ).toContain("(archived)");
+
+    fireEvent.click(
+      within(suggestions).getByRole("button", { name: "Add github:acme/web" }),
+    );
+    expect(addressOf(ports).scopes).toEqual([
+      "github:acme/api",
+      "github:acme/web",
+    ]);
+  });
+
+  test("are not offered without a token", () => {
+    renderApp(testPorts());
+
+    expect(screen.queryByRole("region", { name: "Suggestions" })).toBeNull();
   });
 });
 
