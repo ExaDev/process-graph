@@ -57,7 +57,7 @@ describe("useModel", () => {
     });
   });
 
-  test("fails when the model is deleted", async () => {
+  test("shows a deleted model as missing and loads it again when it is saved", async () => {
     const client = await storeWithOrder();
     const { result } = renderHook(() => useModel(client, "order"));
     await waitFor(() => {
@@ -67,16 +67,67 @@ describe("useModel", () => {
     await client.v1.models.delete({ modelId: "order" });
 
     await waitFor(() => {
-      expect(result.current.status).toBe("failed");
+      expect(result.current).toEqual({ status: "missing" });
+    });
+
+    const { revision } = await client.v1.models.save({
+      modelId: "order",
+      model: order,
+    });
+
+    await waitFor(() => {
+      expect(result.current).toMatchObject({
+        status: "loaded",
+        stored: { revision },
+      });
     });
   });
 
-  test("fails for a model the store does not have", async () => {
+  test("follows a model the store does not have yet and loads it once it is created", async () => {
     const client = await storeWithOrder();
-    const { result } = renderHook(() => useModel(client, "missing"));
+    const { result } = renderHook(() => useModel(client, "later"));
 
     await waitFor(() => {
-      expect(result.current.status).toBe("failed");
+      expect(result.current).toEqual({ status: "missing" });
+    });
+
+    const { revision } = await client.v1.items.upsert({
+      modelId: "later",
+      items: {
+        participants: [],
+        activities: [
+          { kind: "activity", id: "s:a#1", label: "First", source: "s:a#1" },
+        ],
+        transitions: [],
+        overlay: {},
+      },
+    });
+
+    await waitFor(() => {
+      expect(result.current).toMatchObject({
+        status: "loaded",
+        stored: { modelId: "later", revision },
+      });
+    });
+  });
+
+  test("fails with any error other than a missing model", async () => {
+    const client = await storeWithOrder();
+    const failing = {
+      v1: {
+        models: {
+          load: async () => Promise.reject(new Error("the store is closed")),
+        },
+        changes: client.v1.changes,
+      },
+    };
+    const { result } = renderHook(() => useModel(failing, "order"));
+
+    await waitFor(() => {
+      expect(result.current).toMatchObject({
+        status: "failed",
+        error: new Error("the store is closed"),
+      });
     });
   });
 

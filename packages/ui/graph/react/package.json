@@ -55,7 +55,8 @@
     "@exadev/process-graph-domain": "1.1.1",
     "@exadev/process-graph-projection": "1.1.0",
     "@exadev/process-graph-schema": "1.1.0",
-    "@exadev/process-graph-store-contract": "1.1.0"
+    "@exadev/process-graph-store-contract": "1.1.0",
+    "@orpc/client": "2.0.0-beta.41"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
