@@ -67,6 +67,7 @@ export const createHarness = (
           return {
             client: createRouterClient(createGraphStoreRouter(store)),
             close,
+            warnings: [],
           };
         },
         source: (prefix) => {

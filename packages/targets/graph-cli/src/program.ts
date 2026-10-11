@@ -162,6 +162,9 @@ export const runCli = async (
     async (command: Command, ...values: Args): Promise<void> => {
       const globals = readGlobals(command, ports);
       const opened = await ports.openStore(globals.data);
+      for (const warning of opened.warnings) {
+        writeErr(`warning: ${warning}\n`);
+      }
       try {
         const outcome = await handler(
           {

@@ -8,6 +8,8 @@ export interface OpenedStore {
   readonly client: GraphStoreClient;
   /** Releases the store. Called once, after the command, whether it succeeded or not. */
   readonly close: () => void | Promise<void>;
+  /** Lines the command line writes to standard error before the command runs, such as permissions it narrowed on the store's files; empty when there is nothing to say. */
+  readonly warnings: readonly string[];
 }
 
 /**
