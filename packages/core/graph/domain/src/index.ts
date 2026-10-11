@@ -7,6 +7,7 @@ export {
   elementStatusKey,
   emptyFactRecord,
   evaluateBranches,
+  factNamesIn,
   factsFrom,
   layeredFacts,
   UnsupportedConditionError,

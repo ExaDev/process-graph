@@ -1,6 +1,8 @@
 import type {
   ComputedValue,
+  ExpressionNode,
   JsonValue,
+  PredicateNode,
   Resolution,
   SyncResolvers,
 } from "trilean";
@@ -104,6 +106,35 @@ export const factsFrom = (record: FactRecord): Facts => {
       ? { found: false }
       : { found: true, value: { kind: "boolean", value: provided } };
   };
+};
+
+/**
+ * The named facts a condition reads: the string key of every `reference` node in it, each once, in the order first met walking the tree depth first. Reserved keys and other non-string keys are not names, so they are left out, and a reference's own key is never searched for further references.
+ * @param condition - A trilean predicate or expression, such as a transition's `condition`.
+ * @returns The names, each once.
+ */
+export const factNamesIn = (
+  condition: PredicateNode | ExpressionNode,
+): readonly string[] => {
+  const names = new Set<string>();
+  const pending: unknown[] = [condition];
+  for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
+    if (Array.isArray(node)) {
+      const items: readonly unknown[] = node;
+      pending.push(...[...items].reverse());
+    } else if (typeof node === "object" && node !== null) {
+      if ("kind" in node && node.kind === "reference" && "key" in node) {
+        if (typeof node.key === "string") {
+          names.add(node.key);
+        }
+      } else {
+        const fields: readonly unknown[] = Object.values(node);
+        pending.push(...[...fields].reverse());
+      }
+    }
+  }
+
+  return [...names];
 };
 
 /**
