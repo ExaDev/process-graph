@@ -175,14 +175,22 @@ describe("createFakeGraphSource", () => {
   });
 
   test("without a page size a listing is one page", async () => {
+    const entries = [
+      { scope: "fake:acme/alpha", label: "alpha", archived: false },
+      { scope: "fake:acme/beta", label: "beta", archived: false },
+    ];
     const client = inProcessClient(
       createGraphSourceRouter(
-        createFakeGraphSource({ ...fakeOptions, listingPageSize: undefined }),
+        createFakeGraphSource({
+          source: "fake",
+          scopes: {},
+          children: { "fake:acme": entries },
+        }),
       ),
     );
     await expect(
       client.v1.scopes.children({ scope: "fake:acme" }),
-    ).resolves.not.toHaveProperty("next");
+    ).resolves.toEqual({ entries, gaps: [] });
   });
 
   test("a listing page size that is not a positive integer is refused", () => {
