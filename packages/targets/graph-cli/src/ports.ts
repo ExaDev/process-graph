@@ -38,7 +38,7 @@ export interface CliPorts {
     path: string,
     signal: AbortSignal | undefined,
   ) => Promise<string>;
-  /** The facts that decision conditions read, and which input artefacts are provided. */
+  /** Facts the host supplies for decision conditions and input artefacts. The model's stored fact record (what `set artefact` and `set fact` recorded) answers first; these answer whatever it does not. */
   readonly facts: Facts;
   /** Aborts every store and source call a command makes. */
   readonly signal: AbortSignal | undefined;

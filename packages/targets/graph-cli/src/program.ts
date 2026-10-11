@@ -5,7 +5,17 @@ import {
   type ParticipantKind,
 } from "@exadev/process-graph-schema";
 import { Argument, Command, Option } from "commander";
-import { add, setState, type Addition } from "./edit.ts";
+import type { ComputedValue } from "trilean";
+import {
+  add,
+  artefactStates,
+  factsOf,
+  setArtefact,
+  setFact,
+  setState,
+  type Addition,
+  type ArtefactState,
+} from "./edit.ts";
 import { failureOf } from "./errors.ts";
 import { exitCodes, type ExitCode } from "./exit-codes.ts";
 import type { CliPorts } from "./ports.ts";
@@ -21,12 +31,15 @@ import {
 import {
   renderAdded,
   renderBlocked,
+  renderFacts,
   renderCycles,
   renderHandoffs,
   renderImpact,
   renderPath,
   renderReady,
   renderSet,
+  renderSetArtefact,
+  renderSetFact,
   renderSync,
   renderValidate,
   renderWhy,
@@ -90,6 +103,9 @@ const readGlobals = (command: Command, ports: CliPorts): GlobalOptions => {
   };
 };
 
+/** Narrows a variadic option's values, which commander gives as an untyped array, to the strings they are. */
+const isText = (value: unknown): value is string => typeof value === "string";
+
 const isOneOf = <T extends string>(
   values: readonly T[],
   value: unknown,
@@ -106,6 +122,37 @@ const choice = <T extends string>(
   }
 
   return value;
+};
+
+/** The word that forgets a named fact rather than giving it a value. */
+const unknownValue = "unknown";
+
+/** A number as JSON writes one, so a value that reads as a number is never also meant as text. */
+const jsonNumber = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/u;
+
+/**
+ * Reads a fact's value from the command line: `true` and `false` are booleans, `unknown` forgets the fact, a JSON number is a number, and anything else is text; `--text` reads the value as text whatever it looks like.
+ * @param value - The value as given.
+ * @param asText - Whether `--text` was given.
+ * @returns The trilean value, or `unknown`.
+ */
+const factValueOf = (
+  value: string,
+  asText: boolean,
+): ComputedValue | typeof unknownValue => {
+  if (asText) {
+    return { kind: "text", value };
+  }
+  if (value === unknownValue) {
+    return unknownValue;
+  }
+  if (value === "true" || value === "false") {
+    return { kind: "boolean", value: value === "true" };
+  }
+
+  return jsonNumber.test(value)
+    ? { kind: "number", value: Number(value) }
+    : { kind: "text", value };
 };
 
 /**
@@ -412,6 +459,11 @@ export const runCli = async (
     .argument("<id>", "its identifier")
     .argument("<label>", "its label")
     .option("--actor <participant>", "the role or system that does it")
+    .option(
+      "--consumes <artefact...>",
+      "the artefacts it needs before it can start",
+    )
+    .option("--produces <artefact...>", "the artefacts it makes")
     .action(
       async (
         id: string,
@@ -419,7 +471,7 @@ export const runCli = async (
         options: Record<string, unknown>,
         command: Command,
       ) => {
-        const { actor } = options;
+        const { actor, consumes, produces } = options;
         await added(
           command,
           {
@@ -429,6 +481,12 @@ export const runCli = async (
               id,
               label,
               ...(typeof actor === "string" ? { actor } : {}),
+              ...(Array.isArray(consumes)
+                ? { consumes: consumes.filter(isText) }
+                : {}),
+              ...(Array.isArray(produces)
+                ? { produces: produces.filter(isText) }
+                : {}),
             },
           },
           "activity",
@@ -573,9 +631,11 @@ export const runCli = async (
       },
     );
 
-  program
+  const setCommand = program
     .command("set")
-    .description("set an element's run state")
+    .description(
+      "set an element's run state; set artefact and set fact record what is known from outside the process",
+    )
     .argument("<id>", "the element")
     .addArgument(
       new Argument("<state>", "its run state").choices(overlayStatuses),
@@ -595,6 +655,68 @@ export const runCli = async (
         })(command);
       },
     );
+
+  setCommand
+    .command("artefact")
+    .description(
+      "record whether an artefact is provided, so work consuming it can start; unknown forgets it",
+    )
+    .argument("<id>", "the artefact")
+    .addArgument(
+      new Argument("<state>", "whether it is provided").choices(artefactStates),
+    )
+    .action(
+      async (
+        id: string,
+        state: string,
+        _options: unknown,
+        command: Command,
+      ) => {
+        const provision: ArtefactState = choice(artefactStates, state, "state");
+        await withSession(async (session) => {
+          const result = await setArtefact(session, id, provision);
+
+          return { json: result, text: renderSetArtefact(result) };
+        })(command);
+      },
+    );
+
+  setCommand
+    .command("fact")
+    .description(
+      "record the value of a named fact that decision conditions read; unknown forgets it",
+    )
+    .argument("<name>", "the fact's name, as a condition's reference gives it")
+    .argument("<value>", "true, false, unknown, a number, or any other text")
+    .option("--text", "read the value as text, even true, false or a number")
+    .action(
+      async (
+        name: string,
+        value: string,
+        options: Record<string, unknown>,
+        command: Command,
+      ) => {
+        const parsed = factValueOf(value, options.text === true);
+        await withSession(async (session) => {
+          const result = await setFact(session, name, parsed);
+
+          return { json: result, text: renderSetFact(result) };
+        })(command);
+      },
+    );
+
+  program
+    .command("facts")
+    .description(
+      "list what is recorded about the run: each artefact provided or absent, and each named fact's value",
+    )
+    .action(async (_options: unknown, command: Command) => {
+      await withSession(async (session) => {
+        const result = await factsOf(session);
+
+        return { json: result, text: renderFacts(result) };
+      })(command);
+    });
 
   program
     .command("validate")

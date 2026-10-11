@@ -76,7 +76,8 @@
     "@exadev/process-graph-sqlite-node": "workspace:*",
     "@exadev/process-graph-store-contract": "workspace:*",
     "@orpc/server": "catalog:",
-    "commander": "catalog:"
+    "commander": "catalog:",
+    "trilean": "catalog:"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",

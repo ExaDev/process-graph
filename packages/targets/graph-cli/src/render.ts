@@ -1,5 +1,12 @@
 import type { Status, StatusRule } from "@exadev/process-graph-domain";
-import type { Written, SetResult } from "./edit.ts";
+import type { ComputedValue } from "trilean";
+import type {
+  FactsResult,
+  SetArtefactResult,
+  SetFactResult,
+  SetResult,
+  Written,
+} from "./edit.ts";
 import type {
   BlockedResult,
   CyclesResult,
@@ -118,6 +125,43 @@ export const renderAdded = (
 export const renderSet = (result: SetResult): string =>
   lines([
     `set ${result.element} to ${result.state} at revision ${String(result.revision)}`,
+  ]);
+
+/** A fact's value as the command line reads it back: a boolean or number as written, text as it is, and the other kinds as their JSON. */
+const valueText = (value: ComputedValue): string => {
+  if (value.kind === "boolean" || value.kind === "number") {
+    return value.kind === "number" && value.unit !== undefined
+      ? JSON.stringify(value)
+      : String(value.value);
+  }
+
+  return value.kind === "text" ? value.value : JSON.stringify(value);
+};
+
+/** `set artefact`: the artefact's new state and the revision it took. */
+export const renderSetArtefact = (result: SetArtefactResult): string =>
+  lines([
+    `set artefact ${result.artefact} to ${result.state} at revision ${String(result.revision)}`,
+  ]);
+
+/** `set fact`: the fact's new value and the revision it took. */
+export const renderSetFact = (result: SetFactResult): string =>
+  lines([
+    `set fact ${result.fact} to ${result.value === "unknown" ? "unknown" : valueText(result.value)} at revision ${String(result.revision)}`,
+  ]);
+
+/** `facts`: each recorded artefact as `artefact`, its id and `provided` or `absent`, then each named fact as `fact`, its name and its value, each sorted by id or name. */
+export const renderFacts = (result: FactsResult): string =>
+  lines([
+    ...Object.entries(result.facts.artefacts)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(
+        ([id, provided]) =>
+          `artefact\t${id}\t${provided ? "provided" : "absent"}`,
+      ),
+    ...Object.entries(result.facts.values)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(([name, value]) => `fact\t${name}\t${valueText(value)}`),
   ]);
 
 /** `sync`: what was written, then each gap as its reason, target and message. */

@@ -17,6 +17,7 @@ import {
   labelOf,
   loadRun,
   requireElement,
+  runFacts,
   summarise,
   type ElementSummary,
   type GraphSession,
@@ -92,10 +93,14 @@ const stepWeight = 1;
  * @param session - The store, model and facts.
  */
 export const ready = async (session: GraphSession): Promise<ReadyResult> => {
-  const { model, overlay } = await loadRun(session);
+  const run = await loadRun(session);
+  const { model, overlay } = run;
 
   return {
-    elements: summarise(model, readySet(model, overlay, session.facts)),
+    elements: summarise(
+      model,
+      readySet(model, overlay, runFacts(session, run)),
+    ),
   };
 };
 
@@ -120,13 +125,15 @@ export const blocked = async (
   session: GraphSession,
   id: string,
 ): Promise<BlockedResult> => {
-  const { model, overlay } = await loadRun(session);
+  const run = await loadRun(session);
+  const { model, overlay } = run;
+  const facts = runFacts(session, run);
   const element = requireElement(model, id);
-  const statuses = deriveStatuses(model, overlay, session.facts);
+  const statuses = deriveStatuses(model, overlay, facts);
 
   return {
     element: statusOf(statuses, { id, label: labelOf(element) }),
-    blockedBy: summarise(model, blockedBy(model, overlay, session.facts, id)),
+    blockedBy: summarise(model, blockedBy(model, overlay, facts, id)),
   };
 };
 
@@ -139,13 +146,15 @@ export const impactOf = async (
   session: GraphSession,
   id: string,
 ): Promise<ImpactResult> => {
-  const { model, overlay } = await loadRun(session);
+  const run = await loadRun(session);
+  const { model, overlay } = run;
+  const facts = runFacts(session, run);
   const element = requireElement(model, id);
-  const statuses = deriveStatuses(model, overlay, session.facts);
+  const statuses = deriveStatuses(model, overlay, facts);
 
   return {
     element: statusOf(statuses, { id, label: labelOf(element) }),
-    impacted: summarise(model, impact(model, overlay, session.facts, id)),
+    impacted: summarise(model, impact(model, overlay, facts, id)),
   };
 };
 
@@ -154,8 +163,14 @@ export const impactOf = async (
  * @param session - The store, model and facts.
  */
 export const path = async (session: GraphSession): Promise<PathResult> => {
-  const { model, overlay } = await loadRun(session);
-  const found = criticalPath(model, overlay, session.facts, () => stepWeight);
+  const run = await loadRun(session);
+  const { model, overlay } = run;
+  const found = criticalPath(
+    model,
+    overlay,
+    runFacts(session, run),
+    () => stepWeight,
+  );
 
   return { path: summarise(model, found.path), weight: found.weight };
 };
@@ -191,9 +206,10 @@ export const why = async (
   session: GraphSession,
   id: string,
 ): Promise<WhyResult> => {
-  const { model, overlay } = await loadRun(session);
+  const run = await loadRun(session);
+  const { model, overlay } = run;
   requireElement(model, id);
-  const explained = explainStatus(model, overlay, session.facts, id);
+  const explained = explainStatus(model, overlay, runFacts(session, run), id);
   const chain = explained.chain.map((link) => ({
     id: link.element,
     label: labelOf(requireElement(model, link.element)),

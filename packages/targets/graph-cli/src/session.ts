@@ -1,4 +1,9 @@
-import type { Facts } from "@exadev/process-graph-domain";
+import {
+  factsFrom,
+  layeredFacts,
+  type FactRecord,
+  type Facts,
+} from "@exadev/process-graph-domain";
 import type {
   Element,
   Model,
@@ -10,21 +15,32 @@ import { ORPCError } from "@orpc/server";
 import { CliError } from "./errors.ts";
 import { exitCodes } from "./exit-codes.ts";
 
-/** What every operation works against: one model in one store, the facts its conditions read, and the signal that aborts its calls. */
+/** What every operation works against: one model in one store, the facts a host supplies for its conditions, and the signal that aborts its calls. */
 export interface GraphSession {
   readonly store: GraphStoreClient;
   /** The name the model is filed under in the store. */
   readonly modelId: string;
+  /** Facts the host supplies, consulted for whatever the model's stored fact record does not answer (see `runFacts`). */
   readonly facts: Facts;
   readonly signal: AbortSignal | undefined;
 }
 
-/** A stored model and its run state, as an operation reads them. */
+/** A stored model, its run state and its fact record, as an operation reads them. */
 export interface StoredRun {
   readonly revision: number;
   readonly model: Model<OpenIds>;
   readonly overlay: Overlay<OpenIds>;
+  readonly facts: FactRecord;
 }
+
+/**
+ * The facts a run's reasoning reads: the model's stored fact record first, then the session's own facts for every key the record does not answer. What `set artefact` and `set fact` record therefore overrides a host's facts only where it says something.
+ * @param session - The session, whose facts the host supplied.
+ * @param run - The stored run.
+ * @returns The `Facts` port for graph-domain.
+ */
+export const runFacts = (session: GraphSession, run: StoredRun): Facts =>
+  layeredFacts(factsFrom(run.facts), session.facts);
 
 /** An element as commands report it: its identifier and its human label. */
 export interface ElementSummary {
@@ -59,6 +75,7 @@ export const findRun = async (
       revision: stored.revision,
       model: stored.model,
       overlay: stored.overlay,
+      facts: stored.facts,
     };
   } catch (error) {
     if (error instanceof ORPCError && error.code === "NOT_FOUND") {

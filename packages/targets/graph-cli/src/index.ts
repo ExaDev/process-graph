@@ -15,6 +15,7 @@ export {
 export {
   findRun,
   loadRun,
+  runFacts,
   type ElementSummary,
   type GraphSession,
   type StoredRun,
@@ -51,8 +52,16 @@ export {
 } from "./show.ts";
 export {
   add,
+  artefactStates,
+  factsOf,
+  setArtefact,
+  setFact,
   setState,
   type Addition,
+  type ArtefactState,
+  type FactsResult,
+  type SetArtefactResult,
+  type SetFactResult,
   type SetResult,
   type Written,
 } from "./edit.ts";
