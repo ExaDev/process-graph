@@ -53,7 +53,7 @@ export default function setup(project: TestProject): () => void {
   const consumer = mkdtempSync(join(tmpdir(), "process-graph-consumer-"));
   execFileSync("pnpm", ["pack", "--pack-destination", consumer], {
     cwd: packageDirectory,
-    stdio: "ignore",
+    encoding: "utf8",
   });
   const tarball = readdirSync(consumer).find((name) => name.endsWith(".tgz"));
   if (tarball === undefined) {
@@ -73,7 +73,8 @@ export default function setup(project: TestProject): () => void {
       `./${tarball}`,
       ...peerSpecifiers(),
     ],
-    { cwd: consumer, stdio: "ignore" },
+    // Output is captured rather than shown, and a failure's error carries npm's own report of why.
+    { cwd: consumer, encoding: "utf8" },
   );
   project.provide("consumer", consumer);
 
