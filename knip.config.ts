@@ -21,20 +21,12 @@ const config: KnipConfig = {
       entry: ["src/index.{ts,tsx}"],
       project: ["src/**/*.{ts,tsx}!"],
     },
-    // The contracts' Zod schemas embed the model's, which are built on trilean's expression and JSON schemas, so their emitted declarations import trilean although no source file names it, and knip traces source alone.
-    ...Object.fromEntries(
-      [
-        "packages/core/graph/source-contract",
-        "packages/core/graph/store-contract",
-      ].map((workspace) => [
-        workspace,
-        {
-          entry: ["src/index.{ts,tsx}"],
-          project: ["src/**/*.{ts,tsx}!"],
-          ignoreDependencies: ["trilean"],
-        },
-      ]),
-    ),
+    // The source contract's Zod schemas embed the model's, which are built on trilean's expression and JSON schemas, so its emitted declarations import trilean although no source file names it, and knip traces source alone. The store contract names trilean in its own source, so knip sees that use.
+    "packages/core/graph/source-contract": {
+      entry: ["src/index.{ts,tsx}"],
+      project: ["src/**/*.{ts,tsx}!"],
+      ignoreDependencies: ["trilean"],
+    },
     "packages/adapters/*/*": {
       entry: ["src/index.{ts,tsx}"],
       project: ["src/**/*.{ts,tsx}!"],
