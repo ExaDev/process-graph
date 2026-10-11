@@ -823,19 +823,19 @@ importers:
   packages/ui/graph/react:
     dependencies:
       '@exadev/process-graph-dag':
-        specifier: 1.0.2
+        specifier: 1.1.0
         version: link:../../../core/graph/dag
       '@exadev/process-graph-domain':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../../core/graph/domain
       '@exadev/process-graph-projection':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../../../core/graph/projection
       '@exadev/process-graph-schema':
         specifier: 1.1.0
         version: link:../../../core/graph/schema
       '@exadev/process-graph-store-contract':
-        specifier: 1.0.2
+        specifier: 1.0.3
         version: link:../../../core/graph/store-contract
     devDependencies:
       '@arethetypeswrong/cli':
@@ -893,13 +893,13 @@ importers:
   packages/ui/graph/react-flow:
     dependencies:
       '@exadev/process-graph-domain':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../../core/graph/domain
       '@exadev/process-graph-layout':
-        specifier: 1.0.2
+        specifier: 1.0.3
         version: link:../../../core/graph/layout
       '@exadev/process-graph-projection':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../../../core/graph/projection
       '@exadev/process-graph-react':
         specifier: 0.0.0
@@ -975,10 +975,10 @@ importers:
   packages/ui/graph/ui:
     dependencies:
       '@exadev/process-graph-domain':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../../core/graph/domain
       '@exadev/process-graph-projection':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../../../core/graph/projection
       '@exadev/process-graph-react':
         specifier: 0.0.0
