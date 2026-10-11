@@ -38,8 +38,8 @@ export interface ScopeListingConformance {
   readonly malformedParent: string;
 }
 
-/** The filter the kit syncs with: open work, most recently changed first. Every source can express it, and it narrows and reorders what a scope lists. */
-const kitFilter: SyncFilter = {
+/** The filter the kit syncs with: open work, most recently changed first. Every source can express it, and it narrows and reorders what a scope lists. Exported so an adapter that replays recorded responses can record the requests it makes. */
+export const conformanceFilter: SyncFilter = {
   states: ["open"],
   order: { field: "updated", direction: "descending" },
 };
@@ -413,17 +413,21 @@ export const graphSourceConformance = (
 
     test("a filtered sync pages and streams the same pages, with cursors that never repeat", async () => {
       const client = createClient();
-      const paged = await walkPages(client, scope, kitFilter);
+      const paged = await walkPages(client, scope, conformanceFilter);
       await expect(
-        streamPages(client, { scope, filter: kitFilter }),
+        streamPages(client, { scope, filter: conformanceFilter }),
       ).resolves.toEqual(paged);
-      await expect(walkPages(client, scope, kitFilter)).resolves.toEqual(paged);
+      await expect(
+        walkPages(client, scope, conformanceFilter),
+      ).resolves.toEqual(paged);
     });
 
     test("a filtered sync reads nothing the unfiltered sync does not", async () => {
       const client = createClient();
       const all = assembleSync(await walkPages(client, scope));
-      const narrowed = assembleSync(await walkPages(client, scope, kitFilter));
+      const narrowed = assembleSync(
+        await walkPages(client, scope, conformanceFilter),
+      );
       const everyActivity = new Set(all.model.elements.map(({ id }) => id));
       for (const element of narrowed.model.elements) {
         expect(everyActivity).toContain(element.id);
@@ -435,7 +439,7 @@ export const graphSourceConformance = (
       const first = await client.v1.sync.page({ scope });
       const after = nextOf(first);
       await expect(
-        client.v1.sync.page({ scope, after, filter: kitFilter }),
+        client.v1.sync.page({ scope, after, filter: conformanceFilter }),
       ).rejects.toMatchObject({
         code: "BAD_REQUEST",
         data: { reason: "invalid-cursor", value: after },
