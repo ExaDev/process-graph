@@ -19,6 +19,9 @@
       "path": "../../core/graph/projection/tsconfig.build.json"
     },
     {
+      "path": "../../core/graph/export/tsconfig.build.json"
+    },
+    {
       "path": "../../core/graph/domain/tsconfig.build.json"
     },
     {

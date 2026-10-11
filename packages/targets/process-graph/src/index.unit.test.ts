@@ -1,5 +1,6 @@
 import * as dagPackage from "@exadev/process-graph-dag";
 import * as domainPackage from "@exadev/process-graph-domain";
+import * as exportPackage from "@exadev/process-graph-export";
 import * as projectionPackage from "@exadev/process-graph-projection";
 import * as schemaPackage from "@exadev/process-graph-schema";
 import { describe, expect, test } from "vitest";
@@ -8,6 +9,7 @@ import * as entrypoint from "./index.ts";
 const flatLayers = [
   ["schema", schemaPackage],
   ["projection", projectionPackage],
+  ["export", exportPackage],
   ["domain", domainPackage],
 ] as const;
 

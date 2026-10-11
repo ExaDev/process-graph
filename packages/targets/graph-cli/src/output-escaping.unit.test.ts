@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { exitCodes } from "./exit-codes.ts";
-import {
-  isUnsafeCharacter,
-  terminalJson,
-  terminalText,
-} from "./terminal-text.ts";
+import { isUnsafeCharacter } from "@exadev/process-graph-export";
 import {
   createHarness,
   runInOrder,
@@ -37,71 +33,6 @@ const categoryExamples: readonly (readonly [string, string, string])[] = [
   ["a private-use character (Co)", "\uE000", "\\u{e000}"],
   ["an unassigned code point (Cn)", "\u2065", "\\u{2065}"],
 ];
-
-/** Text that must pass through unchanged: a family emoji joined by zero-width joiners, CJK, accents, Arabic, and Persian with its zero-width non-joiner. */
-const scripts = [
-  "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}",
-  "日本語の文",
-  "crème brûlée",
-  "مرحبا بالعالم",
-  "\u0645\u06CC\u200C\u062E\u0648\u0627\u0647\u0645",
-];
-
-describe("terminalText", () => {
-  test("escapes every control and format character class it guards, visibly and by code point", () => {
-    expect(
-      terminalText(
-        "\u0000\u0008\u000B\u001F\u007F\u0080\u009F\u200B\u200F\u202A\u202E\u2060\u2064\u2066\u2069\uFEFF",
-      ),
-    ).toBe(
-      "\\u{0}\\u{8}\\u{b}\\u{1f}\\u{7f}\\u{80}\\u{9f}\\u{200b}\\u{200f}\\u{202a}\\u{202e}\\u{2060}\\u{2064}\\u{2066}\\u{2069}\\u{feff}",
-    );
-  });
-
-  test("leaves line feed, tab and ordinary text in any script exactly as written, joiners included", () => {
-    const text = `a\tb\n${ordinary}${scripts.join(" ")}`;
-
-    expect(terminalText(text)).toBe(text);
-  });
-
-  test.each(categoryExamples)(
-    "escapes %s visibly by its code point",
-    (_name, character, escape) => {
-      expect(terminalText(`a${character}b`)).toBe(`a${escape}b`);
-    },
-  );
-
-  test("escapes a hostile title", () => {
-    expect(terminalText(hostile)).toBe(escaped);
-  });
-});
-
-describe("terminalJson", () => {
-  test.each(categoryExamples)(
-    "writes %s as a JSON escape that parses back to it",
-    (_name, character) => {
-      const json = terminalJson({ title: `a${character}b` });
-
-      expect(unsafeIn(json)).toEqual([]);
-      expect(json).toMatch(/\\u[0-9a-f]{4}/u);
-      expect(JSON.parse(json)).toEqual({ title: `a${character}b` });
-    },
-  );
-
-  test("writes ordinary text in any script, joiners included, as it is", () => {
-    const value = { scripts };
-
-    expect(terminalJson(value)).toBe(`${JSON.stringify(value, null, 2)}\n`);
-  });
-
-  test("writes no unsafe character raw, and parses back to the same value", () => {
-    const value = { title: hostile, c1: "\u009B2J", del: "\u007F", ordinary };
-    const json = terminalJson(value);
-
-    expect(unsafeIn(json)).toEqual([]);
-    expect(JSON.parse(json)).toEqual(value);
-  });
-});
 
 describe("every human-readable and diagram output of the command line", () => {
   let harness: Harness;

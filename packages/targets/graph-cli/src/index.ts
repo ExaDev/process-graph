@@ -84,15 +84,15 @@ export {
   type SyncResult,
 } from "./sync.ts";
 export type { SourceLookup } from "@exadev/process-graph-sync";
-export {
-  flowchartToMermaid,
-  sequenceToMermaid,
-  stateMachineToMermaid,
-  swimlaneToMermaid,
-} from "./emit/mermaid.ts";
+
+// The emitters are graph-export's; the command line's library carries them as it always has, for hosts that draw a view they projected themselves.
 export {
   flowchartToDot,
+  flowchartToMermaid,
   sequenceToDot,
+  sequenceToMermaid,
   stateMachineToDot,
+  stateMachineToMermaid,
   swimlaneToDot,
-} from "./emit/dot.ts";
+  swimlaneToMermaid,
+} from "@exadev/process-graph-export";

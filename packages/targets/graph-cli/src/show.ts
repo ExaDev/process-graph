@@ -9,18 +9,8 @@ import {
   type Swimlane,
 } from "@exadev/process-graph-projection";
 import type { Model, OpenIds } from "@exadev/process-graph-schema";
-import {
-  flowchartToDot,
-  sequenceToDot,
-  stateMachineToDot,
-  swimlaneToDot,
-} from "./emit/dot.ts";
-import {
-  flowchartToMermaid,
-  sequenceToMermaid,
-  stateMachineToMermaid,
-  swimlaneToMermaid,
-} from "./emit/mermaid.ts";
+import type { ProjectedView as NotationView } from "@exadev/process-graph-projection";
+import { viewText, type ExportFormat } from "@exadev/process-graph-export";
 import { CliError } from "./errors.ts";
 import { exitCodes } from "./exit-codes.ts";
 import { loadRun, type GraphSession } from "./session.ts";
@@ -36,8 +26,12 @@ export const viewNames = [
 /** One of the views `show` draws. */
 export type ViewName = (typeof viewNames)[number];
 
-/** The formats `show` writes. */
-export const formatNames = ["json", "mermaid", "dot"] as const;
+/** The formats `show` writes, graph-export's, with JSON named first. */
+export const formatNames = [
+  "json",
+  "mermaid",
+  "dot",
+] as const satisfies readonly ExportFormat[];
 
 /** One of the formats `show` writes. */
 export type FormatName = (typeof formatNames)[number];
@@ -160,47 +154,33 @@ export const project = (
   };
 };
 
+/** A view as `show` names it, as the projection layer names its notation. */
+const notationViewOf = (projected: ProjectedView): NotationView<OpenIds> => {
+  if (projected.view === "flowchart") {
+    return { notation: "flowchart", view: projected.projection };
+  }
+  if (projected.view === "swimlane") {
+    return { notation: "swimlane", view: projected.projection };
+  }
+  if (projected.view === "state") {
+    return { notation: "stateMachine", view: projected.projection };
+  }
+
+  return { notation: "sequence", view: projected.projection };
+};
+
 /**
- * Writes a projected view as Mermaid or DOT source.
+ * Writes a projected view as Mermaid or DOT source, or as JSON, through graph-export's `viewText`, the writer the web app's downloads use too.
  * @param model - The model, for participant labels.
  * @param projected - The view.
- * @param format - `mermaid` or `dot`.
- * @returns The diagram source.
+ * @param format - `mermaid`, `dot` or `json`.
+ * @returns The text.
  */
 export const emit = (
   model: Model<OpenIds>,
   projected: ProjectedView,
-  format: Exclude<FormatName, "json">,
-): string => {
-  const labels = new Map(
-    model.participants.map((participant) => [
-      participant.id,
-      participant.label,
-    ]),
-  );
-  // An actor a loaded model names without declaring has no label of its own, so it is shown by its identifier, as the swimlane projection labels its lane.
-  const participantLabel = (id: string): string => labels.get(id) ?? id;
-  const mermaid = format === "mermaid";
-  if (projected.view === "flowchart") {
-    return mermaid
-      ? flowchartToMermaid(projected.projection)
-      : flowchartToDot(projected.projection);
-  }
-  if (projected.view === "swimlane") {
-    return mermaid
-      ? swimlaneToMermaid(projected.projection)
-      : swimlaneToDot(projected.projection);
-  }
-  if (projected.view === "state") {
-    return mermaid
-      ? stateMachineToMermaid(projected.projection)
-      : stateMachineToDot(projected.projection);
-  }
-
-  return mermaid
-    ? sequenceToMermaid(projected.projection, participantLabel)
-    : sequenceToDot(projected.projection, participantLabel);
-};
+  format: FormatName,
+): string => viewText(model, notationViewOf(projected), format);
 
 /**
  * Draws the session's model as a view in a format.
@@ -213,10 +193,7 @@ export const show = async (
 ): Promise<ShowResult> => {
   const { model } = await loadRun(session);
   const projected = project(model, request);
-  const text =
-    request.format === "json"
-      ? `${JSON.stringify(projected.projection, null, 2)}\n`
-      : emit(model, projected, request.format);
+  const text = emit(model, projected, request.format);
 
   return { ...projected, format: request.format, text };
 };
