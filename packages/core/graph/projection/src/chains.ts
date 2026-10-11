@@ -94,6 +94,8 @@ export interface ChainIndex<I extends IdSpace> {
   readonly carried: (
     firsts: Readonly<Iterable<TransitionOf<I>>>,
   ) => ReadonlySet<I["element"]>;
+  /** The elements the notation would fold but does not, because folding them would multiply edges; the notation draws them no more than it draws any element it has no shape for. */
+  readonly unfolded: ReadonlySet<I["element"]>;
 }
 
 /** Appends `value` to the list `map` holds under `key`. */
@@ -121,8 +123,90 @@ export const once = <T>(compute: () => T): (() => T) => {
   };
 };
 
+/** More than this many distinct entrances or targets is counted as "many": the folding rule only needs to tell one, two and more apart. */
+const enough = 3;
+
+/** Adds `values` to a capped set: once it would hold `enough`, it stands for "many" and keeps no more. */
+const addCapped = <T>(set: Set<T>, values: Readonly<Iterable<T>>): void => {
+  for (const value of values) {
+    if (set.size >= enough) {
+      return;
+    }
+    set.add(value);
+  }
+};
+
+/**
+ * The elements a notation would fold that it must not, because folding them would multiply edges.
+ *
+ * Folding an element replaces the routes through it with one chain per pair of a way in and a drawn element it leads to. Through a folded region, an element is reached by some set of entering transitions (transitions from an element that is not folded) and leads to some set of accepted targets; folding it can draw up to entering times targets chains where the model had entering plus targets transitions. So an element is folded only when that product is no more than that sum: when one side is a single item, or both are two. Counting k sources into one message that leads to k ends, or into a run of messages that fans out to k ends further on, both fail, so neither draws k times k edges. The counts are the distinct entering transitions reaching each element and the distinct targets it reaches, both through folded elements, each held as a set capped at `enough` and carried over the condensed folded graph once in each direction, so deciding every element costs linear work. The counts are taken before any element is unfolded, so an element downstream of an unfolded one may be unfolded too; that errs towards drawing less, never towards multiplying.
+ */
+const multiplying = <I extends IdSpace>(
+  model: Model<I>,
+  outgoing: ReadonlyMap<I["element"], readonly TransitionOf<I>[]>,
+  foldable: ReadonlySet<I["element"]>,
+  accepted: (element: I["element"]) => boolean,
+): ReadonlySet<I["element"]> => {
+  const components = stronglyConnectedComponents(
+    buildDag([...foldable], (id) =>
+      (outgoing.get(id) ?? [])
+        .map((transition) => transition.target)
+        .filter((target) => foldable.has(target)),
+    ),
+  );
+  const componentOf = new Map<I["element"], number>();
+  for (const [index, members] of components.entries()) {
+    for (const member of members) {
+      componentOf.set(member, index);
+    }
+  }
+  const entering = components.map(() => new Set<I["transition"]>());
+  const reaching = components.map(() => new Set<I["element"]>());
+  const before = components.map((): number[] => []);
+  const after = components.map((): number[] => []);
+  for (const transition of model.transitions) {
+    const from = componentOf.get(transition.source);
+    const to = componentOf.get(transition.target);
+    if (to !== undefined && from === undefined) {
+      addCapped(entering[to] ?? new Set(), [transition.id]);
+    }
+    if (from !== undefined && to === undefined && accepted(transition.target)) {
+      addCapped(reaching[from] ?? new Set(), [transition.target]);
+    }
+    if (from !== undefined && to !== undefined && from !== to) {
+      before[to]?.push(from);
+      after[from]?.push(to);
+    }
+  }
+  // Components come out with each before the components that need it along the folded transitions: successors first. Targets flow back from successors in that order; entrances flow forward in the reverse.
+  for (const [index] of components.entries()) {
+    for (const successor of after[index] ?? []) {
+      addCapped(reaching[index] ?? new Set(), reaching[successor] ?? []);
+    }
+  }
+  for (let index = components.length - 1; index >= 0; index -= 1) {
+    for (const predecessor of before[index] ?? []) {
+      addCapped(entering[index] ?? new Set(), entering[predecessor] ?? []);
+    }
+  }
+  const unfolded = new Set<I["element"]>();
+  for (const [index, members] of components.entries()) {
+    const ways = entering[index]?.size ?? 0;
+    const ends = reaching[index]?.size ?? 0;
+    if (ways * ends > ways + ends) {
+      for (const member of members) {
+        unfolded.add(member);
+      }
+    }
+  }
+
+  return unfolded;
+};
+
 /**
  * Indexes a model's folded elements so chains can be read off for any first transition.
+ *
+ * An element the notation would fold is left unfolded when folding it would multiply edges (see `multiplying`), and is then drawn no more than any element the notation has no shape for; `unfolded` lists them so the projection can report them.
  *
  * The folded elements that lead to some accepted element are found first, by one walk back from the accepted elements, and no walk enters any other, so a run that leads nowhere costs nothing. The folded elements are condensed into strongly connected components in one pass, and the condensed graph is read in reverse topological order. A component gets a flat array of its accepted targets only when something reads it on its own: it is entered from an element that is not folded, or from two or more components. Every other component has at most one component before it and is read as part of that one, so it is visited once in all. Arrays are built on demand and remembered, so a region no start reaches costs nothing; a generation stamp per target removes duplicates in constant time, a component with nothing of its own to add shares the one array it reads, and the only builder of an array nothing else reads extends it in place instead of copying it. The total work is linear in the elements and transitions plus the sizes of the arrays that must be copied, which is where two or more starts, or two or more components, read the same targets. Folded elements entered from exactly one folded element, outside any cycle, form a forest of routes; each records how deep it is and the last trigger, effect and guard on the way down to it, so a single-route chain's labels are found from its ends in constant time.
  *
@@ -133,12 +217,16 @@ export const chainIndex = <I extends IdSpace>(
   folding: Folding<I>,
 ): ChainIndex<I> => {
   const outgoing = outgoingMap(model);
-  const isFolded = new Set<I["element"]>();
+  const foldable = new Set<I["element"]>();
   for (const element of model.elements) {
     if (folding.folded(element.id)) {
-      isFolded.add(element.id);
+      foldable.add(element.id);
     }
   }
+  const unfolded = multiplying(model, outgoing, foldable, folding.accepted);
+  const isFolded = new Set<I["element"]>(
+    [...foldable].filter((id) => !unfolded.has(id)),
+  );
   const events = new Map<I["element"], I["event"]>();
   for (const id of isFolded) {
     const event = folding.eventOf?.(id);
@@ -761,5 +849,6 @@ export const chainIndex = <I extends IdSpace>(
     from,
     arriving: (element) => arrivingIn.get(element) ?? [],
     carried,
+    unfolded,
   };
 };

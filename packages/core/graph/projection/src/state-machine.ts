@@ -194,16 +194,23 @@ export const stateMachineParts = <I extends IdSpace>(
   const loss: Loss<I>[] = [
     ...commonLoss(model, "stateMachine", {
       fragments: new Set(),
-      messages: carried,
+      messages: new Set([...carried, ...index.unfolded]),
     }),
     ...unrepresentedLoss(
       model,
       "stateMachine",
-      new Set<I["element"]>([...stateIds, ...folded]),
+      new Set<I["element"]>([
+        ...stateIds,
+        ...[...folded].filter((id) => !index.unfolded.has(id)),
+      ]),
+      index.unfolded,
     ),
   ];
   const skipped = model.elements.filter(
-    (element) => element.kind === "activity" && isTransparent(element),
+    (element) =>
+      element.kind === "activity" &&
+      isTransparent(element) &&
+      !index.unfolded.has(element.id),
   );
   if (skipped.length > 0) {
     loss.push({
