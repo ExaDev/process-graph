@@ -113,7 +113,7 @@ process-graph why github:ExaDev/process-graph#12
 process-graph show --view swimlane --format mermaid
 ```
 
-Every command, its options and its exit statuses are in the [command line's README](../graph-cli/README.md). A program that mounts the command line as a subcommand, or wants each command's result as data, imports `process-graph/cli`.
+Run without them, the bin starts nothing: it names the missing peers and the command that installs them with the package manager that ran it, and exits with status 6. Every command, its options and its exit statuses are in the [command line's README](../graph-cli/README.md). A program that mounts the command line as a subcommand, or wants each command's result as data, imports `process-graph/cli`.
 
 ## What is exported, and under which name
 

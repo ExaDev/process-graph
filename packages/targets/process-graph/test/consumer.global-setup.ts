@@ -13,8 +13,10 @@ import type { TestProject } from "vitest/node";
 
 declare module "vitest" {
   export interface ProvidedContext {
-    /** The throwaway project the packed package is installed into. */
+    /** The throwaway project the packed package is installed into, beside every peer dependency. */
     readonly consumer: string;
+    /** A throwaway project the packed package is installed into alone, without its optional peers. */
+    readonly bareConsumer: string;
   }
 }
 
@@ -45,34 +47,50 @@ const peerSpecifiers = (): string[] => {
 };
 
 /**
- * Packs the built package with `pnpm pack`, as it would be published, and installs the tarball with pnpm into a new directory outside the repository, beside its peer dependencies, so the smoke tests import it exactly as a consumer would: through its exports map, with no workspace package reachable.
- * @param project - The smoke project, given the consumer's directory.
- * @returns Removes the consumer's directory.
+ * Makes a throwaway project outside the repository and installs a tarball into it with pnpm.
+ * @param tarball - The packed package.
+ * @param specifiers - Further packages to install beside it.
+ * @returns The project's directory.
  */
-export default function setup(project: TestProject): () => void {
+const consumerOf = (tarball: string, specifiers: readonly string[]): string => {
   const consumer = mkdtempSync(join(tmpdir(), "process-graph-consumer-"));
-  execFileSync("pnpm", ["pack", "--pack-destination", consumer], {
-    cwd: packageDirectory,
-    encoding: "utf8",
-  });
-  const tarball = readdirSync(consumer).find((name) => name.endsWith(".tgz"));
-  if (tarball === undefined) {
-    throw new Error(`pnpm pack wrote no tarball to ${consumer}`);
-  }
   writeFileSync(
     join(consumer, "package.json"),
     JSON.stringify({ name: "consumer", private: true, type: "module" }),
   );
   // pnpm rather than npm: npm 11.19.0, the npm the pinned Node ships, cannot resolve drizzle-orm 1.0.0-rc.4's optional `effect` peer range at all (ERESOLVE, with or without this package), which npm 11.19.1 fixes.
-  execFileSync(
-    "pnpm",
-    ["add", "--ignore-scripts", `./${tarball}`, ...peerSpecifiers()],
+  execFileSync("pnpm", ["add", "--ignore-scripts", tarball, ...specifiers], {
+    cwd: consumer,
     // Output is captured rather than shown, and a failure's error carries pnpm's own report of why.
-    { cwd: consumer, encoding: "utf8" },
-  );
+    encoding: "utf8",
+  });
+
+  return consumer;
+};
+
+/**
+ * Packs the built package with `pnpm pack`, as it would be published, and installs the tarball with pnpm into two new projects outside the repository, one beside every peer dependency and one alone, so the smoke tests use it exactly as a consumer would: through its exports map, with no workspace package reachable.
+ * @param project - The smoke project, given both consumers' directories.
+ * @returns Removes the tarball and both consumers.
+ */
+export default function setup(project: TestProject): () => void {
+  const packed = mkdtempSync(join(tmpdir(), "process-graph-packed-"));
+  execFileSync("pnpm", ["pack", "--pack-destination", packed], {
+    cwd: packageDirectory,
+    encoding: "utf8",
+  });
+  const tarball = readdirSync(packed).find((name) => name.endsWith(".tgz"));
+  if (tarball === undefined) {
+    throw new Error(`pnpm pack wrote no tarball to ${packed}`);
+  }
+  const consumer = consumerOf(join(packed, tarball), peerSpecifiers());
+  const bareConsumer = consumerOf(join(packed, tarball), []);
   project.provide("consumer", consumer);
+  project.provide("bareConsumer", bareConsumer);
 
   return () => {
-    rmSync(consumer, { recursive: true, force: true });
+    for (const directory of [packed, consumer, bareConsumer]) {
+      rmSync(directory, { recursive: true, force: true });
+    }
   };
 }
