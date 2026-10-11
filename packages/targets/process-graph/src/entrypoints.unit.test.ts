@@ -9,6 +9,7 @@ import * as sqliteNodePackage from "@exadev/process-graph-sqlite-node";
 import * as storeContractPackage from "@exadev/process-graph-store-contract";
 import * as storeSqlitePackage from "@exadev/process-graph-store-sqlite";
 import * as uiPackage from "@exadev/process-graph-ui";
+import * as uiThemePackage from "@exadev/process-graph-ui/theme";
 import { describe, expect, test } from "vitest";
 import * as cliEntry from "./cli.ts";
 import * as layoutEntry from "./layout.ts";
@@ -19,6 +20,7 @@ import * as githubNodeEntry from "./source/github/node.ts";
 import * as storeEntry from "./store.ts";
 import * as storeNodeEntry from "./store/node.ts";
 import * as uiEntry from "./ui.ts";
+import * as uiThemeEntry from "./ui/theme.ts";
 import * as versionModule from "./version.ts";
 
 /** One subpath entry point and the bundled packages whose exports it carries flat. */
@@ -70,6 +72,11 @@ const subpaths: readonly Subpath[] = [
     name: "ui",
     entry: uiEntry,
     layers: [["ui", uiPackage]],
+  },
+  {
+    name: "ui/theme",
+    entry: uiThemeEntry,
+    layers: [["ui/theme", uiThemePackage]],
   },
   {
     name: "react-flow",

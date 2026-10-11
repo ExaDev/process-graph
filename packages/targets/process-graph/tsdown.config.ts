@@ -27,6 +27,7 @@ export default defineConfig({
     "store/wasm/worker": "src/store/wasm/worker.ts",
     react: "src/react.ts",
     ui: "src/ui.ts",
+    "ui/theme": "src/ui/theme.ts",
     "react-flow": "src/react-flow.ts",
     cli: "src/cli.ts",
     bin: "src/bin.ts",

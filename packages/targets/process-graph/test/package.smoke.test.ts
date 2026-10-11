@@ -11,13 +11,14 @@ const installed = join(consumer, "node_modules", "process-graph");
 /**
  * Runs an ES module in the consumer's project, as a consumer's own code would run, and parses the JSON it prints.
  * @param source - The module's source; it prints one JSON document.
+ * @param project - The project to run it in; the one with every peer installed when absent.
  * @returns The printed document.
  */
-const evaluate = (source: string): unknown => {
+const evaluate = (source: string, project: string = consumer): unknown => {
   const result = spawnSync(
     process.execPath,
     ["--input-type=module", "--eval", source],
-    { cwd: consumer, encoding: "utf8" },
+    { cwd: project, encoding: "utf8" },
   );
   if (result.status !== 0) {
     throw new Error(result.stderr);
@@ -251,6 +252,31 @@ describe("each subpath, imported from the installed package", () => {
       ready: true,
       stdout: "added activity build at revision 1\nbuild\tBuild\n",
     });
+  });
+});
+
+describe("process-graph/ui/theme, in a project with none of the optional peers", () => {
+  test("imports without React, and carries the same contract and values as process-graph/ui", () => {
+    const bareConsumer = inject("bareConsumer");
+    const theme = `
+      import * as theme from "process-graph/ui/theme";
+      const resolves = (name) => { try { import.meta.resolve(name); return true; } catch { return false; } };
+      console.log(JSON.stringify({ react: resolves("react"), exports: Object.keys(theme).sort(), vars: theme.vars, light: theme.lightValues }));
+    `;
+    const bare = evaluate(theme, bareConsumer);
+    const full = evaluate(`
+      import { vars, lightValues } from "process-graph/ui";
+      console.log(JSON.stringify({ vars, light: lightValues }));
+    `);
+
+    expect(bare).toMatchObject({
+      react: false,
+      exports: ["darkTheme", "darkValues", "lightTheme", "lightValues", "vars"],
+    });
+    if (typeof full !== "object" || full === null) {
+      throw new Error("process-graph/ui printed no theme");
+    }
+    expect(bare).toMatchObject(full);
   });
 });
 
