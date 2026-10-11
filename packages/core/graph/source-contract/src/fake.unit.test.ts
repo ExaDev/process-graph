@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { graphSourceConformance } from "./conformance.ts";
+import {
+  conformanceFilter,
+  graphSourceConformance,
+  graphSourceListingConformance,
+  type GraphSourceListingConformanceOptions,
+  type ScopeListingConformance,
+} from "./conformance.ts";
 import { createFakeGraphSource } from "./fake.ts";
 import { createGraphSourceRouter } from "./router.ts";
 import { fakeOptions } from "./test-support/pages.ts";
@@ -8,7 +14,7 @@ import { inProcessClient, messagePortClient } from "./conformance.ts";
 const router = createGraphSourceRouter(createFakeGraphSource(fakeOptions));
 const scope = ["fake:acme/alpha", "fake:acme/beta"];
 
-const listing = {
+const listing: ScopeListingConformance = {
   roots: true,
   parent: "fake:acme",
   missingParent: "fake:umbrella",
@@ -30,8 +36,16 @@ graphSourceConformance({
   scope,
   missingScope: "fake:acme/gamma",
   malformedScope: "fake:",
-  listing: { ...listing, malformedParent: "fake:" },
 });
+
+// The listing's share on its own, over the same transport, as an adapter whose listing needs a different client runs it.
+const portListing: GraphSourceListingConformanceOptions = {
+  ...listing,
+  name: "in-memory fake, over a message port",
+  createClient: () => messagePortClient(router),
+  malformedParent: "fake:",
+};
+graphSourceListingConformance(portListing);
 
 describe("createFakeGraphSource", () => {
   test("serves the scopes in the order requested, one page per call", async () => {
@@ -83,6 +97,16 @@ describe("createFakeGraphSource", () => {
       code: "BAD_REQUEST",
       data: { reason: "invalid-cursor", value: "fake%3Aacme%2Fbeta@0" },
     });
+  });
+
+  test("the kit's filter keeps open work only, so the fake drops the done activity", async () => {
+    const page = await inProcessClient(router).v1.sync.page({
+      scope: ["fake:acme/alpha"],
+      filter: conformanceFilter,
+    });
+    expect(page.activities.map((activity) => activity.id)).toEqual([
+      "fake:acme/alpha#2",
+    ]);
   });
 
   test("a states filter keeps the activities in those states and drops what they were part of", async () => {
