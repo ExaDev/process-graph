@@ -5,5 +5,12 @@
     "types": []
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts", "src/test-support/**", "src/bin.ts"]
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/test-support/**",
+    "src/bin.ts",
+    "src/cli.ts",
+    "src/store/node.ts",
+    "src/source/github/node.ts"
+  ]
 }

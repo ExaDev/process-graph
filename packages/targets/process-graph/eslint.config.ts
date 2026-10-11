@@ -1,11 +1,33 @@
 import { defineConfig } from "eslint/config";
 import { packageLintConfig } from "../../../eslint.shared.ts";
 
+/** The modules behind the package's subpath exports other than the root, each a pure re-export of the private packages that subpath bundles. */
+const subpathEntries = [
+  "src/layout.ts",
+  "src/source/github.ts",
+  "src/source/github/node.ts",
+  "src/store.ts",
+  "src/store/node.ts",
+  "src/store/wasm.ts",
+  "src/store/wasm/worker.ts",
+  "src/cli.ts",
+];
+
 export default defineConfig(
   packageLintConfig({
     tsconfigRootDir: import.meta.dirname,
     isomorphic: true,
-    // The bin is a Node launcher that is run, never imported, so the library it carries stays isomorphic.
-    isomorphicExemptions: ["src/bin.ts"],
+    // The bin is a Node launcher that is run, never imported, and these subpaths are the Node-only ones by design; the root entry and every other subpath stay isomorphic.
+    isomorphicExemptions: [
+      "src/bin.ts",
+      "src/cli.ts",
+      "src/store/node.ts",
+      "src/source/github/node.ts",
+    ],
   }),
+  {
+    // Every subpath of this package is an entry point whose whole content is a re-export, the same as `src/index.ts`. The policy's `single` mode recognises only `src/index.ts` as an entry point, so the subpath modules are declared here instead; each still contains nothing but re-exports, which `entrypoints.unit.test.ts` checks against the packages it bundles.
+    files: subpathEntries,
+    rules: { "exadev/barrel-policy": "off" },
+  },
 );
