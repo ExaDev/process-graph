@@ -1,3 +1,37 @@
+## [1.3.0](https://github.com/ExaDev/process-graph/compare/process-graph@1.2.0...process-graph@1.3.0) (2026-10-11)
+
+### Features
+
+* **process-graph:** add the process-graph/ui/theme subpath ([dcaa869](https://github.com/ExaDev/process-graph/commit/dcaa869a2abd732a3af6110511bea6b6bd72d135))
+* **process-graph:** export the manifest and a build-time version constant ([6fcd2df](https://github.com/ExaDev/process-graph/commit/6fcd2df02f81617d8ca667818cbc679c7abf91ae))
+* **store:** export private data-file preparation and a host-owned data path ([d010269](https://github.com/ExaDev/process-graph/commit/d010269392c5bc1546aa11fee23d2cf3033c04aa))
+
+### Bug Fixes
+
+* **process-graph:** declare stable peers as caret ranges ([798171b](https://github.com/ExaDev/process-graph/commit/798171b62a400997062dd8a8d143b24b04de2d42))
+
+### Documentation
+
+* say an install age gate must exempt trilean and trilean-regex ([4f2ebf6](https://github.com/ExaDev/process-graph/commit/4f2ebf6bfe7bb5ec5e0a09b627612c55d5f50b9d))
+
+
+### Dependencies
+
+- Updated @exadev/process-graph-schema to 1.1.2
+- Updated @exadev/process-graph-domain to 1.2.1
+- Updated @exadev/process-graph-projection to 1.1.2
+- Updated @exadev/process-graph-source-contract to 1.1.2
+- Updated @exadev/process-graph-layout to 1.0.5
+- Updated @exadev/process-graph-source-github-issues to 1.1.2
+- Updated @exadev/process-graph-store-contract to 1.2.1
+- Updated @exadev/process-graph-react to 1.1.2
+- Updated @exadev/process-graph-store-sqlite to 1.2.1
+- Updated @exadev/process-graph-sqlite-node to 1.1.0
+- Updated @exadev/process-graph-sqlite-wasm to 1.0.6
+- Updated @exadev/process-graph-ui to 1.1.0
+- Updated @exadev/process-graph-cli to 1.2.0
+- Updated @exadev/process-graph-react-flow to 1.1.2
+
 ## [1.2.0](https://github.com/ExaDev/process-graph/compare/process-graph@1.1.1...process-graph@1.2.0) (2026-10-11)
 
 
