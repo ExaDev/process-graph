@@ -36,6 +36,11 @@ export {
   type TransitionChange,
   type TransitionFieldChange,
 } from "./diff.ts";
+export {
+  project,
+  type ProjectedView,
+  type ViewsByNotation,
+} from "./project.ts";
 export { diffFlowchart, diffSwimlane } from "./inverse-flowchart.ts";
 export { diffStateMachine } from "./inverse-state-machine.ts";
 export { diffSequence } from "./inverse-sequence.ts";
