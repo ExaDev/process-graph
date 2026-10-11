@@ -294,8 +294,7 @@ export function packageLintConfig(options: PackageLintOptions): Config[] {
     react === undefined
       ? []
       : [
-          // Nested rather than spread: at runtime this is an array of config blocks, which defineConfig flattens.
-          exadev.configs.react,
+          ...exadev.configs.react,
           { settings: { react: { version: react.version } } },
         ],
     dataFileLintConfig,
