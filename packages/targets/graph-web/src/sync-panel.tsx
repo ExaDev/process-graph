@@ -7,7 +7,7 @@ import {
   section,
   sectionHeading,
 } from "./app.css.ts";
-import type { SyncProgress } from "./sync.ts";
+import type { SyncProgress } from "@exadev/process-graph-sync";
 import type { SyncHandle } from "./use-sync.ts";
 
 export interface SyncPanelProps {

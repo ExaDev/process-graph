@@ -1153,6 +1153,9 @@ importers:
       '@exadev/process-graph-store-contract':
         specifier: workspace:*
         version: link:../../core/graph/store-contract
+      '@exadev/process-graph-sync':
+        specifier: workspace:*
+        version: link:../../core/graph/sync
       '@exadev/process-graph-ui':
         specifier: workspace:*
         version: link:../../ui/graph/ui

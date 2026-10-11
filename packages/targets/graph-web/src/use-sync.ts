@@ -2,8 +2,12 @@ import type { Gap } from "@exadev/process-graph-source-contract";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { failureOf, type Failure } from "./failure.ts";
 import type { AppPorts } from "./ports.ts";
-import type { SyncCheckpoint, SyncRecord } from "./sync-record.ts";
-import { runSync, type SyncProgress } from "./sync.ts";
+import {
+  syncScopes,
+  type SyncCheckpoint,
+  type SyncProgress,
+} from "@exadev/process-graph-sync";
+import type { SyncRecord } from "./sync-record.ts";
 
 /** Where the sync of the shown model stands in this page. */
 type SyncState =
@@ -92,7 +96,7 @@ export const useSync = (
         gaps: [...earlierGaps, ...progress.gaps],
       });
       settle({ phase: "running", progress: undefined });
-      runSync({
+      syncScopes({
         store: ports.store,
         sources: ports.sources(token),
         modelId,
