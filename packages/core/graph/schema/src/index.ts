@@ -47,5 +47,5 @@ export {
   type OverlayIssue,
 } from "./overlay.ts";
 export type { OverlayStatus } from "./vocabulary.ts";
-export { modelSchema } from "./schema.ts";
+export { modelSchema, type ModelSchema } from "./schema.ts";
 export { ModelParseError, parseModel, type ModelIssue } from "./parse.ts";

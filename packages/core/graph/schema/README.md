@@ -85,7 +85,7 @@ The two cover different things on purpose.
 - **Types** carry what only an author can get wrong before the model exists: a reference to an undeclared identifier, an identifier of the wrong space, an entity acting. They need the identifiers to be literals, so they only apply to a model written in source.
 - **The open schema** carries what a loaded document can get wrong: shape, vocabulary, unknown keys (every object is strict, so a misspelt field is an error and is never dropped), then the rules in `validate`.
 
-`z.infer<typeof modelSchema>` is exactly `Model<OpenIds>`, pinned by a type-level test, so a loaded model is usable anywhere an open-space model is.
+`z.infer<typeof modelSchema>` is exactly `Model<OpenIds>`, pinned by a type-level test, so a loaded model is usable anywhere an open-space model is. `modelSchema` is declared as the named interface `ModelSchema`, so a consumer that embeds it in a schema of its own, such as `z.object({ model: modelSchema })`, and emits declarations gets a reference to `ModelSchema` rather than the whole model schema written out, which can exceed the length TypeScript will serialise (TS7056).
 
 ## Extensions
 

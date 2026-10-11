@@ -138,12 +138,8 @@ const viewsSchema = z
   )
   .readonly();
 
-/**
- * The open (runtime) shape of a model: identifiers are plain strings, so references are not checked here. `validate` checks what the shape cannot, and `parseModel` runs both.
- *
- * Every object is strict. The inferred type is exactly `Model<OpenIds>`, which a type-level test pins in both directions.
- */
-export const modelSchema = record({
+/** The strict object schema inside `modelSchema`, before it is made read-only. */
+const modelObjectSchema = z.strictObject({
   participants: z.array(participantSchema).readonly(),
   events: z.array(eventSchema).readonly(),
   actions: z.array(actionSchema).readonly(),
@@ -154,3 +150,18 @@ export const modelSchema = record({
   projections: z.array(projectionSchema).readonly(),
   views: viewsSchema.exactOptional(),
 });
+
+/**
+ * The type of `modelSchema`, declared by name so that a declaration file that embeds the schema, such as a consumer's `z.object({ model: modelSchema })` under `declaration: true`, refers to `ModelSchema` rather than writing out the whole model schema with every record and trilean's JSON value inline, which can exceed the length the compiler will serialise (TS7056).
+ */
+export interface ModelSchema extends z.ZodReadonly<typeof modelObjectSchema> {
+  /** The strict object schema inside, whose `shape` holds each record's own schema. */
+  readonly unwrap: () => typeof modelObjectSchema;
+}
+
+/**
+ * The open (runtime) shape of a model: identifiers are plain strings, so references are not checked here. `validate` checks what the shape cannot, and `parseModel` runs both.
+ *
+ * Every object is strict. The inferred type is exactly `Model<OpenIds>`, which a type-level test pins in both directions.
+ */
+export const modelSchema: ModelSchema = modelObjectSchema.readonly();
