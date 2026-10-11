@@ -1,6 +1,11 @@
+import {
+  createGraphSourceRouter,
+  GraphSourceError,
+} from "@exadev/process-graph-source-contract";
 import { inProcessClient } from "@exadev/process-graph-source-contract/conformance";
 import { describe, expect, test } from "vitest";
-import type { GraphqlFetch } from "./graphql.ts";
+import type { GitHubTokenPort, GraphqlFetch } from "./graphql.ts";
+import { createGitHubIssuesSource } from "./source.ts";
 import { fakeToken, fixedNow, stubbedRouter } from "./test-support/sources.ts";
 
 const scope = ["github:ExaDev/document-schema.js"];
@@ -258,5 +263,56 @@ describe("requests", () => {
         message: "Resource not accessible by integration",
       },
     ]);
+  });
+});
+
+describe("a token port that fails", () => {
+  /** A fetch the request must never reach, since it has no token to send. */
+  const unreachable: GraphqlFetch = async () =>
+    Promise.reject(new Error("fetch was called without a token"));
+
+  /** A page read through the router with this token port. */
+  const pageWithToken = async (token: GitHubTokenPort) =>
+    inProcessClient(
+      createGraphSourceRouter(
+        createGitHubIssuesSource({
+          token,
+          fetch: unreachable,
+          now: () => fixedNow,
+        }),
+      ),
+    ).v1.sync.page({ scope });
+
+  test("is UNAUTHORIZED, naming the token port and the owner, with the port's own error as the cause of the source error", async () => {
+    const original = new Error("the keychain is locked");
+    const failure = await pageWithToken(async () =>
+      Promise.reject(original),
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      code: "UNAUTHORIZED",
+      message:
+        "the GitHub token port gave no token for ExaDev: the keychain is locked",
+    });
+    expect(
+      failure instanceof Error &&
+        failure.cause instanceof GraphSourceError &&
+        failure.cause.cause,
+    ).toBe(original);
+  });
+
+  test("passes a GraphSourceError the port throws through as it is", async () => {
+    const own = new GraphSourceError({
+      kind: "unauthorised",
+      message: "no stored GitHub token is for ExaDev or for any owner",
+    });
+
+    await expect(
+      pageWithToken(async () => Promise.reject(own)),
+    ).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+      message: "no stored GitHub token is for ExaDev or for any owner",
+      cause: own,
+    });
   });
 });

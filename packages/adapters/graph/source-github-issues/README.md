@@ -79,7 +79,7 @@ A rate-limited sync resumes from the last page's `next` once the limit resets.
 
 ## Tokens
 
-The token comes from a `GitHubTokenPort`, `(owner, signal) => Promise<string>`, asked for the owner of each repository or board read, so different organisations can use different credentials, and with `owner` undefined for the viewer's own listing, which no owner names. The token is sent only in the `Authorization` header and never logged or put in an error.
+The token comes from a `GitHubTokenPort`, `(owner, signal) => Promise<string>`, asked for the owner of each repository or board read, so different organisations can use different credentials, and with `owner` undefined for the viewer's own listing, which no owner names. The token is sent only in the `Authorization` header and never logged or put in an error. A port that cannot supply a token ends the call as `unauthorised`, just as GitHub rejecting one would: a `GraphSourceError` it throws is passed through as it is, and any other error is wrapped in one whose message names the token port and the owner (`the GitHub token port gave no token for <owner>: <its message>`) and whose cause is the port's own error.
 
 `storedTokenPort({ list, used })` chooses among tokens a host keeps (a browser's token store, say), each scoped to some owners or to any: a token naming the owner wins, the one naming the fewest owners first and then the most recently used; otherwise the most recently used token for any owner; a request with no owner takes only a token for any owner. Logins match without regard to case. `list` is read on every request, `used` is told which token was chosen so the host can keep its recency, and no fitting token is `unauthorised`. `selectStoredToken` is the choice on its own.
 

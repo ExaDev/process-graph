@@ -12,6 +12,7 @@ export const githubGraphqlEndpoint = "https://api.github.com/graphql";
  * @param owner - The login of the account whose repositories or board the request reads, or `undefined` for a request about the token's own holder (the viewer and the organisations it belongs to), which no owner names.
  * @param signal - The caller's abort signal.
  * @returns The token.
+ * @throws GraphSourceError with `unauthorised` when no token can be had, with a message saying how to get one; any other error is reported by the adapter as `unauthorised` too, naming the token port and the owner, with that error as the cause.
  */
 export type GitHubTokenPort = (
   owner: string | undefined,
@@ -152,12 +153,42 @@ export interface GraphqlRequest<Schema extends z.ZodType> {
 }
 
 /**
+ * Asks the token port for the token a request needs. A port that cannot supply one has failed to provide credentials, which ends the sync exactly as GitHub rejecting them would, so whatever it throws is reported as `unauthorised`: a `GraphSourceError` the port threw as it is, and anything else wrapped in one whose message names the token port and the owner and whose cause is the port's own error. An abort is passed through, since it is the caller's, not the port's.
+ * @param transport - The token port.
+ * @param owner - The login the request is about, or `undefined` for the token's own holder.
+ * @param signal - The caller's abort signal.
+ * @returns The token.
+ * @throws GraphSourceError with `unauthorised` when the port fails.
+ */
+const tokenFor = async (
+  transport: GraphqlTransport,
+  owner: string | undefined,
+  signal: AbortSignal | undefined,
+): Promise<string> => {
+  try {
+    return await transport.token(owner, signal);
+  } catch (error: unknown) {
+    if (error instanceof GraphSourceError || signal?.aborted === true) {
+      throw error;
+    }
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new GraphSourceError(
+      {
+        kind: "unauthorised",
+        message: `the GitHub token port gave no token${owner === undefined ? "" : ` for ${owner}`}: ${reason}`,
+      },
+      { cause: error },
+    );
+  }
+};
+
+/**
  * Sends one GraphQL request and classifies the answer.
  * @param transport - The token, fetch and clock ports.
  * @param request - The document, its variables, the owner whose token to use and the schema for `data`.
  * @param signal - The caller's abort signal, passed to `fetch`.
  * @returns The parsed data and any `NOT_FOUND` or `FORBIDDEN` problems beside it.
- * @throws GraphSourceError with `unauthorised` for HTTP 401, and `rate-limited` (with the reset instant when GitHub gives one) for any form of rate limiting.
+ * @throws GraphSourceError with `unauthorised` for HTTP 401 or a token port that fails, and `rate-limited` (with the reset instant when GitHub gives one) for any form of rate limiting.
  * @throws Error for any other failure: an HTTP error, another GraphQL error type, or data that does not match the schema.
  */
 export const graphql = async <Schema extends z.ZodType>(
@@ -165,7 +196,7 @@ export const graphql = async <Schema extends z.ZodType>(
   request: GraphqlRequest<Schema>,
   signal: AbortSignal | undefined,
 ): Promise<QueryResult<z.infer<Schema>>> => {
-  const token = await transport.token(request.owner, signal);
+  const token = await tokenFor(transport, request.owner, signal);
   const response = await transport.fetch(githubGraphqlEndpoint, {
     method: "POST",
     headers: {

@@ -3,7 +3,7 @@ import type { BadRequestReason } from "./schema.ts";
 /**
  * The failures that end a sync call, as a closed union a caller can switch on exhaustively. What a source can still partly read is not a failure: it arrives as a `Gap` in the page.
  *
- * - `unauthorised`: the source rejected the credentials outright.
+ * - `unauthorised`: the source rejected the credentials outright, or none could be had for it.
  * - `rate-limited`: the source refused the request until `resetAt` (an ISO 8601 instant) when it said so. Resume from the last page's `next` after that.
  * - `bad-request`: the cursor or a scope identifier is not one this source issued or understands.
  */
