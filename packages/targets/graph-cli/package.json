@@ -20,6 +20,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./exit-codes": {
+      "types": "./dist/exit-codes.d.ts",
+      "import": "./dist/exit-codes.js"
     }
   },
   "types": "./dist/index.d.ts",
