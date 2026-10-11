@@ -27,6 +27,7 @@
     "test:coverage": "turbo run _test:coverage",
     "test:integration": "turbo run _test:integration",
     "test:smoke": "turbo run _test:smoke",
+    "test:e2e": "turbo run _test:e2e",
     "test:mutation": "turbo run _test:mutation",
     "deps:lint": "syncpack lint",
     "deps:fix": "syncpack fix",
