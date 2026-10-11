@@ -12,10 +12,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import {
-  prepareDataFile,
   privateDirectoryMode,
   privateFileMode,
-} from "./data-file.ts";
+} from "@exadev/process-graph-sqlite-node";
 import { exitCodes } from "./exit-codes.ts";
 import { nodePorts } from "./node.ts";
 import { runCli } from "./program.ts";
@@ -139,14 +138,52 @@ describe("a store at a path the user names", () => {
   });
 });
 
-test("on Windows, where file modes mean nothing, no mode is set or changed", () => {
-  const path = join(directory, "xdg", "process-graph", "graph.sqlite3");
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, "", { mode: looseFileMode });
-  chmodSync(path, looseFileMode);
+describe("a data file the host owns", () => {
+  test("is the default data path, over PROCESS_GRAPH_DATA, and is created private with the directories above it", async () => {
+    const owned = join(directory, "host", "graph", "graph.sqlite3");
+    let stderr = "";
+    const ports = nodePorts({
+      env: { PROCESS_GRAPH_DATA: join(directory, "elsewhere.sqlite3") },
+      home: directory,
+      dataPath: owned,
+      stderr: (text) => {
+        stderr += text;
+      },
+    });
 
-  expect(
-    prepareDataFile(path, { ownsDirectory: true, platform: "win32" }),
-  ).toEqual([]);
-  expect(modeOf(path)).toBe(looseFileMode);
+    expect(ports.defaultDataPath).toBe(owned);
+    await expect(
+      runCli(["add", "participant", "team", "Team"], ports, {
+        name: "sb graph",
+        version: "0.0.0",
+      }),
+    ).resolves.toBe(exitCodes.success);
+    expect([
+      modeOf(join(directory, "host")),
+      modeOf(dirname(owned)),
+      modeOf(owned),
+    ]).toEqual([privateDirectoryMode, privateDirectoryMode, privateFileMode]);
+    expect(stderr).toBe("");
+  });
+
+  test("is narrowed when it already exists readable by others, as the command line's own is", async () => {
+    const owned = join(directory, "host", "graph.sqlite3");
+    mkdirSync(dirname(owned), { mode: looseDirectoryMode });
+    chmodSync(dirname(owned), looseDirectoryMode);
+    writeFileSync(owned, "");
+    chmodSync(owned, looseFileMode);
+    const opened = await nodePorts({
+      home: directory,
+      dataPath: owned,
+    }).openStore(owned);
+    await opened.close();
+
+    expect(opened.warnings).toEqual([
+      `made ${dirname(owned)}, ${owned} readable by its owner only, since other users could read the synced work in it`,
+    ]);
+    expect([modeOf(dirname(owned)), modeOf(owned)]).toEqual([
+      privateDirectoryMode,
+      privateFileMode,
+    ]);
+  });
 });

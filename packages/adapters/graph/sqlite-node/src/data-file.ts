@@ -13,10 +13,10 @@ const permissionBits = 0o777;
 /** The bits that give the file's group or anyone else any access. */
 const groupAndOtherBits = 0o077;
 
-/** Where a store's data file lives, and how much of its path the command line owns. */
+/** Where a store's data file lives, and how much of its path the caller owns. */
 export interface DataFileOptions {
   /**
-   * Whether the directory is the command line's own default, which it creates private and keeps private. A directory the user named (`--data` or `PROCESS_GRAPH_DATA`) is created when missing but never has its mode changed.
+   * Whether the directory is the caller's own, such as an application's default data directory or one a host keeps under its own home, which is created private and kept private. A directory someone else chose, such as a path a user names on a command line, is created when missing but never has its mode changed.
    */
   readonly ownsDirectory: boolean;
   /** The platform; on Windows, file modes mean nothing and nothing is set. */
@@ -59,10 +59,13 @@ const tighten = (path: string, mode: number): boolean => {
 };
 
 /**
- * Makes a data file ready for SQLite to open. The directory is created when missing, private when it is the command line's own. The database file is created private when missing, before SQLite opens it, so the file and the sidecars SQLite derives from it are never readable by others, whatever the umask; a file that already exists is left alone unless the directory is the command line's own. In its own directory, an existing directory or store file that group or others can read is narrowed to the private mode.
- * @param path - The database file.
- * @param options - How much of the path the command line owns, and the platform.
- * @returns One warning line naming what was narrowed, or nothing.
+ * Makes a data file ready for `openNodeGraphStore` to open, so a store holding synced work is never readable by other users on the host. Call it before opening the store; it does not open the database itself.
+ *
+ * The directory is created when missing (with any missing parents), with `privateDirectoryMode` when it is the caller's own. The database file is created with `privateFileMode` when missing, before SQLite opens it, so the file and the `-wal` and `-shm` files SQLite derives from it are never readable by others, whatever the umask. A file that already exists is left alone unless the directory is the caller's own; there, an existing directory or store file (database, `-wal` or `-shm`) that group or others can read is narrowed to the private mode. On Windows, where file modes mean nothing, only the directory is created.
+ * @param path - The database file; not `":memory:"`, which has no file.
+ * @param options - Whether the caller owns the directory, and the platform.
+ * @returns One warning line naming what was narrowed, for the caller to show, or nothing when nothing was.
+ * @throws Error from the file system when the directory or file cannot be created or its mode read or changed.
  */
 export const prepareDataFile = (
   path: string,
