@@ -62,6 +62,10 @@ export interface ProcessFlowProps<I extends IdSpace> {
   readonly colorMode?: ColorMode | undefined;
   /** Called with each element a click or key selects, and with `undefined` when the selection is cleared. */
   readonly onSelect?: ((id: I["element"] | undefined) => void) | undefined;
+  /**
+   * The selected element, when the owner keeps the selection, as `useGraphSelection`'s option of the same name: give the key, even as `undefined`, and the canvas shows this selection and reports through `onSelect` what a click or key asks for, so the canvas and other views of the model share one selection. Leave it out for the canvas to keep its own.
+   */
+  readonly selected?: I["element"] | undefined;
 }
 
 /**
@@ -107,6 +111,7 @@ export const ProcessFlow = <I extends IdSpace>(
   const { selected, select, containerProps } = useGraphSelection(shown, {
     onChange: onSelect,
     focus,
+    ...("selected" in props ? { selected: props.selected } : {}),
   });
 
   const drawn = useMemo(() => {
