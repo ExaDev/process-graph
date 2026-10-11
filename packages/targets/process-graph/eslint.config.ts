@@ -10,6 +10,9 @@ const subpathEntries = [
   "src/store/node.ts",
   "src/store/wasm.ts",
   "src/store/wasm/worker.ts",
+  "src/react.ts",
+  "src/ui.ts",
+  "src/react-flow.ts",
   "src/cli.ts",
 ];
 
@@ -26,7 +29,7 @@ export default defineConfig(
     ],
   }),
   {
-    // Every subpath of this package is an entry point whose whole content is a re-export, the same as `src/index.ts`. The policy's `single` mode recognises only `src/index.ts` as an entry point, so the subpath modules are declared here instead; each still contains nothing but re-exports, which `entrypoints.unit.test.ts` checks against the packages it bundles.
+    // Every subpath of this package is an entry point whose whole content is a re-export, the same as `src/index.ts`. The policy's `single` mode recognises only `src/index.ts` as an entry point, so the subpath modules are declared here instead; each still contains nothing but re-exports, and `entrypoints.unit.test.ts` and the smoke test check each one's surface against the packages it bundles.
     files: subpathEntries,
     rules: { "exadev/barrel-policy": "off" },
   },
