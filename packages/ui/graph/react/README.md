@@ -58,7 +58,7 @@ const Cards = ({ run }) => {
 | `useImpact(run, id)`                 | The live work downstream of an element, by `impact`.                                                                                           |
 | `useWhyStatus(run, id)`              | The `StatusExplanation` of an element, by `explainStatus`.                                                                                     |
 | `useCriticalPath(run, weight?)`      | The heaviest chain through the work ahead; each element weighs one step unless `weight` says otherwise.                                        |
-| `useProjection(model, projection)`   | The view a projection names, as `{ notation, view }`.                                                                                          |
+| `useProjection(model, projection)`   | The view a projection names, as `{ notation, view }`: graph-projection's `project`, which this package also exports, memoised.                 |
 | `useElementFilter(initial?)`         | A filter by status, actor and source, with toggles and `clear`.                                                                                |
 | `useGraphSelection(order, options?)` | The selected element, a setter, and container and item props for keyboard navigation.                                                          |
 

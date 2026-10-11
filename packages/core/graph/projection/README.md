@@ -6,13 +6,14 @@ A private workspace package, not published on its own: it is bundled into [`proc
 
 Projections of the process model from `@exadev/process-graph-schema` into each notation. Every projection is a pure function of the model plus the extra input its notation needs, and none of them reads or preserves layout. `src/` imports nothing Node-only.
 
-| Function                         | Extra input              | Result                                                          |
-| -------------------------------- | ------------------------ | --------------------------------------------------------------- |
-| `handoffs(model)`                | none                     | Transitions between elements whose actors differ.               |
-| `toFlowchart(model)`             | none                     | Nodes (process, decision, terminator, bar) and guarded edges.   |
-| `toSwimlane(model)`              | none                     | The flowchart plus lanes by actor, unassigned nodes, hand-offs. |
-| `toStateMachine(model, subject)` | a subject entity         | States and transitions with decisions folded into guards.       |
-| `toSequence(model, scenario)`    | a path of transition ids | Lifelines in order of first appearance, messages and fragments. |
+| Function                         | Extra input              | Result                                                                                                                    |
+| -------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `handoffs(model)`                | none                     | Transitions between elements whose actors differ.                                                                         |
+| `toFlowchart(model)`             | none                     | Nodes (process, decision, terminator, bar) and guarded edges.                                                             |
+| `toSwimlane(model)`              | none                     | The flowchart plus lanes by actor, unassigned nodes, hand-offs.                                                           |
+| `toStateMachine(model, subject)` | a subject entity         | States and transitions with decisions folded into guards.                                                                 |
+| `toSequence(model, scenario)`    | a path of transition ids | Lifelines in order of first appearance, messages and fragments.                                                           |
+| `project(model, projection)`     | a declared projection    | The view the projection's notation gives, as `{ notation, view }` (a `ProjectedView`), following its subject or scenario. |
 
 ```ts
 import { handoffs, toSequence } from "@exadev/process-graph-projection";

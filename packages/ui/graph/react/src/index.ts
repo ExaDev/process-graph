@@ -14,12 +14,13 @@ export {
   useWhyStatus,
   type BlockedChain,
 } from "./analysis.ts";
+export { useProjection } from "./projection.ts";
+// The projection of a model by a declared projection is the projection layer's; it is part of this package's surface too, beside the hook that memoises it.
 export {
   project,
-  useProjection,
   type ProjectedView,
   type ViewsByNotation,
-} from "./projection.ts";
+} from "@exadev/process-graph-projection";
 export {
   actorsOf,
   emptyFilter,
