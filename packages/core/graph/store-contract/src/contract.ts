@@ -7,6 +7,7 @@ import {
   modelIdSchema,
   modelSummarySchema,
   reachSchema,
+  relationSchema,
   revisionSchema,
   storedModelSchema,
   storeChangeSchema,
@@ -41,7 +42,9 @@ const written = z.strictObject({ revision: revisionSchema }).readonly();
  * - `models.list`, `models.save`, `models.load` and `models.delete` keep whole models. A save replaces the model and drops the run state of elements it no longer declares.
  * - `overlay.set` sets the run state of the elements it names.
  * - `items.upsert` merges items read from a source into a model by identifier, creating the model when it does not exist.
+ * - `relations.list` returns the relations kept beside a model, which `items.upsert` adds to.
  * - `query.ready`, `query.blockedChain` and `query.impact` answer structural questions from the stored transitions and run state alone (see the package README for exactly what they read), so a store can answer them without loading the model or evaluating conditions.
+ * - `query.children`, `query.descendants` and `query.ancestors` walk the stored `child-of` relations below and above an element.
  * - `changes` yields every later change to one model as an event iterator. A subscriber that falls behind by more than the store's subscription capacity gets one `missed` in place of the changes it let pile up, so a store's memory stays bounded and the subscriber knows to load the model again.
  *
  * Every write is atomic and checked: a change that would leave the model or overlay invalid (`validate`, `validateOverlay`) is rejected whole with `UNPROCESSABLE_CONTENT`. Every call takes the caller's abort signal through the oRPC client options; a call aborted before it writes leaves the store unchanged.
@@ -87,6 +90,15 @@ const graphStoreV1Contract = oc.errors(graphStoreErrors).router({
       )
       .output(written),
   },
+  relations: {
+    list: oc
+      .input(modelRef)
+      .output(
+        z
+          .strictObject({ relations: z.array(relationSchema).readonly() })
+          .readonly(),
+      ),
+  },
   query: {
     ready: oc
       .input(modelRef)
@@ -103,6 +115,25 @@ const graphStoreV1Contract = oc.errors(graphStoreErrors).router({
       .output(
         z
           .strictObject({ impacted: z.array(reachSchema).readonly() })
+          .readonly(),
+      ),
+    children: oc
+      .input(elementRef)
+      .output(
+        z.strictObject({ children: z.array(z.string()).readonly() }).readonly(),
+      ),
+    descendants: oc
+      .input(elementRef)
+      .output(
+        z
+          .strictObject({ descendants: z.array(reachSchema).readonly() })
+          .readonly(),
+      ),
+    ancestors: oc
+      .input(elementRef)
+      .output(
+        z
+          .strictObject({ ancestors: z.array(reachSchema).readonly() })
           .readonly(),
       ),
   },

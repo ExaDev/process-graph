@@ -1,4 +1,5 @@
 import type { Model, OpenIds } from "@exadev/process-graph-schema";
+import type { GraphStoreClient } from "./contract.ts";
 import type { BoundItems, StoreChange } from "./schema.ts";
 
 /** The settled error of a call that must fail, so its code and data can be asserted. */
@@ -54,6 +55,46 @@ export const issueItems: BoundItems = {
     { id: "dep-1-2", source: "github:org/repo#1", target: "github:org/repo#2" },
   ],
   overlay: { "github:org/repo#1": "done" },
+};
+
+/** An activity bound to its own identifier, as a source sends it. */
+const bound = (id: string, label: string) =>
+  ({
+    kind: "activity",
+    id,
+    label,
+    actor: "github:org/repo",
+    source: id,
+  }) as const;
+
+/**
+ * A work hierarchy as a source sends it: an epic with two children, one of which has a child of its own, an assignee, the repository inside its organisation, and a pair of activities each the parent of the other, so a walk over a cycle of `child-of` relations is exercised.
+ */
+export const hierarchyItems: BoundItems = {
+  participants: [
+    { id: "github:@org", label: "org", kind: "system" },
+    { id: "github:org/repo", label: "org/repo", kind: "system" },
+    { id: "github:@ada", label: "ada", kind: "role" },
+  ],
+  activities: [
+    bound("github:org/repo#1", "Epic"),
+    bound("github:org/repo#2", "Store"),
+    bound("github:org/repo#3", "Client"),
+    bound("github:org/repo#4", "Migrations"),
+    bound("github:org/repo#5", "Loop one"),
+    bound("github:org/repo#6", "Loop two"),
+  ],
+  transitions: [],
+  overlay: {},
+  relations: [
+    { kind: "child-of", from: "github:org/repo#3", to: "github:org/repo#1" },
+    { kind: "child-of", from: "github:org/repo#2", to: "github:org/repo#1" },
+    { kind: "child-of", from: "github:org/repo#4", to: "github:org/repo#2" },
+    { kind: "assigned-to", from: "github:org/repo#2", to: "github:@ada" },
+    { kind: "part-of", from: "github:org/repo", to: "github:@org" },
+    { kind: "child-of", from: "github:org/repo#5", to: "github:org/repo#6" },
+    { kind: "child-of", from: "github:org/repo#6", to: "github:org/repo#5" },
+  ],
 };
 
 /** Reads a subscription up to and including the first event `last` accepts, then stops it. */
@@ -125,3 +166,24 @@ export const silentLosses = (
 
   return lost;
 };
+
+/** Makes a client for a store with no models in it, and the function that closes it once a test ends. */
+export type ClientFactory = () => Promise<{
+  readonly client: GraphStoreClient;
+  readonly close: () => Promise<void>;
+}>;
+
+/** Runs a test body against a fresh client and closes it afterwards, pass or fail. */
+export const withClient =
+  (
+    createClient: ClientFactory,
+    body: (client: GraphStoreClient) => Promise<void>,
+  ) =>
+  async (): Promise<void> => {
+    const { client, close } = await createClient();
+    try {
+      await body(client);
+    } finally {
+      await close();
+    }
+  };
