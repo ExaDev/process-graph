@@ -301,3 +301,139 @@ describe("a model with an illegal cycle", () => {
     ]);
   });
 });
+
+describe("facts", () => {
+  const approved = {
+    kind: "compare",
+    op: "eq",
+    left: { kind: "reference", key: "approved" },
+    right: { kind: "booleanLiteral", value: true },
+  } as const;
+
+  /** `build` consumes `spec`, which no activity produces; the decision `gate` after it takes `ship` only when the fact `approved` is true. */
+  const renderFactsModel = async (select: string): Promise<TestPorts> => {
+    const ports = testPorts({
+      token: "t",
+      search: `${acme}&select=${select}`,
+    });
+    await ports.ports.store.v1.models.save({
+      modelId,
+      model: {
+        participants: [],
+        events: [],
+        actions: [],
+        artefacts: [{ id: "spec", name: "Specification" }],
+        elements: [
+          { kind: "activity", id: "build", label: "Build", consumes: ["spec"] },
+          { kind: "decision", id: "gate", label: "Approved?" },
+          { kind: "activity", id: "ship", label: "Ship" },
+        ],
+        transitions: [
+          { id: "build-gate", source: "build", target: "gate" },
+          {
+            id: "gate-ship",
+            source: "gate",
+            target: "ship",
+            condition: approved,
+          },
+        ],
+        fragments: [],
+        projections: [],
+      },
+    });
+    render(<App ports={ports.ports} />);
+
+    return ports;
+  };
+
+  const statusOf = async (id: string): Promise<string | null> =>
+    (await cardOf(id)).getAttribute("data-status");
+
+  test("record an artefact provided from the details, and its consumer becomes ready", async () => {
+    const ports = await renderFactsModel("build");
+    const spec = await screen.findByRole("group", { name: "Specification" });
+
+    expect(await statusOf("build")).toBe("blocked");
+    expect(
+      within(spec)
+        .getByRole("button", { name: "Unknown" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+
+    fireEvent.click(within(spec).getByRole("button", { name: "Provided" }));
+
+    await waitFor(async () => {
+      expect(await statusOf("build")).toBe("ready");
+    });
+    await expect(
+      ports.ports.store.v1.facts.read({ modelId }),
+    ).resolves.toMatchObject({ facts: { artefacts: { spec: true } } });
+    expect(
+      within(screen.getByRole("group", { name: "Specification" }))
+        .getByRole("button", { name: "Provided" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+
+    fireEvent.click(
+      within(screen.getByRole("group", { name: "Specification" })).getByRole(
+        "button",
+        { name: "Absent" },
+      ),
+    );
+
+    await waitFor(async () => {
+      expect(await statusOf("build")).toBe("blocked");
+    });
+  });
+
+  test("record a fact a condition reads, and the branch follows it; unknown leaves it unknown", async () => {
+    const ports = await renderFactsModel("ship");
+    await ports.ports.store.v1.overlay.set({
+      modelId,
+      overlay: { build: "done" },
+    });
+    const fact = async (label: string): Promise<void> => {
+      fireEvent.click(
+        within(
+          await screen.findByRole("group", { name: "approved" }),
+        ).getByRole("button", { name: label }),
+      );
+    };
+
+    await waitFor(async () => {
+      expect(await statusOf("ship")).toBe("unknown");
+    });
+
+    await fact("True");
+    await waitFor(async () => {
+      expect(await statusOf("ship")).toBe("ready");
+    });
+
+    await fact("False");
+    await waitFor(async () => {
+      expect(await statusOf("ship")).toBe("skipped");
+    });
+    await expect(
+      ports.ports.store.v1.facts.read({ modelId }),
+    ).resolves.toMatchObject({
+      facts: { values: { approved: { kind: "boolean", value: false } } },
+    });
+
+    await fact("Unknown");
+    await waitFor(async () => {
+      expect(await statusOf("ship")).toBe("unknown");
+    });
+    await expect(
+      ports.ports.store.v1.facts.read({ modelId }),
+    ).resolves.toMatchObject({ facts: { values: {} } });
+  });
+
+  test("show no artefacts or facts for an element that has none", async () => {
+    await renderFactsModel("gate");
+
+    await screen.findByRole("button", { name: "Mark done" });
+    expect(screen.queryByRole("group", { name: "Specification" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Artefacts" })).toBeNull();
+    expect(screen.getByRole("group", { name: "approved" })).toBeDefined();
+  });
+});
