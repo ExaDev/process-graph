@@ -3,12 +3,15 @@ import { modelSchema, overlaySchema } from "@exadev/process-graph-schema";
 import { z } from "zod";
 import {
   boundItemsSchema,
+  factChangeSchema,
+  factClearingSchema,
   issueSchema,
   modelIdSchema,
   modelSummarySchema,
   reachSchema,
   relationSchema,
   revisionSchema,
+  storedFactsSchema,
   storedModelSchema,
   storeChangeSchema,
 } from "./schema.ts";
@@ -43,6 +46,7 @@ const written = z.strictObject({ revision: revisionSchema }).readonly();
  * - `overlay.set` sets the run state of the elements it names.
  * - `items.upsert` merges items read from a source into a model by identifier, creating the model when it does not exist.
  * - `relations.list` returns the relations kept beside a model, which `items.upsert` adds to.
+ * - `facts.read`, `facts.set` and `facts.clear` keep what is known from outside the process about a model's run: which artefacts are provided and the values of named facts its conditions read. `models.load` returns the same record beside the overlay.
  * - `query.ready`, `query.blockedChain` and `query.impact` answer structural questions from the stored transitions and run state alone (see the package README for exactly what they read), so a store can answer them without loading the model or evaluating conditions.
  * - `query.children`, `query.descendants` and `query.ancestors` walk the stored `child-of` relations below and above an element.
  * - `changes` yields every later change to one model as an event iterator. A subscriber that falls behind by more than the store's subscription capacity gets one `missed` in place of the changes it let pile up, so a store's memory stays bounded and the subscriber knows to load the model again.
@@ -77,6 +81,23 @@ const graphStoreV1Contract = oc.errors(graphStoreErrors).router({
       .input(
         z
           .strictObject({ modelId: modelIdSchema, overlay: overlaySchema })
+          .readonly(),
+      )
+      .output(written),
+  },
+  facts: {
+    read: oc.input(modelRef).output(storedFactsSchema),
+    set: oc
+      .input(
+        z
+          .strictObject({ modelId: modelIdSchema, facts: factChangeSchema })
+          .readonly(),
+      )
+      .output(written),
+    clear: oc
+      .input(
+        z
+          .strictObject({ modelId: modelIdSchema, facts: factClearingSchema })
           .readonly(),
       )
       .output(written),

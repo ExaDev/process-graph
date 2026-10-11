@@ -1,5 +1,7 @@
+import { emptyFactRecord, type FactRecord } from "@exadev/process-graph-domain";
 import type { Model, OpenIds, Overlay } from "@exadev/process-graph-schema";
 import { GraphStoreError } from "./errors.ts";
+import { factIssues, factsWithin, mergeFacts, withoutFacts } from "./facts.ts";
 import { ChangeFeed } from "./feed.ts";
 import {
   ancestorsOf,
@@ -30,6 +32,7 @@ interface Entry {
   readonly model: Model<OpenIds>;
   readonly overlay: Overlay<OpenIds>;
   readonly relations: readonly Relation[];
+  readonly facts: FactRecord;
   readonly revision: number;
 }
 
@@ -87,6 +90,7 @@ export const createFakeGraphStore = (): GraphStore => {
     readonly model: Model<OpenIds>;
     readonly overlay: Overlay<OpenIds>;
     readonly relations: readonly Relation[];
+    readonly facts: FactRecord;
     readonly signal: AbortSignal | undefined;
   }
 
@@ -96,16 +100,26 @@ export const createFakeGraphStore = (): GraphStore => {
     model,
     overlay,
     relations,
+    facts,
     signal,
   }: Write): number => {
     checkStored(model, overlay);
-    const issues = relationIssues(model, relations);
+    const issues = [
+      ...relationIssues(model, relations),
+      ...factIssues(model, facts),
+    ];
     if (issues.length > 0) {
       throw new GraphStoreError({ kind: "invalid", issues });
     }
     signal?.throwIfAborted();
     sequence += 1;
-    entries.set(modelId, { model, overlay, relations, revision: sequence });
+    entries.set(modelId, {
+      model,
+      overlay,
+      relations,
+      facts,
+      revision: sequence,
+    });
     feed.publish({ modelId, kind, revision: sequence });
 
     return sequence;
@@ -127,13 +141,14 @@ export const createFakeGraphStore = (): GraphStore => {
         model,
         overlay: overlayWithin(model, existing?.overlay ?? {}),
         relations: relationsWithin(model, existing?.relations ?? []),
+        facts: factsWithin(model, existing?.facts ?? emptyFactRecord),
         signal,
       });
     }),
     loadModel: later(({ modelId }): StoredModel => {
-      const { model, overlay, revision } = entryOf(modelId);
+      const { model, overlay, facts, revision } = entryOf(modelId);
 
-      return { modelId, revision, model, overlay };
+      return { modelId, revision, model, overlay, facts };
     }),
     deleteModel: later(({ modelId, signal }) => {
       if (!entries.has(modelId)) {
@@ -155,6 +170,34 @@ export const createFakeGraphStore = (): GraphStore => {
         model: entry.model,
         overlay: { ...entry.overlay, ...overlay },
         relations: entry.relations,
+        facts: entry.facts,
+        signal,
+      });
+    }),
+    readFacts: later(({ modelId }) => {
+      const { facts, revision } = entryOf(modelId);
+
+      return { modelId, revision, facts };
+    }),
+    setFacts: later(({ modelId, facts, signal }) => {
+      const entry = entryOf(modelId);
+
+      return write({
+        ...entry,
+        modelId,
+        kind: "facts",
+        facts: mergeFacts(entry.facts, facts),
+        signal,
+      });
+    }),
+    clearFacts: later(({ modelId, facts, signal }) => {
+      const entry = entryOf(modelId);
+
+      return write({
+        ...entry,
+        modelId,
+        kind: "facts",
+        facts: withoutFacts(entry.facts, facts),
         signal,
       });
     }),
@@ -163,6 +206,7 @@ export const createFakeGraphStore = (): GraphStore => {
         model: emptyModel,
         overlay: {},
         relations: [],
+        facts: emptyFactRecord,
       };
 
       return write({
@@ -170,6 +214,7 @@ export const createFakeGraphStore = (): GraphStore => {
         kind: "items",
         ...mergeBoundItems(entry.model, entry.overlay, items),
         relations: mergeRelations(entry.relations, items.relations ?? []),
+        facts: entry.facts,
         signal,
       });
     }),

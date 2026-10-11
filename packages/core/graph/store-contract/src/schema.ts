@@ -1,4 +1,6 @@
+import type { FactRecord } from "@exadev/process-graph-domain";
 import { modelSchema, overlaySchema } from "@exadev/process-graph-schema";
+import { ComputedValueSchema } from "trilean";
 import { z } from "zod";
 
 /**
@@ -56,15 +58,67 @@ export const boundItemsSchema = z
   })
   .readonly();
 
-/** One stored model and the run state laid over it, at the revision of its last change. */
+/** The name of a fact a condition reads: the string key of its `reference` node. */
+export const factNameSchema = z.string().min(1);
+
+/**
+ * What is known from outside the process about one model's run, kept beside its overlay: which artefacts are provided (`true`) or known not to be (`false`), by artefact id, and the trilean value of each named fact, by name. What the record does not name is unknown. It is graph-domain's `FactRecord`, which `factsFrom` adapts to the `Facts` port the reasoning reads.
+ */
+export const factRecordSchema = z
+  .strictObject({
+    artefacts: z.record(z.string().min(1), z.boolean()).readonly(),
+    values: z.record(factNameSchema, ComputedValueSchema).readonly(),
+  })
+  .readonly() satisfies z.ZodType<FactRecord>;
+
+/** One stored model, the run state laid over it and the facts known about its run, at the revision of its last change. */
 export const storedModelSchema = z
   .strictObject({
     modelId: modelIdSchema,
     revision: revisionSchema,
     model: modelSchema,
     overlay: overlaySchema,
+    facts: factRecordSchema,
   })
   .readonly();
+
+/** A model's fact record at the revision of the model's last change. */
+export const storedFactsSchema = z
+  .strictObject({
+    modelId: modelIdSchema,
+    revision: revisionSchema,
+    facts: factRecordSchema,
+  })
+  .readonly();
+
+/**
+ * Facts to record for a model: each artefact's provision and each named fact's value replaces what the record held for it, and everything the change does not name is kept. Every artefact must be one the model declares.
+ */
+export const factChangeSchema = z
+  .strictObject({
+    artefacts: z
+      .record(z.string().min(1), z.boolean())
+      .readonly()
+      .exactOptional(),
+    values: z
+      .record(factNameSchema, ComputedValueSchema)
+      .readonly()
+      .exactOptional(),
+  })
+  .readonly();
+
+/**
+ * Facts to forget, so they are unknown again: either the named artefacts and named facts, or, with `all`, the whole record. A name the record does not hold is ignored.
+ */
+export const factClearingSchema = z.union([
+  z
+    .strictObject({
+      artefacts: z.array(z.string().min(1)).readonly().exactOptional(),
+      values: z.array(factNameSchema).readonly().exactOptional(),
+    })
+    .readonly(),
+  z.strictObject({ all: z.literal(true) }).readonly(),
+]);
 
 /** A stored model's name and the revision of its last change. */
 export const modelSummarySchema = z
@@ -77,7 +131,13 @@ export const reachSchema = z
   .readonly();
 
 /** The kinds of change a store reports. */
-export const changeKinds = ["saved", "overlay", "items", "deleted"] as const;
+export const changeKinds = [
+  "saved",
+  "overlay",
+  "items",
+  "facts",
+  "deleted",
+] as const;
 
 /**
  * A change to a model. `revision` is the revision the change took. `missed` says the subscriber missed one or more changes and should load the model again: it is sent at the start of a subscription that names a revision the model is no longer at (the model changed, or has gone), and in place of the changes a subscriber that reads too slowly has let pile up beyond its subscription's capacity.
@@ -107,6 +167,9 @@ export type BoundItems = z.infer<typeof boundItemsSchema>;
 export type Relation = z.infer<typeof relationSchema>;
 export type RelationKind = (typeof relationKinds)[number];
 export type StoredModel = z.infer<typeof storedModelSchema>;
+export type StoredFacts = z.infer<typeof storedFactsSchema>;
+export type FactChange = z.infer<typeof factChangeSchema>;
+export type FactClearing = z.infer<typeof factClearingSchema>;
 export type ModelSummary = z.infer<typeof modelSummarySchema>;
 export type Reach = z.infer<typeof reachSchema>;
 export type ChangeKind = (typeof changeKinds)[number];

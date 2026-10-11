@@ -1,5 +1,6 @@
 import type { Model, OpenIds } from "@exadev/process-graph-schema";
 import { describe, expect, test } from "vitest";
+import { factConformance } from "./conformance-facts.ts";
 import { relationConformance } from "./conformance-relations.ts";
 import {
   type ClientFactory,
@@ -198,6 +199,7 @@ export const graphStoreConformance = (
           revision,
           model: everyFieldModel,
           overlay: {},
+          facts: { artefacts: {}, values: {} },
         });
       }),
     );
@@ -289,6 +291,7 @@ export const graphStoreConformance = (
           revision,
           model: smaller,
           overlay: { plan: "done" },
+          facts: { artefacts: {}, values: {} },
         });
       }),
     );
@@ -410,6 +413,7 @@ export const graphStoreConformance = (
             projections: [],
           },
           overlay: issueItems.overlay,
+          facts: { artefacts: {}, values: {} },
         });
       }),
     );
@@ -498,6 +502,7 @@ export const graphStoreConformance = (
           revision,
           model: pairModel,
           overlay: {},
+          facts: { artefacts: {}, values: {} },
         });
       }),
     );
@@ -668,6 +673,8 @@ export const graphStoreConformance = (
     );
 
     relationConformance(options.createClient);
+
+    factConformance(options.createClient);
 
     test(
       "a write whose signal has already fired is refused and changes nothing",
