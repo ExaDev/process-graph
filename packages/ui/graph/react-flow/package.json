@@ -56,37 +56,37 @@
     "state-machine"
   ],
   "dependencies": {
-    "@exadev/process-graph-domain": "1.1.1",
-    "@exadev/process-graph-layout": "1.0.3",
-    "@exadev/process-graph-projection": "1.1.0",
-    "@exadev/process-graph-react": "1.0.1",
-    "@exadev/process-graph-schema": "1.1.0",
-    "@exadev/process-graph-ui": "1.0.1",
-    "@xyflow/react": "12.12.0"
+    "@exadev/process-graph-domain": "workspace:*",
+    "@exadev/process-graph-layout": "workspace:*",
+    "@exadev/process-graph-projection": "workspace:*",
+    "@exadev/process-graph-react": "workspace:*",
+    "@exadev/process-graph-schema": "workspace:*",
+    "@exadev/process-graph-ui": "workspace:*",
+    "@xyflow/react": "catalog:"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "0.18.5",
-    "@stryker-mutator/core": "10.0.0",
-    "@stryker-mutator/typescript-checker": "10.0.0",
-    "@stryker-mutator/vitest-runner": "10.0.0",
-    "@testing-library/dom": "10.4.2",
-    "@testing-library/react": "16.3.3",
-    "@types/node": "26.6.4",
-    "@types/react": "19.3.0",
-    "@types/react-dom": "19.3.0",
-    "@vanilla-extract/css": "1.21.2",
-    "@vanilla-extract/vite-plugin": "5.2.6",
-    "@vitest/coverage-v8": "5.0.3",
-    "eslint": "10.12.0",
-    "happy-dom": "20.14.5",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "typescript": "6.0.3",
-    "vite": "8.3.2",
-    "vitest": "5.0.3"
+    "@arethetypeswrong/cli": "catalog:",
+    "@stryker-mutator/core": "catalog:",
+    "@stryker-mutator/typescript-checker": "catalog:",
+    "@stryker-mutator/vitest-runner": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vanilla-extract/css": "catalog:",
+    "@vanilla-extract/vite-plugin": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
+    "happy-dom": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react": "catalog:",
+    "react-dom": "catalog:"
   }
 }

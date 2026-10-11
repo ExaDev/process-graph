@@ -63,27 +63,27 @@
     "graphviz"
   ],
   "dependencies": {
-    "@exadev/process-graph-dag": "1.1.0",
-    "@exadev/process-graph-domain": "1.1.1",
-    "@exadev/process-graph-projection": "1.1.0",
-    "@exadev/process-graph-schema": "1.1.0",
-    "@exadev/process-graph-source-contract": "1.1.0",
-    "@exadev/process-graph-source-github-issues": "1.1.0",
-    "@exadev/process-graph-sqlite-node": "1.0.4",
-    "@exadev/process-graph-store-contract": "1.1.0",
-    "@orpc/server": "2.0.0-beta.41",
-    "commander": "15.0.0"
+    "@exadev/process-graph-dag": "workspace:*",
+    "@exadev/process-graph-domain": "workspace:*",
+    "@exadev/process-graph-projection": "workspace:*",
+    "@exadev/process-graph-schema": "workspace:*",
+    "@exadev/process-graph-source-contract": "workspace:*",
+    "@exadev/process-graph-source-github-issues": "workspace:*",
+    "@exadev/process-graph-sqlite-node": "workspace:*",
+    "@exadev/process-graph-store-contract": "workspace:*",
+    "@orpc/server": "catalog:",
+    "commander": "catalog:"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "0.18.5",
-    "@stryker-mutator/core": "10.0.0",
-    "@stryker-mutator/typescript-checker": "10.0.0",
-    "@stryker-mutator/vitest-runner": "10.0.0",
-    "@types/node": "26.6.4",
-    "@vitest/coverage-v8": "5.0.3",
-    "eslint": "10.12.0",
-    "publint": "0.3.25",
-    "typescript": "6.0.3",
-    "vitest": "5.0.3"
+    "@arethetypeswrong/cli": "catalog:",
+    "@stryker-mutator/core": "catalog:",
+    "@stryker-mutator/typescript-checker": "catalog:",
+    "@stryker-mutator/vitest-runner": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
+    "publint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
