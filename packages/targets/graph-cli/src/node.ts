@@ -31,7 +31,7 @@ export interface NodePortsOptions {
   readonly fetch?: GraphqlFetch;
   /** The clock, in milliseconds since the epoch, for a rate limit's retry time; `Date.now` when absent. */
   readonly now?: () => number;
-  /** The facts decision conditions read and which input artefacts are provided; nothing is known when absent. */
+  /** Facts the host supplies for decision conditions and input artefacts, answering whatever the model's stored fact record does not; nothing more is known when absent. */
   readonly facts?: Facts;
   /** Aborts every store and source call. */
   readonly signal?: AbortSignal;

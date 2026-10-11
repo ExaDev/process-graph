@@ -1025,6 +1025,9 @@ importers:
       commander:
         specifier: 'catalog:'
         version: 15.0.0
+      trilean:
+        specifier: 'catalog:'
+        version: 1.7.2
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'

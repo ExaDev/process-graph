@@ -1,3 +1,4 @@
+import type { FactRecord } from "@exadev/process-graph-domain";
 import type {
   ArtefactDef,
   Element,
@@ -9,6 +10,9 @@ import type {
   Transition,
 } from "@exadev/process-graph-schema";
 import { emptyModel } from "@exadev/process-graph-store-contract";
+import type { ComputedValue } from "trilean";
+import { CliError } from "./errors.ts";
+import { exitCodes } from "./exit-codes.ts";
 import {
   callOptions,
   findRun,
@@ -103,4 +107,104 @@ export const setState = async (
   );
 
   return { element: id, state, revision };
+};
+
+/** What can be recorded about an artefact: `provided`, known not provided (`absent`), or `unknown`, which forgets whatever was recorded. */
+export const artefactStates = ["provided", "absent", "unknown"] as const;
+
+/** One of `artefactStates`. */
+export type ArtefactState = (typeof artefactStates)[number];
+
+/** The state an artefact was given. */
+export interface SetArtefactResult extends Written {
+  readonly artefact: string;
+  readonly state: ArtefactState;
+}
+
+/**
+ * Records whether an artefact of the session's model is provided, so a consumer of an input no activity produces can become ready, or forgets it with `unknown`.
+ * @param session - The store and model.
+ * @param id - The artefact.
+ * @param state - `provided`, `absent` or `unknown`.
+ * @returns The artefact, its new state and the revision the change took.
+ * @throws CliError with `notFound` when the model or the artefact does not exist.
+ */
+export const setArtefact = async (
+  session: GraphSession,
+  id: string,
+  state: ArtefactState,
+): Promise<SetArtefactResult> => {
+  const { model } = await loadRun(session);
+  if (!model.artefacts.some((artefact) => artefact.id === id)) {
+    throw new CliError(exitCodes.notFound, `no artefact "${id}" in the model`);
+  }
+  const options = callOptions(session.signal);
+  const { revision } =
+    state === "unknown"
+      ? await session.store.v1.facts.clear(
+          { modelId: session.modelId, facts: { artefacts: [id] } },
+          options,
+        )
+      : await session.store.v1.facts.set(
+          {
+            modelId: session.modelId,
+            facts: { artefacts: { [id]: state === "provided" } },
+          },
+          options,
+        );
+
+  return { artefact: id, state, revision };
+};
+
+/** The value a named fact was given, or `unknown` when it was forgotten. */
+export interface SetFactResult extends Written {
+  readonly fact: string;
+  readonly value: ComputedValue | "unknown";
+}
+
+/**
+ * Records a named fact's value for the session's model, so every condition reading that name evaluates against it, or forgets it with `unknown`, so those conditions are indeterminate again.
+ * @param session - The store and model.
+ * @param name - The fact's name, the key a condition's `reference` node gives.
+ * @param value - Its trilean value, or `unknown`.
+ * @returns The fact, its new value and the revision the change took.
+ * @throws CliError with `notFound` when the model does not exist.
+ */
+export const setFact = async (
+  session: GraphSession,
+  name: string,
+  value: ComputedValue | "unknown",
+): Promise<SetFactResult> => {
+  await loadRun(session);
+  const options = callOptions(session.signal);
+  const { revision } =
+    value === "unknown"
+      ? await session.store.v1.facts.clear(
+          { modelId: session.modelId, facts: { values: [name] } },
+          options,
+        )
+      : await session.store.v1.facts.set(
+          { modelId: session.modelId, facts: { values: { [name]: value } } },
+          options,
+        );
+
+  return { fact: name, value, revision };
+};
+
+/** The session's model's fact record. */
+export interface FactsResult {
+  readonly revision: number;
+  readonly facts: FactRecord;
+}
+
+/**
+ * Reads what is recorded about the session's model's run: which artefacts are provided or absent, and each named fact's value.
+ * @param session - The store and model.
+ * @returns The fact record and the model's revision.
+ * @throws CliError with `notFound` when the model does not exist.
+ */
+export const factsOf = async (session: GraphSession): Promise<FactsResult> => {
+  const { revision, facts } = await loadRun(session);
+
+  return { revision, facts };
 };
