@@ -62,15 +62,18 @@ describe("checkPublishedManifest", () => {
     ]);
   });
 
-  test("rejects a range", () => {
-    expect(
-      checkPublishedManifest(
-        published("peerDependencies", { zod: "^4.6.5" }),
-        catalog,
-        siblings,
-      ).map((finding) => finding.reason),
-    ).toEqual(["a published dependency must be an exact version"]);
-  });
+  test.each(["dependencies", "devDependencies"] as const)(
+    "rejects a range in %s",
+    (field) => {
+      expect(
+        checkPublishedManifest(
+          published(field, { zod: "^4.6.5" }),
+          catalog,
+          siblings,
+        ).map((finding) => finding.reason),
+      ).toEqual(["a published dependency must be an exact version"]);
+    },
+  );
 
   test("rejects a version that differs from the catalog's or the sibling's", () => {
     expect(
@@ -96,6 +99,76 @@ describe("checkPublishedManifest", () => {
         siblings,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("checkPublishedManifest on peerDependencies", () => {
+  const peerCatalog = new Map([
+    ["react", "19.3.0"],
+    ["@orpc/server", "2.0.0-beta.41"],
+  ]);
+  const peers = (entries: Readonly<Record<string, string>>) =>
+    checkPublishedManifest(
+      published("peerDependencies", entries),
+      peerCatalog,
+      siblings,
+    ).map(({ name, reason }) => [name, reason]);
+
+  test("accepts a caret range on a stable version the catalog satisfies, and an exact prerelease equal to the catalog", () => {
+    expect(
+      peers({ react: "^19.3.0", "@orpc/server": "2.0.0-beta.41" }),
+    ).toEqual([]);
+  });
+
+  test("accepts a caret range whose floor is below the catalog's version, since the catalog still satisfies it", () => {
+    expect(peers({ react: "^19.0.0" })).toEqual([]);
+  });
+
+  test("rejects a caret range the catalog's version does not satisfy", () => {
+    expect(peers({ react: "^19.4.0" })).toEqual([
+      [
+        "react",
+        "must be satisfied by the catalog entry, 19.3.0, which the tests run against",
+      ],
+    ]);
+  });
+
+  test.each(["19.3.0", "~19.3.0", ">=19.3.0", "19.x", "*"])(
+    "rejects %s for a stable peer, which must be a caret range",
+    (specifier) => {
+      expect(peers({ react: specifier })).toEqual([
+        [
+          "react",
+          "a stable peer must be a caret range on the lowest tested version, such as ^1.2.3",
+        ],
+      ]);
+    },
+  );
+
+  test("rejects a range on a prerelease peer, which must stay exact", () => {
+    expect(peers({ "@orpc/server": "^2.0.0-beta.41" })).toEqual([
+      [
+        "@orpc/server",
+        "a prerelease peer must be an exact version, since a prerelease has no compatible-range semantics",
+      ],
+    ]);
+  });
+
+  test("rejects an exact prerelease peer that differs from the catalog's", () => {
+    expect(peers({ "@orpc/server": "2.0.0-beta.40" })).toEqual([
+      ["@orpc/server", "must equal the catalog entry, 2.0.0-beta.41"],
+    ]);
+  });
+
+  test("checks a peer the catalog does not name by its own version", () => {
+    expect(
+      peers({ elkjs: "^0.12.0", vite: "8.3.2", next: "1.0.0-rc.1" }),
+    ).toEqual([
+      [
+        "vite",
+        "a stable peer must be a caret range on the lowest tested version, such as ^1.2.3",
+      ],
+    ]);
   });
 });
 

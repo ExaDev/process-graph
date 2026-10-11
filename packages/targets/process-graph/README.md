@@ -72,7 +72,7 @@ The package is built from the repository's internal packages, which are bundled 
 | `react-flow`        | `react`, `react-dom`, `@xyflow/react`, `elkjs`, `@vanilla-extract/recipes`   |
 | `cli` and the bin   | `commander`, `@orpc/client`, `@orpc/contract`, `@orpc/server`, `drizzle-orm` |
 
-The versions are the ones `package.json` declares under `peerDependencies`.
+The versions are the ones `package.json` declares under `peerDependencies`. A peer with a stable version is a caret range whose floor is the version this package is tested against, so any later compatible release satisfies it. The oRPC packages, `drizzle-orm` and `@sqlite.org/sqlite-wasm` are prereleases, which have no compatible-range semantics (a range on one admits only later prereleases of the same version, which may break anything), so each is declared at the exact version tested.
 
 With Vite, exclude `@sqlite.org/sqlite-wasm` from dependency pre-bundling (`optimizeDeps.exclude`), since it loads its `.wasm` file relative to itself. A worker module serving the browser store is one call:
 

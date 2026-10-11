@@ -16,7 +16,7 @@ pnpm build
 pnpm test
 ```
 
-Dependencies are added with `pnpm add`, never by editing a version by hand. Every third-party version is written once, exactly, in the catalog in `pnpm-workspace.yaml`: a private package names it as `catalog:` (`pnpm add --save-catalog <name>@<version>`) and a sibling as `workspace:*`. The published `process-graph` manifest names exact literal versions instead, because `npm publish` ships a protocol specifier verbatim; `pnpm run deps:lint` (`syncpack` and `scripts/check-published-manifests.ts`) holds both rules. The install age gate in `pnpm-workspace.yaml` is never lowered; ExaDev's own packages are the only entries in `minimumReleaseAgeExclude`.
+Dependencies are added with `pnpm add`, never by editing a version by hand. Every third-party version is written once, exactly, in the catalog in `pnpm-workspace.yaml`: a private package names it as `catalog:` (`pnpm add --save-catalog <name>@<version>`) and a sibling as `workspace:*`. The published `process-graph` manifest names literal versions instead, because `npm publish` ships a protocol specifier verbatim: its dependencies exactly, and its peer dependencies as caret ranges on the lowest tested version, which the catalog's version satisfies, except a prerelease peer (oRPC's betas, Drizzle's release candidate), which stays exact because a prerelease has no compatible-range semantics; `pnpm run deps:lint` (`syncpack` and `scripts/check-published-manifests.ts`) holds both rules. The install age gate in `pnpm-workspace.yaml` is never lowered; ExaDev's own packages are the only entries in `minimumReleaseAgeExclude`.
 
 ## Commands
 

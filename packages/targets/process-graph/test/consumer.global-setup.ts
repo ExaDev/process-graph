@@ -24,7 +24,7 @@ declare module "vitest" {
 const packageDirectory = fileURLToPath(new URL("..", import.meta.url));
 
 /**
- * Each peer dependency the manifest declares, as `name@version`, so the consumer installs every optional subpath's libraries at the versions the package was built against.
+ * Each peer dependency the manifest declares, as `name@version` at the lowest version its specifier admits, so the consumer installs every optional subpath's libraries at the floor the manifest claims was tested. A stable peer is a caret range on one version and a prerelease peer is that version exactly (`scripts/check-published-manifests.ts` holds both), so dropping a leading caret gives the floor.
  * @returns The install specifiers.
  */
 const peerSpecifiers = (): string[] => {
@@ -42,7 +42,8 @@ const peerSpecifiers = (): string[] => {
   }
 
   return Object.entries(manifest.peerDependencies).map(
-    ([name, version]: [string, unknown]) => `${name}@${String(version)}`,
+    ([name, version]: [string, unknown]) =>
+      `${name}@${String(version).replace(/^\^/, "")}`,
   );
 };
 

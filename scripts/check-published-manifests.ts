@@ -4,10 +4,15 @@ import {
   discoverWorkspace,
   type WorkspacePackage,
 } from "@exadev/semantic-release-workspace";
+import { prerelease, satisfies } from "semver";
 import { parse } from "yaml";
 
 /**
- * The half of `deps:lint` that syncpack cannot express. A published manifest ships every specifier exactly as written, because `@semantic-release/npm` publishes with `npm publish`, so it must name exact versions, never a `workspace:`, `catalog:`, `link:` or `file:` protocol; each third-party version the catalog names must equal the catalog's, and each sibling version the sibling's own, so the published package was built and tested against what it declares. Every catalog entry must be an exact version too, since the catalog is where the private packages take theirs.
+ * The half of `deps:lint` that syncpack cannot express. A published manifest ships every specifier exactly as written, because `@semantic-release/npm` publishes with `npm publish`, so it must never name a `workspace:`, `catalog:`, `link:` or `file:` protocol. Every catalog entry must be an exact version, since the catalog is where the private packages take theirs.
+ *
+ * `dependencies` and `devDependencies` name exact versions, each third-party one equal to the catalog's and each sibling one equal to the sibling's own, so the published package was built and tested against what it installs.
+ *
+ * `peerDependencies` are the consumer's own installs, so pinning one to a single version would force every consumer onto exactly that version. A peer with a stable version is declared as a caret range on one version, `^<version>`, whose floor is the lowest version tested: the catalog's version, which every test in the workspace runs against, must satisfy it, and the smoke test installs the packed package beside each peer at its floor. A peer whose version is a prerelease (`2.0.0-beta.41`, `1.0.0-rc.4`) stays exact and equal to the catalog's, because a prerelease has no compatible-range semantics: a caret range on one matches only later prereleases of that same version, which may break anything, and no stable release.
  */
 
 /** One rule a manifest or the catalog breaks. */
@@ -30,6 +35,12 @@ const protocolSpecifier = /^(?:workspace|catalog|link|file):/;
 /** An exact semantic version, prerelease and build metadata allowed, with no range operator. */
 const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
+/** A caret range on one exact version, the only range a published peer may declare. */
+const caretRange = new RegExp(`^\\^${exactVersion.source.slice(1)}`);
+
+/** The dependency field whose ranges the consumer resolves against its own installs. */
+const peerField = "peerDependencies";
+
 /**
  * Checks the catalog's entries.
  * @param catalog - The default catalog, library name to version.
@@ -44,6 +55,43 @@ export const checkCatalog = (catalog: ReadonlyMap<string, string>): Finding[] =>
       specifier: version,
       reason: "a catalog entry must be an exact version",
     }));
+
+/**
+ * Checks one peer dependency's specifier.
+ * @param specifier - What the manifest declares.
+ * @param expected - The catalog's or the sibling's version, which the workspace's tests run against; `undefined` when neither names the peer.
+ * @param source - Which of the two `expected` is, for the message.
+ * @returns The reasons the specifier is wrong; empty when it is right.
+ */
+const checkPeer = (
+  specifier: string,
+  expected: string | undefined,
+  source: string,
+): string[] => {
+  const tested = expected ?? specifier.replace(/^\^/, "");
+  if (prerelease(tested) !== null) {
+    if (!exactVersion.test(specifier)) {
+      return [
+        "a prerelease peer must be an exact version, since a prerelease has no compatible-range semantics",
+      ];
+    }
+
+    return expected !== undefined && specifier !== expected
+      ? [`must equal ${source}, ${expected}`]
+      : [];
+  }
+  if (!caretRange.test(specifier)) {
+    return [
+      "a stable peer must be a caret range on the lowest tested version, such as ^1.2.3",
+    ];
+  }
+
+  return expected !== undefined && !satisfies(expected, specifier)
+    ? [
+        `must be satisfied by ${source}, ${expected}, which the tests run against`,
+      ]
+    : [];
+};
 
 /**
  * Checks one published package's manifest against the catalog and its siblings.
@@ -69,14 +117,18 @@ export const checkPublishedManifest = (
           "npm publish ships a protocol specifier verbatim, which no consumer can install",
         );
       }
+      const expected = siblings.get(name) ?? catalog.get(name);
+      const source = siblings.has(name)
+        ? "the sibling's own version"
+        : "the catalog entry";
+      if (field === peerField) {
+        return checkPeer(specifier, expected, source).flatMap(finding);
+      }
       if (!exactVersion.test(specifier)) {
         return finding("a published dependency must be an exact version");
       }
-      const expected = siblings.get(name) ?? catalog.get(name);
       if (expected !== undefined && specifier !== expected) {
-        return finding(
-          `must equal ${siblings.has(name) ? "the sibling's own version" : "the catalog entry"}, ${expected}`,
-        );
+        return finding(`must equal ${source}, ${expected}`);
       }
 
       return [];

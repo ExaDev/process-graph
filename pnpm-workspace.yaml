@@ -10,7 +10,7 @@ packages:
 # - ui/<domain>/<package>: components that render the model.
 # - targets/<package>: deployable entry points, deliberately flat.
 
-# Every private package names its siblings with `workspace:*` and its third-party libraries with `catalog:`, so a version is written once, in the catalog below, and nothing installs a sibling from the registry. The published `process-graph` package is the exception: `@semantic-release/npm` publishes with `npm publish`, which ships a `workspace:` or `catalog:` specifier verbatim, so its manifest names exact versions, which `scripts/check-published-manifests.ts` holds equal to the catalog and to each sibling's own version. linkWorkspacePackages lets those exact sibling versions link the workspace copy rather than resolve from the registry.
+# Every private package names its siblings with `workspace:*` and its third-party libraries with `catalog:`, so a version is written once, in the catalog below, and nothing installs a sibling from the registry. The published `process-graph` package is the exception: `@semantic-release/npm` publishes with `npm publish`, which ships a `workspace:` or `catalog:` specifier verbatim, so its manifest names literal versions, which `scripts/check-published-manifests.ts` holds to the catalog and to each sibling's own version: exact and equal in `dependencies` and `devDependencies`, and in `peerDependencies` a caret range the catalog satisfies, or the exact catalog version for a prerelease. linkWorkspacePackages lets those exact sibling versions link the workspace copy rather than resolve from the registry.
 linkWorkspacePackages: true
 
 saveExact: true
@@ -64,6 +64,7 @@ catalog:
   "@types/node": 26.6.4
   "@types/react": 19.3.0
   "@types/react-dom": 19.3.0
+  "@types/semver": 7.8.0
   "@vanilla-extract/css": 1.21.2
   "@vanilla-extract/recipes": 0.5.7
   "@vanilla-extract/vite-plugin": 5.2.6
@@ -94,6 +95,7 @@ catalog:
   react: 19.3.0
   react-dom: 19.3.0
   semantic-release: 25.0.9
+  semver: 7.8.5
   syncpack: 15.3.3
   trilean: 1.7.2
   turbo: 2.11.7
