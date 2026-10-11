@@ -131,4 +131,16 @@ describe("release-workspace.config.ts", () => {
     expect(config.plugins).toContain("@semantic-release/changelog");
     expect(config.plugins).toContain("@semantic-release/github");
   });
+
+  it("names every published package as one that bundles its private siblings", async () => {
+    const workspace = await discoverWorkspace(import.meta.dirname);
+    const published = workspace.packages
+      .filter((pkg) => !pkg.private)
+      .map((pkg) => pkg.name)
+      .sort();
+
+    expect([...(config.bundlingPackages ?? [])].sort()).toStrictEqual(
+      published,
+    );
+  });
 });

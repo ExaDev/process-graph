@@ -56,11 +56,14 @@ const config: Pick<
   | "commitStrategy"
   | "plugins"
   | "packagePlugins"
+  | "bundlingPackages"
   | "analyzeCommits"
   | "generateNotes"
 > = {
   branches: ["main"],
   commitStrategy: "single",
+  // The one published package inlines the private workspace packages, so it releases at the highest type among the bundled packages that released in the run: a `feat` in a bundled package is a minor release of `process-graph`, not a patch.
+  bundlingPackages: ["process-graph"],
   plugins,
   packagePlugins: Object.fromEntries(
     workspace.packages
