@@ -16,6 +16,11 @@ export const shell = style({
   boxSizing: "border-box",
 });
 
+// Links take the theme's accent, which reads on the background in both themes, rather than the browser's default blue.
+globalStyle(`${shell} a`, {
+  color: vars.colour.accent,
+});
+
 export const header = style({
   display: "flex",
   flexWrap: "wrap",
@@ -158,6 +163,16 @@ export const field = style({
 export const list = style({
   margin: 0,
   paddingLeft: vars.space.large,
+});
+
+/** A row of chips with no list markers or indent. */
+export const chipList = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: vars.space.medium,
+  listStyle: "none",
+  margin: 0,
+  padding: 0,
 });
 
 export const chip = style({
