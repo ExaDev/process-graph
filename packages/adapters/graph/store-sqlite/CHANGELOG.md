@@ -1,3 +1,11 @@
+## [1.0.3](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-store-sqlite@1.0.2...@exadev/process-graph-store-sqlite@1.0.3) (2026-10-11)
+
+
+### Dependencies
+
+- Updated @exadev/process-graph-domain to 1.1.1
+- Updated @exadev/process-graph-store-contract to 1.0.3
+
 ## [1.0.2](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-store-sqlite@1.0.1...@exadev/process-graph-store-sqlite@1.0.2) (2026-10-11)
 
 

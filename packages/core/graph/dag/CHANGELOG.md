@@ -1,3 +1,10 @@
+## [1.1.0](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-dag@1.0.2...@exadev/process-graph-dag@1.1.0) (2026-10-11)
+
+### Features
+
+* **dag:** export stronglyConnectedComponents ([7ebcd9b](https://github.com/ExaDev/process-graph/commit/7ebcd9b2c61323317a661f09ccbcdb9d634feea2))
+* **dag:** find immediate dominators ([fc5f6cb](https://github.com/ExaDev/process-graph/commit/fc5f6cb489ad46ba65916db309608743e0f17ba8))
+
 ## [1.0.2](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-dag@1.0.1...@exadev/process-graph-dag@1.0.2) (2026-10-10)
 
 ### Build System

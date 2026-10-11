@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-domain@1.1.0...@exadev/process-graph-domain@1.1.1) (2026-10-11)
+
+
+### Dependencies
+
+- Updated @exadev/process-graph-dag to 1.1.0
+
 ## [1.1.0](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-domain@1.0.3...@exadev/process-graph-domain@1.1.0) (2026-10-11)
 
 ### Features
