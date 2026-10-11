@@ -1,53 +1,236 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { expect, test } from "vitest";
-// Deliberately imports the built dist/, not src/: this is the check that catches a wrong exports map or a build misconfiguration that a unit test importing straight from src/ never touches.
-import {
-  dag,
-  deriveStatuses,
-  parseModel,
-  readySet,
-  toSwimlane,
-} from "../dist/index.js";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, inject, test } from "vitest";
 
-test("the built package loads a model, projects it and derives its status through one import", () => {
-  const model = parseModel({
-    participants: [
-      { id: "customer", label: "Customer", kind: "role" },
-      { id: "shop", label: "Shop", kind: "system" },
-    ],
-    events: [],
-    actions: [],
-    artefacts: [],
-    elements: [
-      { kind: "activity", id: "submit", label: "Submit", actor: "customer" },
-      { kind: "activity", id: "pack", label: "Pack", actor: "shop" },
-    ],
-    transitions: [{ id: "t1", source: "submit", target: "pack" }],
-    fragments: [],
-    projections: [],
+// Every test here runs against the packed tarball installed into a throwaway project by `consumer.global-setup.ts`, never against src/ or the workspace: this is the check that catches a wrong exports map, a declaration or import that still names a private workspace package, or a manifest that ships a specifier no consumer can install.
+const consumer = inject("consumer");
+const installed = join(consumer, "node_modules", "process-graph");
+
+/**
+ * Runs an ES module in the consumer's project, as a consumer's own code would run, and parses the JSON it prints.
+ * @param source - The module's source; it prints one JSON document.
+ * @returns The printed document.
+ */
+const evaluate = (source: string): unknown => {
+  const result = spawnSync(
+    process.execPath,
+    ["--input-type=module", "--eval", source],
+    { cwd: consumer, encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error(result.stderr);
+  }
+  const printed: unknown = JSON.parse(result.stdout);
+
+  return printed;
+};
+
+/** A two-actor model, the same in every test that needs one. */
+const model = `{
+  participants: [
+    { id: "customer", label: "Customer", kind: "role" },
+    { id: "shop", label: "Shop", kind: "system" },
+  ],
+  events: [],
+  actions: [],
+  artefacts: [],
+  elements: [
+    { kind: "activity", id: "submit", label: "Submit", actor: "customer" },
+    { kind: "activity", id: "pack", label: "Pack", actor: "shop" },
+  ],
+  transitions: [{ id: "t1", source: "submit", target: "pack" }],
+  fragments: [],
+  projections: [],
+}`;
+
+/** Every file under a directory, recursively. */
+const filesUnder = (directory: string): string[] =>
+  readdirSync(directory, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => join(entry.parentPath, entry.name));
+
+describe("the packed package", () => {
+  test("ships no protocol specifier in its manifest", () => {
+    const manifest = readFileSync(join(installed, "package.json"), "utf8");
+
+    expect(manifest).not.toMatch(/"(?:catalog|workspace):/);
   });
-  const facts = () => ({ found: false }) as const;
 
-  expect(
-    toSwimlane(model).lanes.map((lane) => [lane.participant, lane.nodes]),
-  ).toEqual([
-    ["customer", ["submit"]],
-    ["shop", ["pack"]],
-  ]);
-  expect([...deriveStatuses(model, { submit: "done" }, facts)]).toEqual([
-    ["submit", "done"],
-    ["pack", "ready"],
-  ]);
-  expect(readySet(model, {}, facts)).toEqual(["submit"]);
-  expect(typeof dag.criticalPath).toBe("function");
+  test("names no private workspace package in any file it ships", () => {
+    const naming = filesUnder(join(installed, "dist")).filter((file) =>
+      readFileSync(file, "utf8").includes("@exadev/process-graph-"),
+    );
+
+    expect(naming).toEqual([]);
+  });
+
+  test.each([
+    {
+      subpath: "process-graph/ui/style.css",
+      holding: "a rule",
+      rule: /\{[^}]+\}/,
+    },
+    {
+      subpath: "process-graph/react-flow/style.css",
+      holding: "React Flow's own rules",
+      rule: /\.react-flow/,
+    },
+  ])(
+    "ships $subpath, resolvable through its subpath and holding $holding",
+    ({ subpath, rule }) => {
+      const stylesheet = evaluate(`
+      import { readFileSync } from "node:fs";
+      import { fileURLToPath } from "node:url";
+      console.log(JSON.stringify(readFileSync(fileURLToPath(import.meta.resolve("${subpath}")), "utf8")));
+    `);
+
+      expect(typeof stylesheet === "string" && rule.test(stylesheet)).toBe(
+        true,
+      );
+    },
+  );
 });
 
-test("the built process-graph bin runs the command line as a process with this package's version", () => {
-  const bin = fileURLToPath(new URL("../dist/bin.js", import.meta.url));
+describe("each subpath, imported from the installed package", () => {
+  test("process-graph loads a model, projects it and derives its status", () => {
+    expect(
+      evaluate(`
+        import { dag, deriveStatuses, parseModel, readySet, toSwimlane } from "process-graph";
+        const model = parseModel(${model});
+        const facts = () => ({ found: false });
+        console.log(JSON.stringify({
+          lanes: toSwimlane(model).lanes.map((lane) => [lane.participant, lane.nodes]),
+          statuses: [...deriveStatuses(model, { submit: "done" }, facts)],
+          ready: readySet(model, {}, facts),
+          layers: dag.topologicalLayers(dag.buildDag(["a", "b"], (id) => (id === "b" ? ["a"] : []))).layers,
+        }));
+      `),
+    ).toEqual({
+      lanes: [
+        ["customer", ["submit"]],
+        ["shop", ["pack"]],
+      ],
+      statuses: [
+        ["submit", "done"],
+        ["pack", "ready"],
+      ],
+      ready: ["submit"],
+      layers: [["a"], ["b"]],
+    });
+  });
+
+  test("process-graph/layout places a projected flowchart", () => {
+    expect(
+      evaluate(`
+        import { parseModel, toFlowchart } from "process-graph";
+        import { layout } from "process-graph/layout";
+        const placed = await layout(toFlowchart(parseModel(${model})));
+        console.log(JSON.stringify(Object.keys(placed.sizes).sort()));
+      `),
+    ).toEqual(expect.arrayContaining(["pack", "submit"]));
+  });
+
+  test("process-graph/source/github and its node entry build a GitHub source and its token port", () => {
+    expect(
+      evaluate(`
+        import { createFakeGraphSource, createGitHubIssuesSource, graphSourceContract } from "process-graph/source/github";
+        import { githubTokenFromEnvironment } from "process-graph/source/github/node";
+        console.log(JSON.stringify({
+          adapter: typeof createGitHubIssuesSource,
+          fake: typeof createFakeGraphSource,
+          contract: typeof graphSourceContract,
+          token: await githubTokenFromEnvironment({ env: { GITHUB_TOKEN: "example-token" } })(),
+        }));
+      `),
+    ).toEqual({
+      adapter: "function",
+      fake: "function",
+      contract: "object",
+      token: "example-token",
+    });
+  });
+
+  test("process-graph/store and process-graph/store/node save and load a model on node:sqlite", () => {
+    expect(
+      evaluate(`
+        import { createGraphStoreRouter } from "process-graph/store";
+        import { openNodeGraphStore } from "process-graph/store/node";
+        import { parseModel } from "process-graph";
+        const { store, close } = openNodeGraphStore(":memory:");
+        await store.saveModel({ modelId: "orders", model: parseModel(${model}), signal: undefined });
+        const loaded = await store.loadModel({ modelId: "orders", signal: undefined });
+        close();
+        console.log(JSON.stringify({
+          router: typeof createGraphStoreRouter(store),
+          elements: loaded.model.elements.map((element) => element.id),
+        }));
+      `),
+    ).toEqual({ router: "object", elements: ["submit", "pack"] });
+  });
+
+  test("process-graph/store/wasm and its worker entry resolve to the page and worker halves", () => {
+    expect(
+      evaluate(`
+        import { connectGraphStore } from "process-graph/store/wasm";
+        import { serveGraphStoreInWorker } from "process-graph/store/wasm/worker";
+        console.log(JSON.stringify([typeof connectGraphStore, typeof serveGraphStoreInWorker]));
+      `),
+    ).toEqual(["function", "function"]);
+  });
+
+  test("process-graph/react, ui and react-flow are separate subpaths, the styled components apart from the headless ones", () => {
+    expect(
+      evaluate(`
+        import * as react from "process-graph/react";
+        import * as ui from "process-graph/ui";
+        import { ProcessFlow, toFlow } from "process-graph/react-flow";
+        console.log(JSON.stringify({
+          hook: typeof react.useModel,
+          theme: typeof ui.GraphTheme,
+          flow: [typeof ProcessFlow, typeof toFlow],
+          distinctCards: react.ElementCard !== ui.ElementCard,
+        }));
+      `),
+    ).toEqual({
+      hook: "function",
+      theme: "function",
+      flow: ["function", "function"],
+      distinctCards: true,
+    });
+  });
+
+  test("process-graph/cli runs a command through the Node ports", () => {
+    expect(
+      evaluate(`
+        import { mkdtempSync, rmSync } from "node:fs";
+        import { tmpdir } from "node:os";
+        import { join } from "node:path";
+        import { exitCodes, nodePorts, runCli } from "process-graph/cli";
+        const directory = mkdtempSync(join(tmpdir(), "process-graph-cli-"));
+        let stdout = "";
+        const ports = nodePorts({
+          env: { PROCESS_GRAPH_DATA: join(directory, "graph.sqlite3") },
+          stdout: (text) => { stdout += text; },
+        });
+        const identity = { name: "process-graph", version: "0.0.0" };
+        const added = await runCli(["add", "activity", "build", "Build"], ports, identity);
+        const ready = await runCli(["ready"], ports, identity);
+        rmSync(directory, { recursive: true, force: true });
+        console.log(JSON.stringify({ added: added === exitCodes.success, ready: ready === exitCodes.success, stdout }));
+      `),
+    ).toEqual({
+      added: true,
+      ready: true,
+      stdout: "added activity build at revision 1\nbuild\tBuild\n",
+    });
+  });
+});
+
+describe("the installed bin", () => {
+  const bin = join(consumer, "node_modules", ".bin", "process-graph");
   const manifest: unknown = JSON.parse(
-    readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+    readFileSync(join(installed, "package.json"), "utf8"),
   );
   const version =
     typeof manifest === "object" &&
@@ -57,13 +240,19 @@ test("the built process-graph bin runs the command line as a process with this p
       ? manifest.version
       : undefined;
 
-  const result = spawnSync(process.execPath, [bin, "--version"], {
-    encoding: "utf8",
-  });
-  const help = spawnSync(process.execPath, [bin, "--help"], {
-    encoding: "utf8",
+  test("prints the command line's help", () => {
+    const help = spawnSync(bin, ["--help"], {
+      cwd: consumer,
+      encoding: "utf8",
+    });
+
+    expect(help).toMatchObject({ status: 0 });
+    expect(help.stdout).toContain("Usage: process-graph [options] [command]");
   });
 
-  expect(result).toMatchObject({ status: 0, stdout: `${String(version)}\n` });
-  expect(help.stdout).toContain("Usage: process-graph [options] [command]");
+  test("reports the package's version", () => {
+    expect(
+      spawnSync(bin, ["--version"], { cwd: consumer, encoding: "utf8" }),
+    ).toMatchObject({ status: 0, stdout: `${String(version)}\n` });
+  });
 });
