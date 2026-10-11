@@ -21,6 +21,11 @@ updates:
       # Version 10 of the preset needs conventional-changelog-writer 9, but @semantic-release/release-notes-generator still loads writer 8, so generating notes throws and no release is published. Lift this once that plugin depends on writer 9.
       - dependency-name: "conventional-changelog-conventionalcommits"
         update-types: ["version-update:semver-major"]
+      # @stryker-mutator/vitest-runner 10.0.0 does not exercise mutants under vitest 5: the same package scores about 4 there and about 94 on vitest 4, so every mutation result on vitest 5 is vacuous. Lift these once the runner supports vitest 5 and a package's score is unchanged by the bump.
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitest/*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
