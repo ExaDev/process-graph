@@ -11,5 +11,7 @@ export default defineConfig(
     isomorphic: true,
     browserGlobals: true,
     react: { version },
+    // The `./theme` entry point, a pure re-export of the theme contract and values beside the components' `src/index.ts`.
+    barrelEntries: ["src/theme.ts"],
   }),
 );
