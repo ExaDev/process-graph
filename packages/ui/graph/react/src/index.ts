@@ -36,6 +36,7 @@ export {
 export {
   useGraphSelection,
   type GraphSelection,
+  type GraphSelectionOptions,
   type SelectionContainerProps,
   type SelectionItemProps,
 } from "./selection.ts";
