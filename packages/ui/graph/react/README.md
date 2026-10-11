@@ -48,25 +48,25 @@ const Cards = ({ run }) => {
 
 ## Hooks
 
-| Hook                                 | Result                                                                                                  |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `useModel(client, modelId)`          | `loading`, then `loaded` with the stored model, overlay and revision, or `failed` with the error.       |
-| `useStatuses(run)`                   | Every element's `Status`, by `deriveStatuses`.                                                          |
-| `useReadySet(run)`                   | The ready elements, by `readySet`.                                                                      |
-| `useBlockedChain(run, id)`           | The chain of unfinished work behind an element and the blockers at its end.                             |
-| `useBlockers(run)`                   | Each blocked element's blockers, for a view that shows them beside every element.                       |
-| `useImpact(run, id)`                 | The live work downstream of an element, by `impact`.                                                    |
-| `useWhyStatus(run, id)`              | The `StatusExplanation` of an element, by `explainStatus`.                                              |
-| `useCriticalPath(run, weight?)`      | The heaviest chain through the work ahead; each element weighs one step unless `weight` says otherwise. |
-| `useProjection(model, projection)`   | The view a projection names, as `{ notation, view }`.                                                   |
-| `useElementFilter(initial?)`         | A filter by status, actor and source, with toggles and `clear`.                                         |
-| `useGraphSelection(order, options?)` | The selected element, a setter, and container and item props for keyboard navigation.                   |
+| Hook                                 | Result                                                                                                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useModel(client, modelId)`          | `loading`, then `loaded` with the stored model, overlay and revision, `missing` while the store has no such model, or `failed` with the error. |
+| `useStatuses(run)`                   | Every element's `Status`, by `deriveStatuses`.                                                                                                 |
+| `useReadySet(run)`                   | The ready elements, by `readySet`.                                                                                                             |
+| `useBlockedChain(run, id)`           | The chain of unfinished work behind an element and the blockers at its end.                                                                    |
+| `useBlockers(run)`                   | Each blocked element's blockers, for a view that shows them beside every element.                                                              |
+| `useImpact(run, id)`                 | The live work downstream of an element, by `impact`.                                                                                           |
+| `useWhyStatus(run, id)`              | The `StatusExplanation` of an element, by `explainStatus`.                                                                                     |
+| `useCriticalPath(run, weight?)`      | The heaviest chain through the work ahead; each element weighs one step unless `weight` says otherwise.                                        |
+| `useProjection(model, projection)`   | The view a projection names, as `{ notation, view }`.                                                                                          |
+| `useElementFilter(initial?)`         | A filter by status, actor and source, with toggles and `clear`.                                                                                |
+| `useGraphSelection(order, options?)` | The selected element, a setter, and container and item props for keyboard navigation.                                                          |
 
 A `Run` is `{ model, overlay, facts }`. `noFacts` is the facts port of a run with no facts source: every condition that reads a fact is indeterminate. Keep the three parts stable between renders; the hooks recompute when one of them changes identity. A hook that derives status throws what `graph-domain` throws (an illegal cycle, an unknown element), so an error boundary shows it.
 
 ### Following a store
 
-`useModel` takes any `GraphStore` client from `@exadev/process-graph-store-contract`: an in-process router client, one over a `MessagePort` to the SQLite worker, or one over HTTP. It subscribes to the model's changes before loading it, loads again on every change newer than what it shows, and aborts both when the component unmounts or the client or model id changes. A model that does not exist, or is deleted, ends in `failed` with the store's `NOT_FOUND`.
+`useModel` takes any `GraphStore` client from `@exadev/process-graph-store-contract`: an in-process router client, one over a `MessagePort` to the SQLite worker, or one over HTTP. It subscribes to the model's changes before loading it, loads again on every change newer than what it shows, and aborts both when the component unmounts or the client or model id changes. A model the store does not have, yet or any more, is `missing` and still followed, so the write that creates it (a sync, a save) loads it; any other error ends in `failed`.
 
 ### Filtering
 
