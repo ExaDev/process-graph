@@ -27,6 +27,8 @@ import {
   UpdateNotice,
 } from "./notices.tsx";
 import type { AppPorts, ThemePreference } from "./ports.ts";
+import { isBoardScope } from "./scope-input.ts";
+import { ScopeOptions } from "./scope-options.tsx";
 import { ScopePicker } from "./scope-picker.tsx";
 import { ScopeSuggestions, type ScopeLister } from "./scope-suggestions.tsx";
 import { SyncPanel } from "./sync-panel.tsx";
@@ -83,7 +85,7 @@ export const App = (props: AppProps): ReactElement => {
   const themeId = useId();
   const mainId = useId();
   const modelId = modelIdOf(state.scopes);
-  const sync = useSync(ports, modelId, state.scopes);
+  const sync = useSync(ports, modelId, state.scopes, state.syncFilter);
   const theme =
     preference === "system" ? (prefersDark ? "dark" : "light") : preference;
   const { start } = sync;
@@ -199,6 +201,15 @@ export const App = (props: AppProps): ReactElement => {
               update((current) => withScopes(current, scopes));
             }}
           />
+          {state.scopes.length === 0 ? null : (
+            <ScopeOptions
+              filter={state.syncFilter}
+              hasBoard={state.scopes.some(isBoardScope)}
+              onChange={(syncFilter) => {
+                update((current) => ({ ...current, syncFilter }));
+              }}
+            />
+          )}
           {hasToken && online ? (
             <ScopeSuggestions
               list={listScopes}

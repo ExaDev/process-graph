@@ -1,4 +1,4 @@
-import type { Gap } from "@exadev/process-graph-source-contract";
+import type { Gap, SyncFilter } from "@exadev/process-graph-source-contract";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { failureOf, type Failure } from "./failure.ts";
 import type { AppPorts } from "./ports.ts";
@@ -41,12 +41,14 @@ const idle: SyncState = { phase: "idle" };
  * @param ports - The app's ports: the store, the sources, the token and the sync records. The token is read when a sync starts and handed straight to the sources, so it never enters React state.
  * @param modelId - The model the scopes sync into.
  * @param scopes - The scopes, in order.
+ * @param filter - What a new sync reads of each scope. A resumed sync reads under the filter its checkpoint was issued with, since a source's cursor is valid only under that filter.
  * @returns The sync's state, its record and its controls.
  */
 export const useSync = (
   ports: AppPorts,
   modelId: string,
   scopes: readonly string[],
+  filter: SyncFilter | undefined,
 ): SyncHandle => {
   const [state, setState] = useState<{
     readonly modelId: string;
@@ -101,6 +103,7 @@ export const useSync = (
         sources: ports.sources(token),
         modelId,
         scopes,
+        filter: resume === undefined ? filter : resume.filter,
         resume,
         signal: current.signal,
         onProgress: (progress) => {
@@ -133,7 +136,7 @@ export const useSync = (
         },
       );
     },
-    [ports, modelId, scopes],
+    [ports, modelId, scopes, filter],
   );
 
   const start = useCallback(() => {
