@@ -1,7 +1,7 @@
 import type { FlowLayoutOptions } from "@exadev/process-graph-react-flow";
 import type { GraphStoreClient } from "@exadev/process-graph-store-contract";
 import type { SyncRecord } from "./sync-record.ts";
-import type { SourceLookup } from "./sync.ts";
+import type { SourceLookup } from "@exadev/process-graph-sync";
 
 /** A value that changes over time and tells its listeners when it does, in the shape React's `useSyncExternalStore` reads. */
 export interface Observable<T> {

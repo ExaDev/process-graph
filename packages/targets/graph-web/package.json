@@ -50,6 +50,7 @@
     "@exadev/process-graph-source-github-issues": "workspace:*",
     "@exadev/process-graph-sqlite-wasm": "workspace:*",
     "@exadev/process-graph-store-contract": "workspace:*",
+    "@exadev/process-graph-sync": "workspace:*",
     "@exadev/process-graph-ui": "workspace:*",
     "@orpc/client": "catalog:",
     "@orpc/server": "catalog:",

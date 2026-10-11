@@ -103,6 +103,8 @@ interface Issue {
   readonly repository: string;
   readonly state: "done" | "open";
   readonly blockedBy: readonly string[];
+  /** The issue this one is a sub-issue of. */
+  readonly parent?: string;
 }
 
 const repositoryParticipant = (repository: string) => ({
@@ -112,7 +114,7 @@ const repositoryParticipant = (repository: string) => ({
 });
 
 /**
- * A page of the fake GitHub source, built as the real adapter builds one: each issue a bound activity whose actor is its repository, each blocker a transition from it to the issue it blocks, and the state in the overlay.
+ * A page of the fake GitHub source, built as the real adapter builds one: each issue a bound activity whose actor is its repository, each blocker a transition from it to the issue it blocks, each sub-issue `child-of` its parent, and the state in the overlay.
  * @param issues - The page's issues, with every blocker among them.
  */
 export const pageOf = (issues: readonly Issue[]): FakePage => ({
@@ -133,7 +135,11 @@ export const pageOf = (issues: readonly Issue[]): FakePage => ({
       target: issue.id,
     })),
   ),
-  relations: [],
+  relations: issues.flatMap((issue) =>
+    issue.parent === undefined
+      ? []
+      : [{ kind: "child-of" as const, from: issue.id, to: issue.parent }],
+  ),
   overlay: Object.fromEntries(issues.map((issue) => [issue.id, issue.state])),
   gaps: [],
 });
@@ -180,6 +186,7 @@ const webPage: FakePage = pageOf([
     repository: "github:acme/web",
     state: "open",
     blockedBy: ["github:acme/api#2", "github:partner/sdk#1"],
+    parent: "github:acme/web#2",
   },
   {
     id: "github:acme/web#2",

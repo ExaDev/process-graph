@@ -205,6 +205,41 @@ describe("the details", () => {
     });
   });
 
+  test("link an element's parent and sub-tasks, each selecting it", async () => {
+    const ports = await synced(`${acme}&select=github%3Aacme%2Fweb%231`);
+
+    const parents = await waitFor(() => {
+      const found = document.querySelector('[data-hierarchy="parent"]');
+      if (!(found instanceof HTMLElement)) {
+        throw new Error("no parent is listed yet");
+      }
+
+      return found;
+    });
+    expect(within(parents).getByRole("heading").textContent).toBe("Part of");
+    expect(document.querySelector('[data-hierarchy="child"]')).toBeNull();
+    fireEvent.click(
+      within(parents).getByRole("button", { name: "Ship the release" }),
+    );
+
+    expect(addressOf(ports).selected).toBe("github:acme/web#2");
+    const children = await waitFor(() => {
+      const found = document.querySelector('[data-hierarchy="child"]');
+      if (!(found instanceof HTMLElement)) {
+        throw new Error("no sub-task is listed yet");
+      }
+
+      return found;
+    });
+    expect(within(children).getByRole("heading").textContent).toBe("Sub-tasks");
+    expect(
+      within(children)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Build the page"]);
+    expect(document.querySelector('[data-hierarchy="parent"]')).toBeNull();
+  });
+
   test("say when a link selects an element the model does not have", async () => {
     await synced(`${acme}&select=github%3Aacme%2Fapi%2399`);
 

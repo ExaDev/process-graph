@@ -246,6 +246,10 @@ const Workspace = (props: WorkspaceProps): ReactElement => {
             onSetArtefact={setArtefact}
             onSetFact={setFact}
             onAddScope={onAddScope}
+            store={ports.store}
+            modelId={modelId}
+            revision={props.stored.revision}
+            onSelect={select}
           />
         )}
         <WorkLists
