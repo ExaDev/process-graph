@@ -36,9 +36,9 @@ const flowchart: Flowchart<OpenIds> = {
     { id: "ok", label: "OK?", shape: "decision" },
   ],
   edges: [
-    { from: "start", to: "github:acme/app#1" },
-    { from: "github:acme/app#1", to: "fork" },
-    { from: "fork", to: "ok", label: "a|b" },
+    { from: "start", to: "github:acme/app#1", transitions: ["t1"] },
+    { from: "github:acme/app#1", to: "fork", transitions: ["t2"] },
+    { from: "fork", to: "ok", label: "a|b", transitions: ["t3"] },
   ],
   loss: [],
 };
@@ -86,15 +86,16 @@ const stateMachine: StateMachine<OpenIds> = {
     { id: "end", label: "End", role: "final" },
   ],
   transitions: [
-    { source: "begin", target: "placed" },
+    { source: "begin", target: "placed", transitions: ["t1"] },
     {
       source: "placed",
       target: "paid",
       event: "pay",
       guard: "card ok",
       effect: "receipt",
+      transitions: ["t2"],
     },
-    { source: "paid", target: "end", effect: "archive" },
+    { source: "paid", target: "end", effect: "archive", transitions: ["t3"] },
   ],
   loss: [],
 };
