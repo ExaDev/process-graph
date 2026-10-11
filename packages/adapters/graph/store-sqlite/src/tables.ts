@@ -7,6 +7,7 @@ import {
   participantKinds,
   pseudoRoles,
 } from "@exadev/process-graph-schema";
+import { relationKinds } from "@exadev/process-graph-store-contract";
 import {
   index,
   integer,
@@ -169,4 +170,26 @@ export const overlay = sqliteTable(
     status: text("status", { enum: overlayStatuses }).notNull(),
   },
   (table) => [primaryKey({ columns: [table.modelId, table.element] })],
+);
+
+/**
+ * Relations kept beside a model, one row per kind and pair of ends, so a relation sent twice is stored once, with `position` keeping the order relations were first stored. The ends are identifiers of the model's elements or participants, by kind.
+ */
+export const relations = sqliteTable(
+  "relations",
+  {
+    modelId: text("model_id").notNull(),
+    kind: text("kind", { enum: relationKinds }).notNull(),
+    from: text("from_id").notNull(),
+    to: text("to_id").notNull(),
+    position: integer("position").notNull(),
+  },
+  (table) => [
+    // The key also serves the walk from a child up to its parents, which starts from `from_id`.
+    primaryKey({
+      columns: [table.modelId, table.kind, table.from, table.to],
+    }),
+    // The walk from a parent down to its children starts from `to_id`.
+    index("relations_by_to").on(table.modelId, table.kind, table.to),
+  ],
 );

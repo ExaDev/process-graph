@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { SqliteDatabase } from "./database.ts";
 
 /**
- * The structural queries of the `GraphStore` contract in SQL, each one recursive query over `transitions`, `elements` and `overlay` through Drizzle's `sql` template. They read the stored `loop` flag rather than the model, so they never load or evaluate it, and they answer exactly as the contract's reference implementation (`readyOf`, `blockedChainOf`, `impactOf`) does, which the conformance kit checks.
+ * The structural queries of the `GraphStore` contract in SQL, each one recursive query over `transitions`, `elements` and `overlay` (or, for the hierarchy, `relations` and `elements`) through Drizzle's `sql` template. They read the stored `loop` flag rather than the model, so they never load or evaluate it, and they answer exactly as the contract's reference implementation (`readyOf`, `blockedChainOf`, `impactOf`, `childrenOf`, `descendantsOf`, `ancestorsOf`) does, which the conformance kit checks.
  */
 
 /** A query about one element of one model. */
@@ -144,3 +144,87 @@ export const ready = async (
 
   return rows.map((row) => idRow.parse(row)[0]);
 };
+
+/** Which way a hierarchy walk follows `child-of` relations: from a parent (`to_id`) to its children (`from_id`), or from a child to its parents. */
+const down: Direction = { from: sql.raw("to_id"), to: sql.raw("from_id") };
+const up: Direction = { from: sql.raw("from_id"), to: sql.raw("to_id") };
+
+/**
+ * Every element reachable from `element` along `child-of` relations in one direction, with the fewest relations it takes, by that distance and then model order. The element itself is never reported.
+ *
+ * Distances are capped at the model's element count: no shortest path is longer, and the cap ends the recursion on a cycle of `child-of` relations.
+ */
+const hierarchyWalk = async (
+  db: SqliteDatabase,
+  { modelId, element }: ElementQuery,
+  { from, to }: Direction,
+): Promise<readonly Reach[]> => {
+  const rows = await db.values(sql`
+    WITH RECURSIVE
+      bound(n) AS (SELECT count(*) FROM elements WHERE model_id = ${modelId}),
+      walk(element, distance) AS (
+        SELECT r.${to}, 1 FROM relations r
+          WHERE r.model_id = ${modelId} AND r.kind = 'child-of' AND r.${from} = ${element}
+        UNION
+        SELECT r.${to}, w.distance + 1 FROM walk w
+          JOIN relations r ON r.model_id = ${modelId} AND r.kind = 'child-of' AND r.${from} = w.element
+          WHERE w.distance < (SELECT n FROM bound)
+      )
+    SELECT w.element, min(w.distance) AS distance
+      FROM walk w
+      JOIN elements e ON e.model_id = ${modelId} AND e.id = w.element
+      WHERE w.element <> ${element}
+      GROUP BY w.element, e.position
+      ORDER BY distance, e.position
+  `);
+
+  return rows.map((row) => {
+    const [reached, distance] = reachRow.parse(row);
+
+    return { element: reached, distance };
+  });
+};
+
+/**
+ * The direct children of an element: every element related to it by `child-of`, other than itself.
+ * @param db - The database.
+ * @param request - The model and the element, which the caller has checked exist.
+ * @returns The children, in model order.
+ */
+export const children = async (
+  db: SqliteDatabase,
+  request: ElementQuery,
+): Promise<readonly string[]> => {
+  const { modelId, element } = request;
+  const rows = await db.values(sql`
+    SELECT r.from_id FROM relations r
+      JOIN elements e ON e.model_id = ${modelId} AND e.id = r.from_id
+      WHERE r.model_id = ${modelId} AND r.kind = 'child-of' AND r.to_id = ${element}
+        AND r.from_id <> ${element}
+      ORDER BY e.position
+  `);
+
+  return rows.map((row) => idRow.parse(row)[0]);
+};
+
+/**
+ * Everything beneath an element along `child-of` relations.
+ * @param db - The database.
+ * @param request - The model and the element, which the caller has checked exist.
+ * @returns The descendants, by distance and then model order.
+ */
+export const descendants = async (
+  db: SqliteDatabase,
+  request: ElementQuery,
+): Promise<readonly Reach[]> => hierarchyWalk(db, request, down);
+
+/**
+ * Everything above an element along `child-of` relations.
+ * @param db - The database.
+ * @param request - The model and the element, which the caller has checked exist.
+ * @returns The ancestors, by distance and then model order.
+ */
+export const ancestors = async (
+  db: SqliteDatabase,
+  request: ElementQuery,
+): Promise<readonly Reach[]> => hierarchyWalk(db, request, up);
