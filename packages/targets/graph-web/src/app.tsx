@@ -1,5 +1,13 @@
+import { githubSource } from "@exadev/process-graph-source-github-issues";
 import { GraphTheme } from "@exadev/process-graph-ui";
-import { useEffect, useId, useRef, useState, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactElement,
+} from "react";
 import {
   button,
   header,
@@ -20,6 +28,7 @@ import {
 } from "./notices.tsx";
 import type { AppPorts, ThemePreference } from "./ports.ts";
 import { ScopePicker } from "./scope-picker.tsx";
+import { ScopeSuggestions, type ScopeLister } from "./scope-suggestions.tsx";
 import { SyncPanel } from "./sync-panel.tsx";
 import { TokenPanel } from "./token-panel.tsx";
 import { modelIdOf, type ViewState } from "./url-state.ts";
@@ -78,6 +87,30 @@ export const App = (props: AppProps): ReactElement => {
   const theme =
     preference === "system" ? (prefersDark ? "dark" : "light") : preference;
   const { start } = sync;
+  // The token is read at the moment of each listing and handed straight to the source, as a sync does, so it never enters React state.
+  const listScopes: ScopeLister = useCallback(
+    async (parent, after) => {
+      const token = ports.token.read();
+      const github =
+        token === undefined ? undefined : ports.sources(token)(githubSource);
+      if (github === undefined) {
+        throw new Error("Save a GitHub token to list what it reaches.");
+      }
+      const from = after === undefined ? {} : { after };
+
+      return parent === undefined
+        ? github.v1.scopes.roots(from)
+        : github.v1.scopes.children({ scope: parent, ...from });
+    },
+    [ports],
+  );
+  const addScope = (scope: string): void => {
+    update((current) =>
+      current.scopes.includes(scope)
+        ? current
+        : withScopes(current, [...current.scopes, scope]),
+    );
+  };
 
   // A scope added from an element's details is synced as soon as its model is the one shown, so expanding on demand is one action.
   useEffect(() => {
@@ -166,6 +199,13 @@ export const App = (props: AppProps): ReactElement => {
               update((current) => withScopes(current, scopes));
             }}
           />
+          {hasToken && online ? (
+            <ScopeSuggestions
+              list={listScopes}
+              scopes={state.scopes}
+              onAdd={addScope}
+            />
+          ) : null}
           {state.scopes.length === 0 ? (
             <p className={muted}>
               Choose an organisation or repository to see its work.
