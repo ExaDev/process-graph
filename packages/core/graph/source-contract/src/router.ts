@@ -8,7 +8,12 @@ import {
 import { graphSourceContract } from "./contract.ts";
 import { GraphSourceError } from "./errors.ts";
 import { paginate } from "./paginate.ts";
-import type { SyncInput, SyncPage } from "./schema.ts";
+import type {
+  ScopeListing,
+  SyncFilter,
+  SyncInput,
+  SyncPage,
+} from "./schema.ts";
 
 /** One request for a page, as a pager receives it. */
 export interface PageRequest {
@@ -18,6 +23,42 @@ export interface PageRequest {
   readonly cursor: string | undefined;
   /** The caller's abort signal. A pager passes it to every request it makes and stops when it fires. */
   readonly signal: AbortSignal | undefined;
+  /** What narrows and orders each scope's listing; absent or `undefined`, nothing narrows it. A cursor issued under one filter is not valid under another. */
+  readonly filter?: SyncFilter | undefined;
+}
+
+/** One request for a page of a scope listing. */
+export interface ListingRequest {
+  /** Where to start: the `next` of the page before, or `undefined` for the first page. */
+  readonly cursor: string | undefined;
+  /** The caller's abort signal, passed to every request the listing makes. */
+  readonly signal: AbortSignal | undefined;
+}
+
+/** One request for a page of the scopes inside a scope. */
+export interface ChildrenRequest extends ListingRequest {
+  /** The scope identifier whose child scopes to list. */
+  readonly scope: string;
+}
+
+/**
+ * How a source lists the scopes a person can choose to sync, one page at a time. Cursors follow the pager's rules: stable, holding no in-memory state, and valid only for the listing (and parent) that issued them, so a foreign one throws `GraphSourceError` with `bad-request` and `invalid-cursor`.
+ */
+export interface GraphSourceScopes {
+  /**
+   * Lists the top-level scopes the credentials reach.
+   * @param request - The cursor to start after, and the abort signal.
+   * @returns One page of entries, with `next` absent on the last.
+   * @throws GraphSourceError for a failure that ends the call.
+   */
+  readonly roots: (request: ListingRequest) => Promise<ScopeListing>;
+  /**
+   * Lists the scopes inside one scope. A parent that does not exist, or that the credentials cannot see, is a gap on an empty page; a scope with nothing inside it is an empty page; a parent that is not a scope identifier of this source throws `bad-request` with `invalid-scope`.
+   * @param request - The parent scope, the cursor to start after, and the abort signal.
+   * @returns One page of entries, with `next` absent on the last.
+   * @throws GraphSourceError for a failure that ends the call.
+   */
+  readonly children: (request: ChildrenRequest) => Promise<ScopeListing>;
 }
 
 /**
@@ -35,6 +76,8 @@ export interface GraphSourcePager {
    * @throws GraphSourceError for a failure that ends the call.
    */
   readonly page: (request: PageRequest) => Promise<SyncPage>;
+  /** Lists the scopes a person can choose from. Absent, the source offers no listing and the router answers its procedures with `NOT_IMPLEMENTED`. */
+  readonly scopes?: GraphSourceScopes;
 }
 
 const os = implement(graphSourceContract);
@@ -80,18 +123,45 @@ const toContractError = (
   });
 };
 
+/** Runs one call into the pager after checking the signal, as the contract's typed error when it fails. */
+const guarded = async <T>(
+  signal: AbortSignal | undefined,
+  errors: Readonly<V1Errors>,
+  read: () => Promise<T>,
+): Promise<T> => {
+  signal?.throwIfAborted();
+  try {
+    return await read();
+  } catch (error) {
+    throw toContractError(error, errors);
+  }
+};
+
 /** Reads one page from the pager, as the contract's typed error when it fails. */
 const readPage = async (
   pager: GraphSourcePager,
   request: Readonly<PageRequest>,
   errors: Readonly<V1Errors>,
-): Promise<SyncPage> => {
-  request.signal?.throwIfAborted();
-  try {
-    return await pager.page(request);
-  } catch (error) {
-    throw toContractError(error, errors);
+): Promise<SyncPage> =>
+  guarded(request.signal, errors, async () => pager.page(request));
+
+type ListingErrors = ORPCErrorConstructorMap<
+  (typeof graphSourceContract.v1.scopes.roots)["~orpc"]["errorMap"]
+>;
+
+/** The pager's scope listing, or the contract's `NOT_IMPLEMENTED` when it has none. */
+const listingOf = (
+  pager: GraphSourcePager,
+  errors: Readonly<ListingErrors>,
+): GraphSourceScopes => {
+  if (pager.scopes === undefined) {
+    throw errors.NOT_IMPLEMENTED({
+      message: `The ${pager.source} source does not list its scopes.`,
+      data: {},
+    });
   }
+
+  return pager.scopes;
 };
 
 /**
@@ -109,7 +179,12 @@ export const createGraphSourceRouter = (
         page: os.v1.sync.page.handler(async ({ input, signal, errors }) =>
           readPage(
             pager,
-            { scope: input.scope, cursor: input.after, signal },
+            {
+              scope: input.scope,
+              cursor: input.after,
+              signal,
+              filter: input.filter,
+            },
             errors,
           ),
         ),
@@ -120,7 +195,11 @@ export const createGraphSourceRouter = (
           errors,
         }) {
           const pages = paginate(input.after ?? lastEventId, async (cursor) =>
-            readPage(pager, { scope: input.scope, cursor, signal }, errors),
+            readPage(
+              pager,
+              { scope: input.scope, cursor, signal, filter: input.filter },
+              errors,
+            ),
           );
           for await (const page of pages) {
             yield page.next === undefined
@@ -128,6 +207,28 @@ export const createGraphSourceRouter = (
               : withEventMeta(page, { id: page.next });
           }
         }),
+      },
+      scopes: {
+        roots: os.v1.scopes.roots.handler(async ({ input, signal, errors }) => {
+          const listing = listingOf(pager, errors);
+
+          return guarded(signal, errors, async () =>
+            listing.roots({ cursor: input.after, signal }),
+          );
+        }),
+        children: os.v1.scopes.children.handler(
+          async ({ input, signal, errors }) => {
+            const listing = listingOf(pager, errors);
+
+            return guarded(signal, errors, async () =>
+              listing.children({
+                scope: input.scope,
+                cursor: input.after,
+                signal,
+              }),
+            );
+          },
+        ),
       },
     },
   });

@@ -23,9 +23,27 @@ const activity = (
   return { kind: "activity", id, source: id, label, actor: repo.id } as const;
 };
 
-/** Two repositories of one organisation: alpha spans two pages, beta one, and beta's work waits on alpha's. */
+const entry = (scope: string, label: string, archived = false) =>
+  ({ scope, label, archived }) as const;
+
+/**
+ * Two repositories of one organisation: alpha spans two pages, beta one, and beta's work waits on alpha's. The listing has the organisation and a person at the top, and the organisation's repositories, one entry a page, one of them archived.
+ */
 export const fakeOptions: FakeGraphSourceOptions = {
   source: "fake",
+  roots: [entry("fake:acme", "Acme"), entry("fake:ada", "ada")],
+  children: {
+    "fake:acme": [
+      {
+        ...entry("fake:acme/alpha", "alpha"),
+        description: "The store",
+        url: "https://example.com/acme/alpha",
+      },
+      entry("fake:acme/beta", "beta"),
+      entry("fake:acme/legacy", "legacy", true),
+    ],
+  },
+  listingPageSize: 1,
   scopes: {
     "fake:acme/alpha": [
       {

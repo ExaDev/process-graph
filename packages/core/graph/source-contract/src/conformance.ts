@@ -3,7 +3,7 @@ import { afterAll, describe, expect, test } from "vitest";
 import { assembleSync } from "./assemble.ts";
 import type { GraphSourceClient } from "./contract.ts";
 import { paginate } from "./paginate.ts";
-import type { SyncPage } from "./schema.ts";
+import type { ScopeListing, SyncFilter, SyncPage } from "./schema.ts";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/message-port";
 import { createRouterClient } from "@orpc/server";
@@ -22,7 +22,27 @@ export interface GraphSourceConformanceOptions {
   readonly missingScope: string;
   /** A string the source cannot parse as a scope identifier, which must be rejected. */
   readonly malformedScope: string;
+  /** What to check of the scope listing, when the source offers one; absent, the listing is not exercised. */
+  readonly listing?: ScopeListingConformance;
 }
+
+/** The parts of a scope listing the conformance kit exercises. */
+export interface ScopeListingConformance {
+  /** Whether to exercise `scopes.roots`, which needs credentials whose top-level scopes are readable where the test runs. */
+  readonly roots: boolean;
+  /** A scope whose children span at least two listing pages, so resumption is exercised between pages. */
+  readonly parent: string;
+  /** A well-formed scope identifier naming nothing, whose listing must be a `not-found` gap. */
+  readonly missingParent: string;
+  /** A string the source cannot parse as a scope identifier, which must be rejected. */
+  readonly malformedParent: string;
+}
+
+/** The filter the kit syncs with: open work, most recently changed first. Every source can express it, and it narrows and reorders what a scope lists. */
+const kitFilter: SyncFilter = {
+  states: ["open"],
+  order: { field: "updated", direction: "descending" },
+};
 
 /** A string no source issues as a cursor: it is the kit's own, outside any source's identifier syntax. */
 const foreignCursor = "conformance-kit:not-a-cursor";
@@ -38,15 +58,20 @@ const recordCursor = (seen: Set<string>, next: string | undefined): void => {
   seen.add(next);
 };
 
-/** Reads every page by following `next` through `sync.page`. */
+/** Reads every page by following `next` through `sync.page`, under `filter` when one is given. */
 const walkPages = async (
   client: GraphSourceClient,
   scope: readonly string[],
+  filter?: SyncFilter,
 ): Promise<readonly SyncPage[]> => {
   const pages: SyncPage[] = [];
   const seen = new Set<string>();
   const paged = paginate(undefined, async (after) =>
-    client.v1.sync.page(after === undefined ? { scope } : { scope, after }),
+    client.v1.sync.page({
+      scope,
+      ...(after === undefined ? {} : { after }),
+      ...(filter === undefined ? {} : { filter }),
+    }),
   );
   for await (const page of paged) {
     pages.push(page);
@@ -66,7 +91,11 @@ interface StreamOptions {
 /** Reads `sync.stream` to its end, or only its first `limit` events, closing the stream early in that case. */
 const streamPages = async (
   client: GraphSourceClient,
-  input: { readonly scope: readonly string[]; readonly after?: string },
+  input: {
+    readonly scope: readonly string[];
+    readonly after?: string;
+    readonly filter?: SyncFilter;
+  },
   { limit, signal }: StreamOptions = {},
 ): Promise<readonly SyncPage[]> => {
   const pages: SyncPage[] = [];
@@ -87,12 +116,68 @@ const streamPages = async (
 };
 
 /** The cursor to resume after `page`, failing the test when the page is the last. */
-const nextOf = (page: SyncPage | undefined): string => {
+const nextOf = (
+  page: { readonly next?: string | undefined } | undefined,
+): string => {
   if (page?.next === undefined) {
     throw new Error("expected a page that is not the last");
   }
 
   return page.next;
+};
+
+/** One listing request: the top-level scopes, or the children of `parent`. */
+type ListingCall = (after: string | undefined) => Promise<ScopeListing>;
+
+const rootsCall =
+  (client: GraphSourceClient): ListingCall =>
+  async (after) =>
+    client.v1.scopes.roots(after === undefined ? {} : { after });
+
+const childrenCall =
+  (client: GraphSourceClient, parent: string): ListingCall =>
+  async (after) =>
+    client.v1.scopes.children(
+      after === undefined ? { scope: parent } : { scope: parent, after },
+    );
+
+/** Reads every page of a listing by following `next`. */
+const walkListing = async (
+  call: ListingCall,
+): Promise<readonly ScopeListing[]> => {
+  const pages: ScopeListing[] = [];
+  const seen = new Set<string>();
+  for await (const page of paginate(undefined, call)) {
+    pages.push(page);
+    recordCursor(seen, page.next);
+  }
+
+  return pages;
+};
+
+/** Checks the paging rules every listing keeps: only the last page lacks `next`, every page resumes from the `next` before it, a second walk returns the same pages, and every entry is a scope of this source. */
+const expectListingPages = async (
+  client: GraphSourceClient,
+  call: ListingCall,
+): Promise<readonly ScopeListing[]> => {
+  const { source } = await client.v1.describe();
+  const pages = await walkListing(call);
+  expect(pages.map((page) => page.next === undefined)).toEqual(
+    pages.map((_, index) => index === pages.length - 1),
+  );
+  await Promise.all(
+    pages
+      .slice(1)
+      .map(async (page, index) =>
+        expect(call(nextOf(pages[index]))).resolves.toEqual(page),
+      ),
+  );
+  await expect(walkListing(call)).resolves.toEqual(pages);
+  for (const entry of pages.flatMap((page) => page.entries)) {
+    expect(entry.scope.startsWith(`${source}:`)).toBe(true);
+  }
+
+  return pages;
 };
 
 const identifiersOf = (pages: readonly SyncPage[]): readonly string[] =>
@@ -102,16 +187,118 @@ const identifiersOf = (pages: readonly SyncPage[]): readonly string[] =>
     ...page.transitions.map((transition) => transition.id),
   ]);
 
+/** The scope listing's share of the kit: paging, resumption, gaps, typed errors and aborts, and entries that sync. */
+const scopeListingConformance = (
+  name: string,
+  createClient: () => GraphSourceClient,
+  { roots, parent, missingParent, malformedParent }: ScopeListingConformance,
+): void => {
+  describe(`GraphSource scope listing conformance: ${name}`, () => {
+    test("an owner's children span at least two pages, resume from every next, and are deterministic", async () => {
+      const client = createClient();
+      const pages = await expectListingPages(
+        client,
+        childrenCall(client, parent),
+      );
+      expect(pages.length).toBeGreaterThanOrEqual(2);
+      expect(pages.flatMap((page) => page.gaps)).toEqual([]);
+    });
+
+    test("a listed child is a scope that syncs", async () => {
+      const client = createClient();
+      const [first] = await walkListing(childrenCall(client, parent));
+      const [entry] = first?.entries ?? [];
+      if (entry === undefined) {
+        throw new Error(`expected ${parent} to list a child`);
+      }
+      await expect(
+        client.v1.sync.page({ scope: [entry.scope] }),
+      ).resolves.toMatchObject({ gaps: [] });
+    });
+
+    test.skipIf(!roots)(
+      "the top-level scopes resume from every next and are deterministic",
+      async () => {
+        const client = createClient();
+        const pages = await expectListingPages(client, rootsCall(client));
+        expect(pages.flatMap((page) => page.entries).length).toBeGreaterThan(0);
+      },
+    );
+
+    test("the children of an unknown scope are a not-found gap on an empty page", async () => {
+      const client = createClient();
+      await expect(
+        client.v1.scopes.children({ scope: missingParent }),
+      ).resolves.toEqual({
+        entries: [],
+        gaps: [
+          expect.objectContaining({
+            target: missingParent,
+            reason: "not-found",
+          }),
+        ],
+      });
+    });
+
+    test("a malformed parent is a BAD_REQUEST with reason invalid-scope", async () => {
+      await expect(
+        createClient().v1.scopes.children({ scope: malformedParent }),
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+        data: { reason: "invalid-scope", value: malformedParent },
+      });
+    });
+
+    test("a cursor the listing did not issue is a BAD_REQUEST with reason invalid-cursor", async () => {
+      const client = createClient();
+      const rejection = {
+        code: "BAD_REQUEST",
+        data: { reason: "invalid-cursor", value: foreignCursor },
+      };
+      await expect(
+        client.v1.scopes.children({ scope: parent, after: foreignCursor }),
+      ).rejects.toMatchObject(rejection);
+      await expect(
+        client.v1.scopes.roots({ after: foreignCursor }),
+      ).rejects.toMatchObject(rejection);
+    });
+
+    test("a cursor for one parent is refused for another", async () => {
+      const client = createClient();
+      const first = await client.v1.scopes.children({ scope: parent });
+      const after = nextOf(first);
+      await expect(
+        client.v1.scopes.children({ scope: missingParent, after }),
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+        data: { reason: "invalid-cursor", value: after },
+      });
+    });
+
+    test("an aborted signal ends both listings", async () => {
+      const client = createClient();
+      const controller = new AbortController();
+      controller.abort();
+      const { signal } = controller;
+      await expect(
+        client.v1.scopes.children({ scope: parent }, { signal }),
+      ).rejects.toThrow();
+      await expect(client.v1.scopes.roots({}, { signal })).rejects.toThrow();
+    });
+  });
+};
+
 /**
  * The behaviour every `GraphSource` must have, as Vitest tests run against a client. An adapter's own test calls this once per transport it supports; because the tests talk only to the oRPC client, the same assertions hold in process, over a message port or over HTTP.
  *
- * The tests check that paging and streaming return the same pages; that a stream closed after any page resumes from that page's `next` with exactly the pages that follow; that a sync is deterministic; that the assembled model and overlay are valid and every identifier carries the source's prefix; that relations name what the sync returned; that an unknown scope is a gap beside the rest; that malformed scopes and foreign cursors are typed `BAD_REQUEST` errors; and that an aborted signal ends both procedures.
+ * The tests check that paging and streaming return the same pages; that a stream closed after any page resumes from that page's `next` with exactly the pages that follow; that a sync is deterministic; that the assembled model and overlay are valid and every identifier carries the source's prefix; that relations name what the sync returned; that an unknown scope is a gap beside the rest; that malformed scopes and foreign cursors are typed `BAD_REQUEST` errors; that a filtered sync pages consistently, reads nothing the unfiltered one does not, and refuses a cursor issued under another filter; and that an aborted signal ends both procedures. With `listing`, they also check the scope listing: paging and resumption, gaps for an unknown parent, typed errors, aborts, and that a listed child syncs.
  * @param options - The client factory and the scopes to exercise.
  */
 export const graphSourceConformance = (
   options: GraphSourceConformanceOptions,
 ): void => {
-  const { name, createClient, scope, missingScope, malformedScope } = options;
+  const { name, createClient, scope, missingScope, malformedScope, listing } =
+    options;
 
   describe(`GraphSource conformance: ${name}`, () => {
     test("the scope spans at least two pages, so resumption is exercised", async () => {
@@ -224,6 +411,37 @@ export const graphSourceConformance = (
       ).rejects.toMatchObject(rejection);
     });
 
+    test("a filtered sync pages and streams the same pages, with cursors that never repeat", async () => {
+      const client = createClient();
+      const paged = await walkPages(client, scope, kitFilter);
+      await expect(
+        streamPages(client, { scope, filter: kitFilter }),
+      ).resolves.toEqual(paged);
+      await expect(walkPages(client, scope, kitFilter)).resolves.toEqual(paged);
+    });
+
+    test("a filtered sync reads nothing the unfiltered sync does not", async () => {
+      const client = createClient();
+      const all = assembleSync(await walkPages(client, scope));
+      const narrowed = assembleSync(await walkPages(client, scope, kitFilter));
+      const everyActivity = new Set(all.model.elements.map(({ id }) => id));
+      for (const element of narrowed.model.elements) {
+        expect(everyActivity).toContain(element.id);
+      }
+    });
+
+    test("a cursor is refused under a filter other than the one it was issued for", async () => {
+      const client = createClient();
+      const first = await client.v1.sync.page({ scope });
+      const after = nextOf(first);
+      await expect(
+        client.v1.sync.page({ scope, after, filter: kitFilter }),
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+        data: { reason: "invalid-cursor", value: after },
+      });
+    });
+
     test("an aborted signal ends both procedures", async () => {
       const client = createClient();
       const controller = new AbortController();
@@ -236,6 +454,10 @@ export const graphSourceConformance = (
       ).rejects.toThrow();
     });
   });
+
+  if (listing !== undefined) {
+    scopeListingConformance(name, createClient, listing);
+  }
 };
 
 /**

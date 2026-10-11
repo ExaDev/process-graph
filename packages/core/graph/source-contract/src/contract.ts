@@ -9,6 +9,9 @@ import {
 import { z } from "zod";
 import {
   badRequestReasons,
+  scopeChildrenInputSchema,
+  scopeListingSchema,
+  scopeRootsInputSchema,
   sourceDescriptionSchema,
   syncInputSchema,
   syncPageSchema,
@@ -39,6 +42,19 @@ const graphSourceErrors = {
 
 type GraphSourceErrors = typeof graphSourceErrors;
 
+/**
+ * The scope listings' errors: every procedure's, and `NOT_IMPLEMENTED` for a source that offers no listing, which oRPC's common code answers with HTTP 501 over HTTP.
+ */
+const scopeListingErrors = {
+  ...graphSourceErrors,
+  NOT_IMPLEMENTED: {
+    message: "The source does not list its scopes.",
+    data: z.strictObject({}),
+  },
+};
+
+type ScopeListingErrors = typeof scopeListingErrors;
+
 /** The event iterator of pages `sync.stream` returns, typed by name so declarations stay small. */
 const syncPageEvents: ReturnType<
   typeof eventIterator<SyncPageInput, SyncPage>
@@ -67,6 +83,18 @@ interface GraphSourceV1Contract {
       GraphSourceErrors
     >;
   };
+  readonly scopes: {
+    readonly roots: ProcedureContract<
+      typeof scopeRootsInputSchema,
+      typeof scopeListingSchema,
+      ScopeListingErrors
+    >;
+    readonly children: ProcedureContract<
+      typeof scopeChildrenInputSchema,
+      typeof scopeListingSchema,
+      ScopeListingErrors
+    >;
+  };
 }
 
 /**
@@ -75,6 +103,7 @@ interface GraphSourceV1Contract {
  * - `describe` names the source, which is the prefix of every identifier it emits.
  * - `sync.page` returns one page of the scope, starting after `after` when given.
  * - `sync.stream` yields every page from `after` onwards (or from the start) as an event iterator, each carrying the `next` cursor to resume after it. Pages are produced on demand as the consumer pulls, so a slow consumer applies backpressure. Over an event-stream transport each event's id is its `next` cursor, so a reconnecting client's `lastEventId` resumes there too; an explicit `after` takes precedence.
+ * - `scopes.roots` lists, a page at a time, the top-level scopes the credentials reach (for GitHub, the viewer's own account and organisations), and `scopes.children` the scopes inside one scope (for GitHub, an owner's repositories), each entry ready to pass to `sync`. Both page and resume by cursor like `sync.page`, and a source that offers no listing answers `NOT_IMPLEMENTED`.
  *
  * Every call takes the caller's abort signal through the oRPC client options, and every implementation passes it on to its source.
  */
@@ -85,6 +114,16 @@ const graphSourceV1Contract: GraphSourceV1Contract = oc
     sync: {
       page: oc.input(syncInputSchema).output(syncPageSchema),
       stream: oc.input(syncInputSchema).output(syncPageEvents),
+    },
+    scopes: {
+      roots: oc
+        .errors(scopeListingErrors)
+        .input(scopeRootsInputSchema)
+        .output(scopeListingSchema),
+      children: oc
+        .errors(scopeListingErrors)
+        .input(scopeChildrenInputSchema)
+        .output(scopeListingSchema),
     },
   });
 
