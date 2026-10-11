@@ -164,6 +164,9 @@ export interface PackageLintOptions {
   /** `@exadev/eslint-config`'s own `exadev/barrel-policy` rule defaults to `"banned"` in its recommended type-checked preset. Every published package here exposes exactly one barrel at `src/index.ts`, so this defaults to `"single"` instead. It explicitly overrides the base preset's own default, rather than merely relying on it. */
   readonly barrelPolicy?: "banned" | "single" | "siblings" | "off";
 
+  /** The package's other entry files, beside `src/index.ts`: the modules behind its subpath exports, as globs relative to the package. Each is held to the barrel rules (only re-exports) and may re-export another package's surface, as `src/index.ts` may. A package with a single entry point gives none. */
+  readonly barrelEntries?: readonly string[];
+
   /**
    * Set for a package that renders React components: `.tsx` files get `@exadev/eslint-config`'s React block (eslint-plugin-react with the automatic JSX runtime, the hooks rules and the jsx-a11y rules). `version` is the React version the rules assume; pass React's own `version` export, so it follows the package's dependency. eslint-plugin-react's `"detect"` cannot be used, because it reads the file name through a context method ESLint 10 removed.
    */
@@ -182,6 +185,7 @@ export function packageLintConfig(options: PackageLintOptions): Config[] {
     isomorphicExemptions = [],
     additionalRestrictedSyntax = [],
     barrelPolicy = "single",
+    barrelEntries = [],
     react,
   } = options;
 
@@ -239,7 +243,14 @@ export function packageLintConfig(options: PackageLintOptions): Config[] {
         ],
         "@typescript-eslint/no-non-null-assertion": nonNullAssertion,
         "exadev/barrel-policy":
-          barrelPolicy === "off" ? "off" : ["error", { mode: barrelPolicy }],
+          barrelPolicy === "off"
+            ? "off"
+            : [
+                "error",
+                barrelEntries.length === 0
+                  ? { mode: barrelPolicy }
+                  : { mode: barrelPolicy, entries: [...barrelEntries] },
+              ],
       },
     },
     {
