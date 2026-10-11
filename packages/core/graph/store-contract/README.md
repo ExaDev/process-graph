@@ -1,6 +1,8 @@
 # @exadev/process-graph-store-contract
 
-[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@exadev/process-graph-store-contract) [![Release](https://img.shields.io/github/v/release/ExaDev/process-graph)](https://github.com/ExaDev/process-graph/releases/latest) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+
+A private workspace package, not published on its own: it is bundled into [`process-graph`](../../../targets/process-graph/README.md), which exposes it as `process-graph/store`, beside the SQLite store.
 
 The persistence port for process models and their run overlays, as an [oRPC](https://orpc.dev) router contract. One definition runs in process (a router client called directly), across a `MessagePort` to a worker, or over HTTP, with no change to its consumers. Inputs and outputs are Zod schemas built from `@exadev/process-graph-schema`'s `modelSchema` and `overlaySchema`, so the port carries the model as it is and storage layout never reaches it. `src/` imports nothing Node-only.
 

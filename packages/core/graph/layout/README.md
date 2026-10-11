@@ -1,6 +1,8 @@
 # @exadev/process-graph-layout
 
-[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@exadev/process-graph-layout) [![Release](https://img.shields.io/github/v/release/ExaDev/process-graph)](https://github.com/ExaDev/process-graph/releases/latest) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+
+A private workspace package, not published on its own: it is bundled into [`process-graph`](../../../targets/process-graph/README.md), which exposes it as `process-graph/layout`.
 
 Layered layout of a projected view from `@exadev/process-graph-projection`. `layout(view, options)` is a pure async function: it reads a flowchart, swimlane or state machine, never mutates anything, and returns positions in the model's `views` shape, so layout stays apart from the semantic model and no projection reads a coordinate. It runs unchanged in a browser, a Worker or Node: `src/` imports nothing Node-only, and the default engine is elkjs's bundled build, which needs no Worker.
 

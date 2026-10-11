@@ -1,6 +1,8 @@
 # @exadev/process-graph-domain
 
-[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@exadev/process-graph-domain) [![Release](https://img.shields.io/github/v/release/ExaDev/process-graph)](https://github.com/ExaDev/process-graph/releases/latest) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+
+A private workspace package, not published on its own: it is bundled into [`process-graph`](../../../targets/process-graph/README.md), which exposes it as its exports at the root entry, `process-graph`.
 
 Reasoning over the process model from `@exadev/process-graph-schema` and a run overlay: which work is ready, what blocks what, what a decision's branches do, which cycles are legal, and what finishing something changes. Pure functions over `Model<I>` and `Overlay<I>`, built on `@exadev/process-graph-dag`. Run state is an input, never part of the model. `src/` imports nothing Node-only.
 
