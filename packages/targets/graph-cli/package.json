@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-cli",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "The process-graph command line: sync work from GitHub issues into a SQLite store, ask what is ready, blocked or on the critical path, explain a status, and show the model as a flowchart, swimlane, state machine or sequence diagram in Mermaid or Graphviz DOT.",
   "private": true,
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-export",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Text exports of a projected view: Mermaid and Graphviz DOT for every notation, and the projection as JSON, with every label from a source made safe to show.",
   "private": true,
   "type": "module",

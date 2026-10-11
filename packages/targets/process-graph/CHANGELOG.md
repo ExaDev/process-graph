@@ -1,3 +1,22 @@
+## [1.4.0](https://github.com/ExaDev/process-graph/compare/process-graph@1.3.0...process-graph@1.4.0) (2026-10-11)
+
+### Features
+
+* **export:** add graph-export, the one writer of a view's text ([de26928](https://github.com/ExaDev/process-graph/commit/de26928f14a084e975c8434eeba8cced9b7e5706))
+* **sync:** add graph-sync, the one sync of a source into a store ([c98c847](https://github.com/ExaDev/process-graph/commit/c98c847be8f571c3705486f7c0e02a8985f6167d))
+
+
+### Dependencies
+
+- Updated @exadev/process-graph-projection to 1.1.3
+- Updated @exadev/process-graph-export to 1.0.0
+- Updated @exadev/process-graph-layout to 1.0.6
+- Updated @exadev/process-graph-react to 1.1.3
+- Updated @exadev/process-graph-sync to 1.0.0
+- Updated @exadev/process-graph-ui to 1.1.1
+- Updated @exadev/process-graph-cli to 1.3.0
+- Updated @exadev/process-graph-react-flow to 1.1.3
+
 ## [1.3.0](https://github.com/ExaDev/process-graph/compare/process-graph@1.2.0...process-graph@1.3.0) (2026-10-11)
 
 ### Features
