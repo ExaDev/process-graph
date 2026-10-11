@@ -45,7 +45,7 @@ const peerSpecifiers = (): string[] => {
 };
 
 /**
- * Packs the built package with `pnpm pack`, as it would be published, and installs the tarball with npm into a new directory outside the repository, beside its peer dependencies, so the smoke tests import it exactly as a consumer would: through its exports map, with no workspace package reachable.
+ * Packs the built package with `pnpm pack`, as it would be published, and installs the tarball with pnpm into a new directory outside the repository, beside its peer dependencies, so the smoke tests import it exactly as a consumer would: through its exports map, with no workspace package reachable.
  * @param project - The smoke project, given the consumer's directory.
  * @returns Removes the consumer's directory.
  */
@@ -63,17 +63,11 @@ export default function setup(project: TestProject): () => void {
     join(consumer, "package.json"),
     JSON.stringify({ name: "consumer", private: true, type: "module" }),
   );
+  // pnpm rather than npm: npm 11.19.0, the npm the pinned Node ships, cannot resolve drizzle-orm 1.0.0-rc.4's optional `effect` peer range at all (ERESOLVE, with or without this package), which npm 11.19.1 fixes.
   execFileSync(
-    "npm",
-    [
-      "install",
-      "--no-audit",
-      "--no-fund",
-      "--ignore-scripts",
-      `./${tarball}`,
-      ...peerSpecifiers(),
-    ],
-    // Output is captured rather than shown, and a failure's error carries npm's own report of why.
+    "pnpm",
+    ["add", "--ignore-scripts", `./${tarball}`, ...peerSpecifiers()],
+    // Output is captured rather than shown, and a failure's error carries pnpm's own report of why.
     { cwd: consumer, encoding: "utf8" },
   );
   project.provide("consumer", consumer);
