@@ -1080,6 +1080,9 @@ importers:
       '@exadev/process-graph-store-contract':
         specifier: workspace:*
         version: link:../../core/graph/store-contract
+      '@exadev/process-graph-sync':
+        specifier: workspace:*
+        version: link:../../core/graph/sync
       '@orpc/server':
         specifier: 'catalog:'
         version: 2.0.0-beta.41

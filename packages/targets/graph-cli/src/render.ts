@@ -8,7 +8,9 @@ import type {
   Written,
 } from "./edit.ts";
 import type {
+  AncestorsResult,
   BlockedResult,
+  ChildrenResult,
   CyclesResult,
   HandoffsResult,
   ImpactResult,
@@ -40,6 +42,18 @@ export const renderBlocked = (result: BlockedResult): string =>
 /** `impact`: each element that depends on the one asked about. */
 export const renderImpact = (result: ImpactResult): string =>
   lines(elementRows(result.impacted));
+
+/** `children`: each direct sub-task's identifier and label. */
+export const renderChildren = (result: ChildrenResult): string =>
+  lines(elementRows(result.children));
+
+/** `ancestors`: each element above the one asked about, nearest first, with its distance. */
+export const renderAncestors = (result: AncestorsResult): string =>
+  lines(
+    result.ancestors.map(
+      (link) => `${link.id}\t${link.label}\t${String(link.distance)}`,
+    ),
+  );
 
 /** `path`: the critical path, one element per line in dependency order. */
 export const renderPath = (result: PathResult): string =>
@@ -167,7 +181,7 @@ export const renderFacts = (result: FactsResult): string =>
 /** `sync`: what was written, then each gap as its reason, target and message. */
 export const renderSync = (result: SyncResult): string =>
   lines([
-    `synced ${String(result.activities)} activities, ${String(result.transitions)} transitions and ${String(result.participants)} participants into "${result.modelId}" at revision ${String(result.revision)}`,
+    `synced ${String(result.activities)} activities, ${String(result.transitions)} transitions, ${String(result.relations)} relations and ${String(result.participants)} participants into "${result.modelId}" at revision ${String(result.revision)}`,
     ...result.gaps.map(
       (gap) => `gap\t${gap.reason}\t${gap.target}\t${gap.message}`,
     ),

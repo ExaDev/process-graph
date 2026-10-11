@@ -1,16 +1,17 @@
+import type { Gap } from "@exadev/process-graph-source-contract";
 import {
-  assembleSync,
-  type Gap,
-  type GraphSourceClient,
-  type SyncPage,
-} from "@exadev/process-graph-source-contract";
-import type { BoundActivity } from "@exadev/process-graph-store-contract";
+  InterruptedSyncError,
+  InvalidScopeError,
+  scopesBySource,
+  syncScopes,
+  UnknownSourceError,
+  type SourceLookup,
+  type SourceScopes,
+  type SyncCheckpoint,
+} from "@exadev/process-graph-sync";
 import { CliError, failureOf, underlyingCause } from "./errors.ts";
 import { exitCodes } from "./exit-codes.ts";
-import { callOptions, type GraphSession } from "./session.ts";
-
-/** Finds the source that serves scopes with an identifier prefix, such as `github`. */
-export type SourceLookup = (prefix: string) => GraphSourceClient | undefined;
+import type { GraphSession } from "./session.ts";
 
 /** What to sync. */
 export interface SyncRequest {
@@ -63,66 +64,37 @@ export class SyncInterruptedError extends CliError implements SyncInterruption {
 /** What a sync wrote. */
 export interface SyncResult {
   readonly modelId: string;
-  /** The revision the write took. */
+  /** The revision the last write took. */
   readonly revision: number;
-  /** The participants, activities and transitions written, each identifier counted once. */
+  /** The participants, activities, transitions and relations written, each counted once. */
   readonly participants: number;
   readonly activities: number;
   readonly transitions: number;
+  readonly relations: number;
   /** The parts of the scope the sources could not read, in the order they were met. */
   readonly gaps: readonly Gap[];
 }
 
-/** The scopes of one source, in the order given. */
-interface SourceScopes {
-  readonly prefix: string;
-  readonly scopes: readonly string[];
-}
-
-const scopeSeparator = ":";
-
-/** Groups scopes by their source prefix, keeping the order in which each prefix first appears. */
-const bySource = (scopes: readonly string[]): readonly SourceScopes[] => {
-  const groups = new Map<string, string[]>();
-  for (const scope of scopes) {
-    const separator = scope.indexOf(scopeSeparator);
-    if (separator <= 0) {
-      throw new CliError(
-        exitCodes.usage,
-        `"${scope}" is not a scope: write <source>:<scope>, such as github:owner/repo`,
-      );
-    }
-    const prefix = scope.slice(0, separator);
-    groups.set(prefix, [...(groups.get(prefix) ?? []), scope]);
+/** A usage error for a scope that names no source or a source nothing reads, or nothing for any other error. */
+const usageError = (error: unknown): CliError | undefined => {
+  if (error instanceof InvalidScopeError) {
+    return new CliError(exitCodes.usage, error.message, { cause: error });
+  }
+  if (error instanceof UnknownSourceError) {
+    return new CliError(
+      exitCodes.usage,
+      `no source reads "${error.prefix}" scopes`,
+      { cause: error },
+    );
   }
 
-  return [...groups].map(([prefix, grouped]) => ({ prefix, scopes: grouped }));
-};
-
-/** Bound activities are the only elements a sync assembles, since a page's activities are bound by schema. */
-const boundActivities = (pages: readonly SyncPage[]) => {
-  const { model, overlay, gaps } = assembleSync(pages);
-  const activities = model.elements.flatMap((element): BoundActivity[] =>
-    element.kind === "activity" && element.source !== undefined
-      ? [{ ...element, source: element.source }]
-      : [],
-  );
-
-  return {
-    items: {
-      participants: model.participants,
-      activities,
-      transitions: model.transitions,
-      overlay,
-    },
-    gaps,
-  };
+  return undefined;
 };
 
 /**
- * Reads every page of the scopes from their sources and merges them into the session's model in one write, creating the model when the store has none. Records already in the model are replaced by identifier and the rest are kept, so syncing again refreshes what changed.
+ * Reads every page of the scopes from their sources and merges each into the session's model as it is read, creating the model when the store has none: participants, bound activities, transitions, relations (sub-issues, assignees, repository membership) and run state. Records already in the model are replaced by identifier and the rest are kept, so syncing again refreshes what changed.
  *
- * When a source fails part way, the pages read before the failure are still written, and the error carries where to carry on: the request that resumes the failing source after the cursor of its last page read, and the scopes of the sources not reached.
+ * When a source fails part way, the pages read before the failure are already written, and the error carries where to carry on: the request that resumes the failing source after the cursor of its last page read, and the scopes of the sources not reached.
  * @param session - The store and model.
  * @param sources - The source for each identifier prefix.
  * @param request - The scopes, and a cursor to resume after.
@@ -134,84 +106,78 @@ export const sync = async (
   sources: SourceLookup,
   request: SyncRequest,
 ): Promise<SyncResult> => {
-  const groups = bySource(request.scopes);
-  if (request.after !== undefined && groups.length > 1) {
+  const { scopes, after } = request;
+  let groups: readonly SourceScopes[];
+  try {
+    groups = scopesBySource(scopes);
+  } catch (error) {
+    throw usageError(error) ?? error;
+  }
+  const [first] = groups;
+  if (after !== undefined && groups.length > 1) {
     throw new CliError(
       exitCodes.usage,
       "--after resumes one source's sync: give only that source's scopes",
     );
   }
-  const clients = groups.map((group) => {
-    const client = sources(group.prefix);
-    if (client === undefined) {
-      throw new CliError(
-        exitCodes.usage,
-        `no source reads "${group.prefix}" scopes`,
-      );
-    }
+  const resume: SyncCheckpoint | undefined =
+    after === undefined || first === undefined
+      ? undefined
+      : {
+          modelId: session.modelId,
+          scopes,
+          source: first.prefix,
+          after,
+        };
 
-    return { ...group, client };
-  });
-
-  const pages: SyncPage[] = [];
-  const write = async () => {
-    const { items, gaps } = boundActivities(pages);
-    const { revision } = await session.store.v1.items.upsert(
-      { modelId: session.modelId, items },
-      callOptions(session.signal),
-    );
+  try {
+    const result = await syncScopes({
+      store: session.store,
+      sources,
+      modelId: session.modelId,
+      scopes,
+      resume,
+      signal: session.signal,
+    });
 
     return {
       modelId: session.modelId,
-      revision,
-      participants: items.participants.length,
-      activities: items.activities.length,
-      transitions: items.transitions.length,
-      gaps,
+      revision: result.revision,
+      participants: result.participants,
+      activities: result.activities,
+      transitions: result.transitions,
+      relations: result.relations,
+      gaps: result.gaps,
     };
-  };
-
-  /** Reads the sources in order, each only after the one before has finished, since a source's failure must stop the ones after it. */
-  const readFrom = async (index: number): Promise<void> => {
-    const group = clients.at(index);
-    if (group === undefined) {
-      return;
+  } catch (error) {
+    const usage = usageError(error);
+    if (usage !== undefined) {
+      throw usage;
     }
-    let cursor = index === 0 ? request.after : undefined;
-    try {
-      const stream = await group.client.v1.sync.stream(
-        cursor === undefined
-          ? { scope: group.scopes }
-          : { scope: group.scopes, after: cursor },
-        callOptions(session.signal),
-      );
-      for await (const page of stream) {
-        pages.push(page);
-        cursor = page.next;
-      }
-    } catch (error) {
-      const failure = failureOf(error);
-      const saved = pages.length > 0;
-      if (saved) {
-        await write();
-      }
-      throw new SyncInterruptedError(
-        failure.exitCode,
-        failure.message,
-        {
-          resume:
-            cursor === undefined
-              ? { scopes: group.scopes }
-              : { scopes: group.scopes, after: cursor },
-          remaining: clients.slice(index + 1).flatMap((next) => next.scopes),
-          saved,
-        },
-        { cause: underlyingCause(error) },
+    if (!(error instanceof InterruptedSyncError)) {
+      throw error;
+    }
+    const failure = failureOf(error.cause);
+    const { resume: from, remaining, saved } = error;
+    const failing = groups.find((group) => group.prefix === from.source);
+    if (failing === undefined) {
+      throw new Error(
+        `unreachable: the interrupted source "${from.source}" is one of the sync's own`,
+        { cause: error },
       );
     }
-    await readFrom(index + 1);
-  };
-  await readFrom(0);
-
-  return write();
+    throw new SyncInterruptedError(
+      failure.exitCode,
+      failure.message,
+      {
+        resume:
+          from.after === undefined
+            ? { scopes: failing.scopes }
+            : { scopes: failing.scopes, after: from.after },
+        remaining,
+        saved,
+      },
+      { cause: underlyingCause(error.cause) },
+    );
+  }
 };

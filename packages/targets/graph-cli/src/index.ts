@@ -21,17 +21,22 @@ export {
   type StoredRun,
 } from "./session.ts";
 export {
+  ancestors,
   blocked,
+  children,
   cycles,
   handoffsOf,
   impactOf,
   path,
   ready,
   why,
+  type AncestorsResult,
   type BlockedResult,
+  type ChildrenResult,
   type CyclesResult,
   type ElementStatus,
   type HandoffsResult,
+  type HierarchyLink,
   type ImpactResult,
   type PathResult,
   type ReadyResult,
@@ -74,11 +79,11 @@ export {
 export {
   sync,
   SyncInterruptedError,
-  type SourceLookup,
   type SyncInterruption,
   type SyncRequest,
   type SyncResult,
 } from "./sync.ts";
+export type { SourceLookup } from "@exadev/process-graph-sync";
 export {
   flowchartToMermaid,
   sequenceToMermaid,
