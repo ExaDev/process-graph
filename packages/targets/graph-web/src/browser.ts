@@ -2,6 +2,7 @@ import { syncRecordSchema, type SyncRecord } from "./sync-record.ts";
 import type {
   AddressBar,
   AppUpdates,
+  DownloadFile,
   Observable,
   SyncRecords,
   ThemePreference,
@@ -164,3 +165,19 @@ export const serviceWorkerUpdates = (
     },
   };
 };
+
+/**
+ * Saves a file as the browser saves a download: the text as a blob, behind a link with the file's name that is clicked once and then released.
+ * @param document - The page's document, which makes the link.
+ * @returns The download port.
+ */
+export const browserDownload =
+  (document: Document) =>
+  (file: DownloadFile): void => {
+    const url = URL.createObjectURL(new Blob([file.text], { type: file.type }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.name;
+    link.click();
+    URL.revokeObjectURL(url);
+  };

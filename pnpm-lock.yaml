@@ -1172,6 +1172,9 @@ importers:
       '@exadev/process-graph-domain':
         specifier: workspace:*
         version: link:../../core/graph/domain
+      '@exadev/process-graph-export':
+        specifier: workspace:*
+        version: link:../../core/graph/export
       '@exadev/process-graph-projection':
         specifier: workspace:*
         version: link:../../core/graph/projection
@@ -1218,6 +1221,9 @@ importers:
         specifier: 'catalog:'
         version: 4.6.5
     devDependencies:
+      '@exadev/process-graph-cli':
+        specifier: workspace:*
+        version: link:../graph-cli
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.63.0

@@ -11,7 +11,12 @@ import {
   createGraphStoreRouter,
 } from "@exadev/process-graph-store-contract";
 import { createRouterClient } from "@orpc/server";
-import type { AppPorts, Observable, ThemePreference } from "../ports.ts";
+import type {
+  AppPorts,
+  DownloadFile,
+  Observable,
+  ThemePreference,
+} from "../ports.ts";
 import type { SyncRecord } from "../sync-record.ts";
 
 /** A value a test changes, observed as the app observes the browser. */
@@ -237,6 +242,8 @@ export interface TestPorts {
   readonly tokensUsed: readonly string[];
   readonly records: ReadonlyMap<string, SyncRecord>;
   readonly savedToken: () => string | undefined;
+  /** The files the app handed over to save, in order. */
+  readonly downloads: readonly DownloadFile[];
 }
 
 export interface TestPortOptions {
@@ -260,6 +267,7 @@ export const testPorts = (options: TestPortOptions = {}): TestPorts => {
   let token = options.token;
   let theme: ThemePreference = "system";
   const tokensUsed: string[] = [];
+  const downloads: DownloadFile[] = [];
   const records = new Map(
     (options.records ?? []).map((record) => [record.modelId, record]),
   );
@@ -314,6 +322,9 @@ export const testPorts = (options: TestPortOptions = {}): TestPorts => {
       },
     },
     layout: { engine: rowEngine },
+    download: (file) => {
+      downloads.push(file);
+    },
   };
 
   return {
@@ -326,5 +337,6 @@ export const testPorts = (options: TestPortOptions = {}): TestPorts => {
     tokensUsed,
     records,
     savedToken: () => token,
+    downloads,
   };
 };

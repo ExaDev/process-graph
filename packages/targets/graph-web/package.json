@@ -42,6 +42,7 @@
   ],
   "dependencies": {
     "@exadev/process-graph-domain": "workspace:*",
+    "@exadev/process-graph-export": "workspace:*",
     "@exadev/process-graph-projection": "workspace:*",
     "@exadev/process-graph-react": "workspace:*",
     "@exadev/process-graph-react-flow": "workspace:*",
@@ -59,6 +60,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@exadev/process-graph-cli": "workspace:*",
     "@playwright/test": "catalog:",
     "@resvg/resvg-js": "catalog:",
     "@testing-library/dom": "catalog:",

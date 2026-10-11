@@ -46,6 +46,15 @@ export interface AppUpdates {
   readonly apply: () => void;
 }
 
+/** A text file handed to the person to save. */
+export interface DownloadFile {
+  /** The file name offered. */
+  readonly name: string;
+  /** Its media type. */
+  readonly type: string;
+  readonly text: string;
+}
+
 /**
  * Everything the app reads or writes outside React, injected at the composition root (`main.tsx`) so every screen runs against fakes in tests and against the browser in the app.
  */
@@ -62,6 +71,8 @@ export interface AppPorts {
   /** Whether the system prefers a dark colour scheme. */
   readonly prefersDark: Observable<boolean>;
   readonly updates: AppUpdates;
+  /** Hands a file to the person to save, as a browser download does. */
+  readonly download: (file: DownloadFile) => void;
   /** How views are laid out; the default is graph-layout's elkjs engine. Tests inject a stub engine. */
   readonly layout?: FlowLayoutOptions | undefined;
 }
