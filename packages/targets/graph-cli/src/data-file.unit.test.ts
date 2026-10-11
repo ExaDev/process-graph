@@ -6,10 +6,8 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import {
   privateDirectoryMode,
@@ -19,13 +17,7 @@ import { exitCodes } from "./exit-codes.ts";
 import { nodePorts } from "./node.ts";
 import { runCli } from "./program.ts";
 
-/** A umask that leaves new files readable by group and others, the usual default, so a test fails if the code relies on the umask for privacy. */
-const permissiveUmask = 0o022;
-/** A umask that removes nothing, so every mode the code asks for is the mode it gets. */
-const openUmask = 0o000;
-/** The radix the probe reads its umask argument in. */
-const octal = 8;
-/** The modes such a umask gives a new directory and file. */
+/** The modes the usual umask gives a new directory and file, readable by group and others. */
 const looseDirectoryMode = 0o755;
 const looseFileMode = 0o644;
 /** The permission bits of a mode. */
@@ -43,9 +35,6 @@ afterEach(() => {
   rmSync(directory, { recursive: true, force: true });
 });
 
-/** The probe that opens a default store under a given umask, in a process of its own, since only a main thread may set the umask and Vitest runs tests in worker threads. */
-const probe = fileURLToPath(new URL("../test/umask-probe.ts", import.meta.url));
-
 /** The Node ports with the XDG data directory inside the test's directory, so the default store is the command line's own. */
 const portsIn = (stderr: (text: string) => void = () => undefined) =>
   nodePorts({
@@ -55,32 +44,21 @@ const portsIn = (stderr: (text: string) => void = () => undefined) =>
   });
 
 describe("the command line's own default store", () => {
-  test.each([
-    { name: "the usual 022", umask: permissiveUmask },
-    { name: "000, which narrows nothing", umask: openUmask },
-  ])(
-    "under a umask of $name, is created private, with the directories it creates, the database and the -wal and -shm files SQLite derives from it",
-    ({ umask }) => {
-      const result = spawnSync(
-        process.execPath,
-        [probe, umask.toString(octal), directory],
-        { encoding: "utf8" },
-      );
-      if (result.status !== 0) {
-        throw new Error(result.stderr);
-      }
-      const modes: unknown = JSON.parse(result.stdout);
+  // Whatever the umask, `prepareDataFile` makes these modes; its own tests in sqlite-node set the umask in a probe process. This checks the command line hands it its XDG data file as one it owns.
+  test("is created private, with the XDG data directory above it", async () => {
+    const ports = portsIn();
+    const path = ports.defaultDataPath;
+    const opened = await ports.openStore(path);
+    await opened.close();
 
-      expect(modes).toEqual({
-        warnings: [],
-        xdg: privateDirectoryMode,
-        app: privateDirectoryMode,
-        database: privateFileMode,
-        wal: privateFileMode,
-        shm: privateFileMode,
-      });
-    },
-  );
+    expect(path).toBe(join(directory, "xdg", "process-graph", "graph.sqlite3"));
+    expect(opened.warnings).toEqual([]);
+    expect([
+      modeOf(join(directory, "xdg")),
+      modeOf(dirname(path)),
+      modeOf(path),
+    ]).toEqual([privateDirectoryMode, privateDirectoryMode, privateFileMode]);
+  });
 
   test("is narrowed when it already exists readable by others, and the command line says so on standard error", async () => {
     let stderr = "";

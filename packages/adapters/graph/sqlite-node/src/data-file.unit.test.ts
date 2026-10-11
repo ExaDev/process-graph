@@ -6,8 +6,10 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import {
   prepareDataFile,
@@ -21,6 +23,15 @@ const looseDirectoryMode = 0o755;
 const looseFileMode = 0o644;
 /** The permission bits of a mode. */
 const permissionBits = 0o777;
+/** A umask that leaves new files readable by group and others, the usual default, so a test fails if the code relies on the umask for privacy. */
+const permissiveUmask = 0o022;
+/** A umask that removes nothing, so every mode the code asks for is the mode it gets. */
+const openUmask = 0o000;
+/** The radix the probe reads its umask argument in. */
+const octal = 8;
+
+/** The probe that prepares and opens a store under a given umask, in a process of its own, since only a main thread may set the umask and Vitest runs tests in worker threads. */
+const probe = fileURLToPath(new URL("../test/umask-probe.ts", import.meta.url));
 
 const modeOf = (path: string): number => statSync(path).mode & permissionBits;
 
@@ -41,6 +52,42 @@ const looseStore = (path: string): void => {
   writeFileSync(path, "");
   chmodSync(path, looseFileMode);
 };
+
+/** No per-test time limit for the probe: it starts a Node process, so how long it takes is the machine's scheduling, not a property of this code, and a clock bound only fails it under load. The CI job's own timeout still ends a hang. */
+const unbounded = 0;
+
+describe(
+  "a store prepared in a process with its own umask",
+  { timeout: unbounded },
+  () => {
+    test.each([
+      { name: "the usual 022", umask: permissiveUmask },
+      { name: "000, which narrows nothing", umask: openUmask },
+    ])(
+      "under a umask of $name, creates the missing directories, the database and the -wal and -shm files SQLite derives from it private",
+      ({ umask }) => {
+        const result = spawnSync(
+          process.execPath,
+          [probe, umask.toString(octal), directory],
+          { encoding: "utf8" },
+        );
+        if (result.status !== 0) {
+          throw new Error(result.stderr);
+        }
+        const modes: unknown = JSON.parse(result.stdout);
+
+        expect(modes).toEqual({
+          warnings: [],
+          home: privateDirectoryMode,
+          graph: privateDirectoryMode,
+          database: privateFileMode,
+          wal: privateFileMode,
+          shm: privateFileMode,
+        });
+      },
+    );
+  },
+);
 
 describe("in a directory the caller owns", () => {
   test("creates the missing directories and the database private, and the store SQLite opens there keeps its sidecars private", () => {
