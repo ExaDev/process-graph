@@ -43,6 +43,7 @@ deriveStatuses(model, overlay, facts); // Map { "triage" => "done", ... }
 | `unmetOutputs(model, overlay, facts)`         | Each deliverable not yet produced, with the elements and missing inputs it still needs.  |
 | `factsFrom(record)`                           | The `Facts` port over a `FactRecord` of provided artefacts and named fact values.        |
 | `layeredFacts(...ports)`                      | A `Facts` port answering each key from the first port that finds it.                     |
+| `factNamesIn(condition)`                      | The named facts a condition reads: the string key of each `reference` node, once each.   |
 
 Every function that derives status throws `CycleError` (from `graph-dag`, carrying the cycles) when `illegalCycles` is not empty, `UnknownNodeError` when a transition names an element the model does not declare, and `UnsupportedConditionError` for a condition the facts port cannot serve.
 

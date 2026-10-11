@@ -4,11 +4,12 @@ import {
   artefactKey,
   elementStatusKey,
   emptyFactRecord,
+  factNamesIn,
   factsFrom,
   layeredFacts,
 } from "./facts.ts";
 import { readySet } from "./queries.ts";
-import { noFacts } from "./test-support/conditions.ts";
+import { fails, holds, noFacts } from "./test-support/conditions.ts";
 import { approval, pipeline } from "./test-support/models.ts";
 
 const yes = { kind: "boolean", value: true } as const;
@@ -141,5 +142,41 @@ describe("a recorded fact drives the status derivation", () => {
 
     expect(statuses.get("accept")).toBe("unknown");
     expect(statuses.get("reject")).toBe("unknown");
+  });
+});
+
+describe("factNamesIn", () => {
+  it("lists each named fact a condition reads once, in the order met, and no reserved key", () => {
+    expect(
+      factNamesIn({
+        kind: "and",
+        operands: [
+          holds("approved"),
+          {
+            kind: "or",
+            operands: [
+              fails("budgeted"),
+              holds("approved"),
+              {
+                kind: "textCompare",
+                op: "equals",
+                left: { kind: "reference", key: elementStatusKey("audit") },
+                right: { kind: "textLiteral", value: "done" },
+              },
+            ],
+          },
+          {
+            kind: "compare",
+            op: "gt",
+            left: { kind: "reference", key: "budget" },
+            right: { kind: "numberLiteral", value: 0 },
+          },
+        ],
+      }),
+    ).toEqual(["approved", "budgeted", "budget"]);
+  });
+
+  it("finds nothing in a condition that reads no named fact", () => {
+    expect(factNamesIn({ kind: "booleanLiteral", value: true })).toEqual([]);
   });
 });
