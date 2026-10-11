@@ -55,8 +55,8 @@
     "sequence-diagram"
   ],
   "dependencies": {
-    "@exadev/process-graph-domain": "1.1.0",
-    "@exadev/process-graph-projection": "1.0.3",
+    "@exadev/process-graph-domain": "1.1.1",
+    "@exadev/process-graph-projection": "1.1.0",
     "@exadev/process-graph-react": "0.0.0",
     "@exadev/process-graph-schema": "1.1.0",
     "@vanilla-extract/recipes": "0.5.7"

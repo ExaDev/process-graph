@@ -56,9 +56,9 @@
     "state-machine"
   ],
   "dependencies": {
-    "@exadev/process-graph-domain": "1.1.0",
-    "@exadev/process-graph-layout": "1.0.2",
-    "@exadev/process-graph-projection": "1.0.3",
+    "@exadev/process-graph-domain": "1.1.1",
+    "@exadev/process-graph-layout": "1.0.3",
+    "@exadev/process-graph-projection": "1.1.0",
     "@exadev/process-graph-react": "0.0.0",
     "@exadev/process-graph-schema": "1.1.0",
     "@exadev/process-graph-ui": "0.0.0",
