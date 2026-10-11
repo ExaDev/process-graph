@@ -8,6 +8,10 @@ export {
   boundActivitySchema,
   boundItemsSchema,
   changeKinds,
+  factChangeSchema,
+  factClearingSchema,
+  factNameSchema,
+  factRecordSchema,
   issueSchema,
   modelIdSchema,
   modelSummarySchema,
@@ -16,10 +20,13 @@ export {
   relationSchema,
   revisionSchema,
   storeChangeSchema,
+  storedFactsSchema,
   storedModelSchema,
   type BoundActivity,
   type BoundItems,
   type ChangeKind,
+  type FactChange,
+  type FactClearing,
   type ModelId,
   type ModelSummary,
   type Reach,
@@ -27,6 +34,7 @@ export {
   type RelationKind,
   type Revision,
   type StoreChange,
+  type StoredFacts,
   type StoredModel,
 } from "./schema.ts";
 export { GraphStoreError, type GraphStoreFailure } from "./errors.ts";
@@ -44,6 +52,7 @@ export {
   mergeBoundItems,
   overlayWithin,
 } from "./merge.ts";
+export { factIssues, factsWithin, mergeFacts, withoutFacts } from "./facts.ts";
 export {
   ancestorsOf,
   childrenOf,

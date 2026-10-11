@@ -2,10 +2,13 @@ import type { Model, OpenIds, Overlay } from "@exadev/process-graph-schema";
 import type { ChangeFeed } from "./feed.ts";
 import type {
   BoundItems,
+  FactChange,
+  FactClearing,
   ModelSummary,
   Reach,
   Relation,
   Revision,
+  StoredFacts,
   StoredModel,
 } from "./schema.ts";
 
@@ -37,19 +40,19 @@ export interface GraphStore {
     readonly signal: AbortSignal | undefined;
   }) => Promise<readonly ModelSummary[]>;
   /**
-   * Stores a model under an id, replacing any model stored there and dropping the run state and relations of what the new model does not declare (see `relationsWithin`).
+   * Stores a model under an id, replacing any model stored there and dropping the run state, relations and artefact facts of what the new model does not declare (see `overlayWithin`, `relationsWithin` and `factsWithin`).
    * @returns The revision the save took.
    */
   readonly saveModel: (
     request: ModelRequest & { readonly model: Model<OpenIds> },
   ) => Promise<Revision>;
   /**
-   * Reads a model back exactly as saved or merged, in its declared order, with its run state.
-   * @returns The model, its overlay and its revision.
+   * Reads a model back exactly as saved or merged, in its declared order, with its run state and its fact record.
+   * @returns The model, its overlay, its facts and its revision.
    */
   readonly loadModel: (request: ModelRequest) => Promise<StoredModel>;
   /**
-   * Removes a model, its run state and its relations.
+   * Removes a model, its run state, its relations and its facts.
    * @returns The revision the deletion took, or `undefined` when there was no such model and nothing changed.
    */
   readonly deleteModel: (
@@ -61,6 +64,25 @@ export interface GraphStore {
    */
   readonly applyOverlay: (
     request: ModelRequest & { readonly overlay: Overlay<OpenIds> },
+  ) => Promise<Revision>;
+  /**
+   * A model's fact record.
+   * @returns The record and the model's revision.
+   */
+  readonly readFacts: (request: ModelRequest) => Promise<StoredFacts>;
+  /**
+   * Records facts about a model's run (see `mergeFacts`). Every artefact named must be one the model declares (`factIssues`); otherwise nothing is written.
+   * @returns The revision the change took.
+   */
+  readonly setFacts: (
+    request: ModelRequest & { readonly facts: FactChange },
+  ) => Promise<Revision>;
+  /**
+   * Forgets facts about a model's run, so what they named is unknown again (see `withoutFacts`).
+   * @returns The revision the change took.
+   */
+  readonly clearFacts: (
+    request: ModelRequest & { readonly facts: FactClearing },
   ) => Promise<Revision>;
   /**
    * Merges items read from a source into a model by id (see `mergeBoundItems`), and adds their relations (see `mergeRelations`), creating the model from an empty one when it does not exist. Every relation stored must name what the merged model declares (`relationIssues`); otherwise nothing is written.

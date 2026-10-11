@@ -92,6 +92,23 @@ export const createGraphStoreRouter = (store: GraphStore): GraphStoreRouter =>
           })),
         ),
       },
+      facts: {
+        read: os.v1.facts.read.handler(async ({ input, signal, errors }) =>
+          call(signal, errors, async () =>
+            store.readFacts({ ...input, signal }),
+          ),
+        ),
+        set: os.v1.facts.set.handler(async ({ input, signal, errors }) =>
+          call(signal, errors, async () => ({
+            revision: await store.setFacts({ ...input, signal }),
+          })),
+        ),
+        clear: os.v1.facts.clear.handler(async ({ input, signal, errors }) =>
+          call(signal, errors, async () => ({
+            revision: await store.clearFacts({ ...input, signal }),
+          })),
+        ),
+      },
       items: {
         upsert: os.v1.items.upsert.handler(async ({ input, signal, errors }) =>
           call(signal, errors, async () => ({
