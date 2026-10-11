@@ -45,6 +45,26 @@ describe("useGraphSelection options", () => {
     expect(focus.mock.calls).toEqual([["first"], ["second"]]);
   });
 
+  test("reads an owner's selection and leaves changing it to the owner", () => {
+    const onChange = vi.fn<(id: string | undefined) => void>();
+    const { rerender } = render(
+      <Canvas selected="second" onChange={onChange} />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "ArrowDown" });
+
+    expect(onChange.mock.calls).toEqual([["third"]]);
+    expect(screen.getByRole("status").textContent).toBe("second");
+
+    rerender(<Canvas selected="third" onChange={onChange} />);
+
+    expect(screen.getByRole("status").textContent).toBe("third");
+
+    rerender(<Canvas selected={undefined} onChange={onChange} />);
+
+    expect(screen.getByRole("status").textContent).toBe("none");
+  });
+
   test("ignores keys it does not navigate with", () => {
     const onChange = vi.fn<(id: string | undefined) => void>();
     render(<Canvas onChange={onChange} />);

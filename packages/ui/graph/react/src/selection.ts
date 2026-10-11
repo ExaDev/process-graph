@@ -34,8 +34,12 @@ export interface GraphSelection<Id extends string> {
 
 /** How a selection starts and what it tells its owner. */
 export interface GraphSelectionOptions<Id extends string> {
-  /** The element selected at first. */
+  /** The element selected at first, when the hook keeps the selection itself. */
   readonly initial?: Id | undefined;
+  /**
+   * The selected element, when the owner keeps the selection: give this key, even as `undefined`, and the hook reads the selection from it and keeps none of its own, reporting each change a click or key asks for through `onChange`. Several views of one model then share one selection. Leave the key out for the hook to keep the selection, starting from `initial`.
+   */
+  readonly selected?: Id | undefined;
   /** Called with each new selection a click or key makes, so a parent can follow it. */
   readonly onChange?: ((id: Id | undefined) => void) | undefined;
   /** Focuses the item of an element after a keyboard move. Defaults to focusing the element `itemProps` was spread on; a renderer that draws its own focusable items, such as a canvas, passes its own. */
@@ -58,7 +62,7 @@ const moves: Readonly<
 /**
  * Selection state with keyboard navigation over the elements of a view, following the listbox pattern of the WAI-ARIA Authoring Practices: the arrow keys move the selection to the next or previous element in `order`, wrapping at either end; Home and End move to the first and last; Escape clears it. Only one item is a tab stop: the selected one, or the first when none is. A keyboard move also focuses the item it selects.
  * @param order - The navigable elements, in the order the keys move through them: the elements on show, after filtering.
- * @param options - The initial selection, a listener for changes and how to focus an item.
+ * @param options - The initial selection or the owner's selection, a listener for changes and how to focus an item.
  * @returns The selection, a setter, and the container and item props.
  */
 export const useGraphSelection = <Id extends string>(
@@ -66,14 +70,18 @@ export const useGraphSelection = <Id extends string>(
   options: GraphSelectionOptions<Id> = {},
 ): GraphSelection<Id> => {
   const { initial, onChange, focus } = options;
-  const [chosen, setChosen] = useState<Id | undefined>(initial);
+  const controlled = "selected" in options;
+  const [kept, setKept] = useState<Id | undefined>(initial);
+  const chosen = controlled ? options.selected : kept;
   const items = useRef(new Map<Id, HTMLElement>());
   const select = useCallback(
     (id: Id | undefined) => {
-      setChosen(id);
+      if (!controlled) {
+        setKept(id);
+      }
       onChange?.(id);
     },
-    [onChange],
+    [controlled, onChange],
   );
   const selected =
     chosen !== undefined && order.includes(chosen) ? chosen : undefined;
