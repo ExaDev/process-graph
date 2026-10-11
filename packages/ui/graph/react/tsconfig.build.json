@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "rewriteRelativeImportExtensions": true
+  },
+  "references": [
+    {
+      "path": "../../../core/graph/schema/tsconfig.build.json"
+    },
+    {
+      "path": "../../../core/graph/projection/tsconfig.build.json"
+    },
+    {
+      "path": "../../../core/graph/domain/tsconfig.build.json"
+    },
+    {
+      "path": "../../../core/graph/store-contract/tsconfig.build.json"
+    }
+  ]
+}

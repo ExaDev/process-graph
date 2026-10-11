@@ -1,0 +1,82 @@
+{
+  "name": "@exadev/process-graph-react",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Headless React hooks and unstyled components over the process model: load and follow a stored model, derive statuses, ready set, blocked chains, impact and explanations, select, filter and navigate by keyboard, and render elements, lanes, legends and panels as semantic markup.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ExaDev/process-graph.git",
+    "directory": "packages/ui/graph/react"
+  },
+  "homepage": "https://github.com/ExaDev/process-graph/tree/main/packages/ui/graph/react#readme",
+  "bugs": {
+    "url": "https://github.com/ExaDev/process-graph/issues"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "license": "MIT",
+  "scripts": {
+    "build": "turbo run _build",
+    "_build": "tsc -b tsconfig.build.json",
+    "lint": "turbo run _lint",
+    "_lint": "eslint . --cache --max-warnings 0",
+    "_lint:fix": "eslint . --fix --cache --max-warnings 0",
+    "typecheck": "turbo run _typecheck _typecheck:attw",
+    "_typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "_typecheck:attw": "attw --pack --profile esm-only",
+    "test": "turbo run _test",
+    "_test": "vitest run --project unit",
+    "test:coverage": "turbo run _test:coverage",
+    "_test:coverage": "vitest run --project unit --coverage",
+    "test:smoke": "turbo run _test:smoke",
+    "_test:smoke": "vitest run --project smoke",
+    "test:mutation": "turbo run _test:mutation",
+    "_test:mutation": "stryker run stryker.config.ts"
+  },
+  "keywords": [
+    "process-model",
+    "react",
+    "hooks",
+    "headless",
+    "dependency-graph"
+  ],
+  "dependencies": {
+    "@exadev/process-graph-dag": "1.0.2",
+    "@exadev/process-graph-domain": "1.1.0",
+    "@exadev/process-graph-projection": "1.0.3",
+    "@exadev/process-graph-schema": "1.1.0",
+    "@exadev/process-graph-store-contract": "1.0.2"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@orpc/server": "2.0.0-beta.41",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/typescript-checker": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "26.6.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitest/coverage-v8": "5.0.3",
+    "eslint": "10.12.0",
+    "happy-dom": "20.14.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  },
+  "peerDependencies": {
+    "react": "19.3.0"
+  }
+}
