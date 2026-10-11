@@ -9,7 +9,11 @@ export default defineConfig({
       },
       {
         extends: true,
-        test: { name: "smoke", include: ["test/package.smoke.test.ts"] },
+        test: {
+          name: "smoke",
+          include: ["test/package.smoke.test.ts"],
+          globalSetup: ["test/consumer.global-setup.ts"],
+        },
       },
     ],
   },

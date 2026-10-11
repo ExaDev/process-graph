@@ -46,7 +46,7 @@ const config: KnipConfig = {
     "packages/targets/process-graph": {
       // Its entries are its tsdown entries, the bin included, which knip's tsdown plugin reads.
       project: ["src/**/*.{ts,tsx}!"],
-      // Optional peer dependencies of the bundle that nothing else in this workspace declares as a peer. Each is also a devDependency, as `pnpm add --save-peer` writes it, so the built bundle that the smoke tests run resolves it here; only the bundle imports it, since `src/` reaches it through the workspace packages it inlines, and knip traces `src/`. knip reports an entry here that stops being needed and a new peer missing from it, so the list cannot drift silently.
+      // Optional peer dependencies of the bundle that nothing else in this workspace declares as a peer. Each is also a devDependency, as `pnpm add --save-peer` writes it, and only the built bundle imports it, since `src/` reaches it through the workspace packages it inlines, and knip traces `src/`. knip reports an entry here that stops being needed and a new peer missing from it, so the list cannot drift silently.
       ignoreDependencies: [
         "@orpc/client",
         "@sqlite.org/sqlite-wasm",
