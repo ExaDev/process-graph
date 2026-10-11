@@ -32,6 +32,16 @@ export interface GraphSelection<Id extends string> {
   readonly itemProps: (id: Id) => SelectionItemProps;
 }
 
+/** How a selection starts and what it tells its owner. */
+export interface GraphSelectionOptions<Id extends string> {
+  /** The element selected at first. */
+  readonly initial?: Id | undefined;
+  /** Called with each new selection a click or key makes, so a parent can follow it. */
+  readonly onChange?: ((id: Id | undefined) => void) | undefined;
+  /** Focuses the item of an element after a keyboard move. Defaults to focusing the element `itemProps` was spread on; a renderer that draws its own focusable items, such as a canvas, passes its own. */
+  readonly focus?: ((id: Id) => void) | undefined;
+}
+
 /** What each navigation key does, given the items in order and the index of the selected one (-1 when none is). */
 const moves: Readonly<
   Record<string, (count: number, at: number) => number | undefined>
@@ -48,15 +58,23 @@ const moves: Readonly<
 /**
  * Selection state with keyboard navigation over the elements of a view, following the listbox pattern of the WAI-ARIA Authoring Practices: the arrow keys move the selection to the next or previous element in `order`, wrapping at either end; Home and End move to the first and last; Escape clears it. Only one item is a tab stop: the selected one, or the first when none is. A keyboard move also focuses the item it selects.
  * @param order - The navigable elements, in the order the keys move through them: the elements on show, after filtering.
- * @param initial - The element selected at first.
+ * @param options - The initial selection, a listener for changes and how to focus an item.
  * @returns The selection, a setter, and the container and item props.
  */
 export const useGraphSelection = <Id extends string>(
   order: readonly Id[],
-  initial?: Id,
+  options: GraphSelectionOptions<Id> = {},
 ): GraphSelection<Id> => {
-  const [chosen, select] = useState<Id | undefined>(initial);
+  const { initial, onChange, focus } = options;
+  const [chosen, setChosen] = useState<Id | undefined>(initial);
   const items = useRef(new Map<Id, HTMLElement>());
+  const select = useCallback(
+    (id: Id | undefined) => {
+      setChosen(id);
+      onChange?.(id);
+    },
+    [onChange],
+  );
   const selected =
     chosen !== undefined && order.includes(chosen) ? chosen : undefined;
   const stop = selected ?? order[0];
@@ -74,12 +92,17 @@ export const useGraphSelection = <Id extends string>(
       );
       const next = index === undefined ? undefined : order[index];
       select(next);
-      if (next !== undefined) {
-        // An item rendered without its props, as on a canvas that manages its own focus, has no element to focus.
+      if (next === undefined) {
+        return;
+      }
+      if (focus === undefined) {
+        // An item rendered without its props has no element to focus.
         items.current.get(next)?.focus();
+      } else {
+        focus(next);
       }
     },
-    [order, selected],
+    [order, selected, select, focus],
   );
 
   const itemProps = useCallback(
@@ -100,7 +123,7 @@ export const useGraphSelection = <Id extends string>(
         select(id);
       },
     }),
-    [selected, stop],
+    [selected, stop, select],
   );
 
   return useMemo(
@@ -110,6 +133,6 @@ export const useGraphSelection = <Id extends string>(
       containerProps: { role: "listbox", onKeyDown },
       itemProps,
     }),
-    [selected, onKeyDown, itemProps],
+    [selected, select, onKeyDown, itemProps],
   );
 };

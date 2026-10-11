@@ -60,7 +60,7 @@ const Cards = ({ run }) => {
 | `useCriticalPath(run, weight?)`      | The heaviest chain through the work ahead; each element weighs one step unless `weight` says otherwise. |
 | `useProjection(model, projection)`   | The view a projection names, as `{ notation, view }`.                                                   |
 | `useElementFilter(initial?)`         | A filter by status, actor and source, with toggles and `clear`.                                         |
-| `useGraphSelection(order, initial?)` | The selected element, a setter, and container and item props for keyboard navigation.                   |
+| `useGraphSelection(order, options?)` | The selected element, a setter, and container and item props for keyboard navigation.                   |
 
 A `Run` is `{ model, overlay, facts }`. `noFacts` is the facts port of a run with no facts source: every condition that reads a fact is indeterminate. Keep the three parts stable between renders; the hooks recompute when one of them changes identity. A hook that derives status throws what `graph-domain` throws (an illegal cycle, an unknown element), so an error boundary shows it.
 
@@ -74,7 +74,7 @@ An `ElementFilter` holds a set of statuses, actors and sources; an empty set doe
 
 ### Keyboard navigation
 
-`useGraphSelection(order)` follows the WAI-ARIA listbox pattern. Spread `containerProps` on the element that holds the items and `itemProps(id)` on each item. The arrow keys move the selection through `order`, wrapping at either end; Home and End go to the first and last; Escape clears the selection. Only one item is a tab stop, the selected one or the first, and a keyboard move focuses the item it selects. Pass the order in which the items are drawn, after filtering.
+`useGraphSelection(order)` follows the WAI-ARIA listbox pattern. Spread `containerProps` on the element that holds the items and `itemProps(id)` on each item. The arrow keys move the selection through `order`, wrapping at either end; Home and End go to the first and last; Escape clears the selection. Only one item is a tab stop, the selected one or the first, and a keyboard move focuses the item it selects. Pass the order in which the items are drawn, after filtering. The options set the initial selection, an `onChange` listener called with each selection a click or key makes, and a `focus` function for a renderer that draws its own focusable items, such as a React Flow canvas.
 
 ## Components
 
