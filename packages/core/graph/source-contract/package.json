@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-source-contract",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "The GraphSource port as an oRPC contract: versioned, paginated and streamed sync of bound activities, participants, transitions and overlay status, with an in-memory fake and a conformance kit every adapter must pass.",
   "private": true,
   "type": "module",

@@ -1170,49 +1170,49 @@ importers:
         specifier: 0.18.5
         version: 0.18.5
       '@exadev/process-graph-cli':
-        specifier: 0.0.0
+        specifier: 1.0.0
         version: link:../graph-cli
       '@exadev/process-graph-dag':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../core/graph/dag
       '@exadev/process-graph-domain':
-        specifier: 1.1.1
+        specifier: 1.1.2
         version: link:../../core/graph/domain
       '@exadev/process-graph-layout':
-        specifier: 1.0.3
+        specifier: 1.0.4
         version: link:../../core/graph/layout
       '@exadev/process-graph-projection':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../core/graph/projection
       '@exadev/process-graph-react':
-        specifier: 1.0.1
+        specifier: 1.1.0
         version: link:../../ui/graph/react
       '@exadev/process-graph-react-flow':
-        specifier: 1.0.1
+        specifier: 1.1.0
         version: link:../../ui/graph/react-flow
       '@exadev/process-graph-schema':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../core/graph/schema
       '@exadev/process-graph-source-contract':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../core/graph/source-contract
       '@exadev/process-graph-source-github-issues':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../adapters/graph/source-github-issues
       '@exadev/process-graph-sqlite-node':
-        specifier: 1.0.4
+        specifier: 1.0.5
         version: link:../../adapters/graph/sqlite-node
       '@exadev/process-graph-sqlite-wasm':
-        specifier: 1.0.3
+        specifier: 1.0.4
         version: link:../../adapters/graph/sqlite-wasm
       '@exadev/process-graph-store-contract':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../core/graph/store-contract
       '@exadev/process-graph-store-sqlite':
-        specifier: 1.1.0
+        specifier: 1.1.1
         version: link:../../adapters/graph/store-sqlite
       '@exadev/process-graph-ui':
-        specifier: 1.0.1
+        specifier: 1.0.2
         version: link:../../ui/graph/ui
       '@orpc/client':
         specifier: 2.0.0-beta.41
