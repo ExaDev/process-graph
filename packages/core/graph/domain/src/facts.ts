@@ -1,4 +1,9 @@
-import type { JsonValue, Resolution, SyncResolvers } from "trilean";
+import type {
+  ComputedValue,
+  JsonValue,
+  Resolution,
+  SyncResolvers,
+} from "trilean";
 import { createSyncEvaluator } from "trilean";
 import type { IdSpace, Model, Overlay } from "@exadev/process-graph-schema";
 import type { Branch } from "./status.ts";
@@ -50,6 +55,76 @@ export const isProvided = (facts: Facts, id: string): boolean => {
 };
 
 /**
+ * What is known from outside the process about one run, as plain data a store can keep: which artefacts are provided, and the values of named facts that conditions read.
+ *
+ * Each part is three-valued by presence. An artefact mapped to `true` is provided and one mapped to `false` is known not to be; an artefact the record does not name is unknown, which `isProvided` treats as not provided but a condition reading `artefactKey` sees as indeterminate. A named fact holds a trilean value; a name the record does not hold is unknown, so a condition reading it is indeterminate.
+ */
+export interface FactRecord {
+  /** The artefacts whose provision is known, by artefact id. */
+  readonly artefacts: Readonly<Record<string, boolean>>;
+  /** The values of named facts, by the name a condition's `reference` node gives as its key. */
+  readonly values: Readonly<Record<string, ComputedValue>>;
+}
+
+/** A record that knows nothing: no artefact is provided and every named fact is unknown. */
+export const emptyFactRecord: FactRecord = { artefacts: {}, values: {} };
+
+const isRecord = (value: JsonValue): value is Record<string, JsonValue> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** The artefact id an `artefactKey` key names, or `undefined` for any other key. */
+const artefactOf = (key: JsonValue): string | undefined => {
+  if (!isRecord(key) || Object.keys(key).length !== 1) {
+    return undefined;
+  }
+  const id = key[artefactField];
+
+  return typeof id === "string" ? id : undefined;
+};
+
+/**
+ * Adapts a fact record to the `Facts` port. A string key is a named fact, answered with its value when the record holds it; a key built by `artefactKey` is answered with the boolean the record holds for that artefact; every other key, and any name or artefact the record does not hold, is not found.
+ * @param record - What is known.
+ * @returns A `Facts` port reading the record.
+ */
+export const factsFrom = (record: FactRecord): Facts => {
+  const values = new Map(Object.entries(record.values));
+  const artefacts = new Map(Object.entries(record.artefacts));
+
+  return (key) => {
+    if (typeof key === "string") {
+      const value = values.get(key);
+
+      return value === undefined ? { found: false } : { found: true, value };
+    }
+    const id = artefactOf(key);
+    const provided = id === undefined ? undefined : artefacts.get(id);
+
+    return provided === undefined
+      ? { found: false }
+      : { found: true, value: { kind: "boolean", value: provided } };
+  };
+};
+
+/**
+ * Layers facts ports: each key is answered by the first port that finds it, so an earlier port overrides a later one only where it knows the answer.
+ * @param ports - The ports, most authoritative first.
+ * @returns A `Facts` port that is not found only when no port finds the key.
+ */
+export const layeredFacts =
+  (...ports: readonly Facts[]): Facts =>
+  (key) => {
+    for (const port of ports) {
+      const answer = port(key);
+      if (answer.found) {
+        return answer;
+      }
+    }
+
+    return { found: false };
+  };
+
+/**
  * Thrown when a condition uses a node whose evaluation needs a table or a collection from the facts port, which answers single keys only.
  */
 export class UnsupportedConditionError extends Error {
@@ -69,9 +144,6 @@ export class UnsupportedConditionError extends Error {
 }
 
 const evaluator = createSyncEvaluator({});
-
-const isRecord = (value: JsonValue): value is Record<string, JsonValue> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
  * Evaluates every transition's condition.
