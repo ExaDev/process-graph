@@ -32,14 +32,9 @@ const config: KnipConfig = {
       entry: ["src/index.{ts,tsx}"],
       project: ["src/**/*.{ts,tsx}!"],
     },
-    // An app rather than a library: its entries are the page's module and the store's worker, which index.html and main.tsx load, and its build script, tests and Playwright suite.
+    // An app rather than a library: knip's Vite plugin finds the page's module from index.html; the store's worker, which main.tsx starts by URL, the build script and the Playwright suite are entries of their own.
     "packages/targets/graph-web": {
-      entry: [
-        "src/main.tsx!",
-        "src/store.worker.ts!",
-        "build/icons.ts",
-        "e2e/**/*.ts",
-      ],
+      entry: ["src/store.worker.ts!", "build/icons.ts", "e2e/**/*.ts"],
       project: ["src/**/*.{ts,tsx}!", "build/**/*.ts", "e2e/**/*.ts"],
     },
   },

@@ -2,7 +2,7 @@ import { useId, useRef, type KeyboardEvent, type ReactElement } from "react";
 import { tab as tabClass, tabList } from "./app.css.ts";
 
 /** One tab: its value and the text it is shown with. */
-export interface TabOption<V extends string> {
+interface TabOption<V extends string> {
   readonly value: V;
   readonly label: string;
 }

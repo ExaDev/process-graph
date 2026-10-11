@@ -36,7 +36,7 @@ import { resolveView } from "./views.ts";
 import { WorkLists } from "./work-lists.tsx";
 
 /** Each view's tab label. */
-export const viewLabels: Readonly<Record<ViewKind, string>> = {
+const viewLabels: Readonly<Record<ViewKind, string>> = {
   flowchart: "Flowchart",
   swimlane: "Swimlane",
   state: "State machine",

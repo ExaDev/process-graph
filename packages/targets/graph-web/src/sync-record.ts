@@ -4,7 +4,7 @@ import { z } from "zod";
 /**
  * Where a sync stopped: the model, every scope it was asked for in order, the prefix of the source to read next, and the cursor after the last page it wrote within that source's scopes (absent to read them from the start). Everything before it is in the store, so a sync started from it reads only what is left.
  */
-export const checkpointSchema = z
+const checkpointSchema = z
   .strictObject({
     modelId: z.string().min(1),
     scopes: z.array(z.string().min(1)).readonly(),
