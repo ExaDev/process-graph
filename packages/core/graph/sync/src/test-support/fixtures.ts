@@ -114,7 +114,7 @@ export const apiPage: FakePage = pageOf([
 ]);
 
 /** The second page of the fake `github:acme` scope: the web repository's issues, the epic among them, with a blocker in the API repository. */
-export const webPage: FakePage = pageOf([
+const webPage: FakePage = pageOf([
   {
     id: "github:acme/web#1",
     label: "Build the page",

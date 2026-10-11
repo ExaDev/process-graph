@@ -122,7 +122,7 @@ const repositoryParticipant = (repository: string) => ({
  * A page of the fake GitHub source, built as the real adapter builds one: each issue a bound activity whose actor is its repository, each blocker a transition from it to the issue it blocks, each sub-issue `child-of` its parent, and the state in the overlay.
  * @param issues - The page's issues, with every blocker among them.
  */
-export const pageOf = (issues: readonly Issue[]): FakePage => ({
+const pageOf = (issues: readonly Issue[]): FakePage => ({
   participants: [...new Set(issues.map((issue) => issue.repository))].map(
     repositoryParticipant,
   ),
@@ -158,7 +158,7 @@ const sdk: Issue = {
 };
 
 /** The first page of the fake `github:acme` scope: the API repository's issues. */
-export const apiPage: FakePage = pageOf([
+const apiPage: FakePage = pageOf([
   {
     id: "github:acme/api#1",
     label: "Design the schema",
