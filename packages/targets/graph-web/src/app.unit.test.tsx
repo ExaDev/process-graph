@@ -2,7 +2,9 @@ import {
   createFakeGraphSource,
   GraphSourceError,
   type GraphSourcePager,
+  type SyncFilter,
 } from "@exadev/process-graph-source-contract";
+import { createGitHubIssuesSource } from "@exadev/process-graph-source-github-issues";
 import {
   act,
   cleanup,
@@ -294,6 +296,144 @@ describe("the sync", () => {
     ).toBeDefined();
     expect(document.querySelector("[data-progress]")?.textContent).toBe(
       "The last sync stopped before it finished.",
+    );
+  });
+});
+
+describe("what to read", () => {
+  test("puts the issue states, labels and order in the address, and syncs with them", async () => {
+    const filters: (SyncFilter | undefined)[] = [];
+    const fake = createFakeGraphSource({
+      source: "github",
+      scopes: fakeScopes,
+    });
+    const ports = testPorts({
+      token: "t",
+      search: acme,
+      pager: {
+        source: "github",
+        page: async (request) => {
+          filters.push(request.filter);
+
+          return fake.page(request);
+        },
+      },
+    });
+    renderApp(ports);
+    const options = screen.getByRole("region", { name: "What to read" });
+
+    fireEvent.click(within(options).getByRole("checkbox", { name: "Open" }));
+    fireEvent.change(
+      within(options).getByLabelText("Only issues with any of these labels"),
+      { target: { value: "bug" } },
+    );
+    fireEvent.click(within(options).getByRole("button", { name: "Add label" }));
+    fireEvent.change(within(options).getByLabelText("Order"), {
+      target: { value: "updated" },
+    });
+    fireEvent.change(within(options).getByLabelText("Direction"), {
+      target: { value: "desc" },
+    });
+
+    const query = new URLSearchParams(ports.address.observable.get());
+    expect([
+      query.getAll("state"),
+      query.getAll("label"),
+      query.get("order"),
+      query.get("direction"),
+    ]).toEqual([["open"], ["bug"], "updated", "desc"]);
+    await syncNow();
+    const filter: SyncFilter = {
+      states: ["open"],
+      labels: ["bug"],
+      order: { field: "updated", direction: "descending" },
+    };
+    expect(filters).toEqual([filter, filter]);
+    expect(addressOf(ports).syncFilter).toEqual(filter);
+  });
+
+  test("resumes an interrupted sync under the filter its checkpoint was issued with", async () => {
+    const filters: (SyncFilter | undefined)[] = [];
+    const fake = createFakeGraphSource({
+      source: "github",
+      scopes: fakeScopes,
+    });
+    const filter: SyncFilter = { states: ["open"] };
+    const first = await fake.page({
+      scope: ["github:acme"],
+      cursor: undefined,
+      signal: undefined,
+      filter,
+    });
+    renderApp(
+      testPorts({
+        token: "t",
+        search: acme,
+        pager: {
+          source: "github",
+          page: async (request) => {
+            filters.push(request.filter);
+
+            return fake.page(request);
+          },
+        },
+        records: [
+          {
+            modelId: "github:acme",
+            gaps: [],
+            checkpoint: {
+              modelId: "github:acme",
+              scopes: ["github:acme"],
+              filter,
+              source: "github",
+              ...(first.next === undefined ? {} : { after: first.next }),
+            },
+          },
+        ],
+      }),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Resume where it stopped" }),
+    );
+    await waitFor(() => {
+      expect(document.querySelector("[data-progress]")?.textContent).toContain(
+        "Sync finished",
+      );
+    });
+    expect(filters).toEqual([filter]);
+  });
+
+  test("clears the filter when nothing narrows or orders the sync", () => {
+    const ports = testPorts({ token: "t", search: `${acme}&state=open` });
+    renderApp(ports);
+    const options = screen.getByRole("region", { name: "What to read" });
+
+    fireEvent.click(within(options).getByRole("checkbox", { name: "Open" }));
+
+    expect(addressOf(ports).syncFilter).toBeUndefined();
+    expect(ports.address.observable.get()).toBe(acme);
+  });
+
+  test("says GitHub cannot filter a board, and shows its refusal when synced anyway", async () => {
+    const ports = testPorts({
+      token: "t",
+      search: "?scope=github%3Aacme%2Fprojects%2F1&state=open",
+      pager: createGitHubIssuesSource({
+        token: async () => Promise.resolve("t"),
+        fetch: async () =>
+          Promise.reject(new Error("a refused sync reaches no network")),
+      }),
+    });
+    renderApp(ports);
+
+    expect(
+      document.querySelector('[data-note="board-filter"]')?.textContent,
+    ).toContain("GitHub cannot filter or reorder a Projects v2 board");
+    fireEvent.click(screen.getByRole("button", { name: "Sync" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      'The sync stopped: "github:acme/projects/1" is a Projects v2 board, which lists its items in the board\'s own order and cannot be filtered; sync it without a filter What was read before it stopped is kept.',
     );
   });
 });

@@ -22,6 +22,11 @@ const everything: ViewState = {
     "github:acme/api#2->github:acme/web#1",
     "github:acme/web#1->github:acme/web#2",
   ],
+  syncFilter: {
+    states: ["open"],
+    labels: ["bug", "good first issue"],
+    order: { field: "updated", direction: "descending" },
+  },
 };
 
 describe("view state in the address", () => {
@@ -49,6 +54,11 @@ describe("view state in the address", () => {
       ["subject", "order"],
       ["step", "github:acme/api#2->github:acme/web#1"],
       ["step", "github:acme/web#1->github:acme/web#2"],
+      ["state", "open"],
+      ["label", "bug"],
+      ["label", "good first issue"],
+      ["order", "updated"],
+      ["direction", "desc"],
     ]);
   });
 
@@ -91,6 +101,52 @@ describe("view state in the address", () => {
       'The view "gantt" is not one of flowchart, swimlane, state, sequence.',
       'The list "everything" is not one of ready, blocked, path, handoffs, cycles, issues.',
       'The status "late" is not one of done, unknown, skipped, ready, blocked.',
+    ]);
+  });
+});
+
+describe("the sync filter in the address", () => {
+  test("reads the issue states, labels and order the sync reads with", () => {
+    expect(
+      parseViewState(
+        "?scope=github:acme&state=done&state=open&label=bug&label=ui&label=bug&order=comments&direction=desc",
+      ),
+    ).toEqual({
+      state: {
+        ...defaultViewState,
+        scopes: ["github:acme"],
+        syncFilter: {
+          states: ["done", "open"],
+          labels: ["bug", "ui"],
+          order: { field: "comments", direction: "descending" },
+        },
+      },
+      problems: [],
+    });
+  });
+
+  test("orders ascending when a link names an order and no direction, and leaves the ascending direction out when it writes one", () => {
+    const { state } = parseViewState("?order=created");
+
+    expect(state.syncFilter).toEqual({
+      order: { field: "created", direction: "ascending" },
+    });
+    expect(serialiseViewState(state)).toBe("?order=created");
+  });
+
+  test("leaves out an issue state, order or direction it cannot use and names each problem", () => {
+    const { state, problems } = parseViewState(
+      "?state=closed&state=open&order=stars&direction=sideways",
+    );
+
+    expect(state.syncFilter).toEqual({ states: ["open"] });
+    expect(problems).toEqual([
+      'The issue state "closed" is not one of open, done.',
+      'The order "stars" is not one of created, updated, comments.',
+      'The direction "sideways" is not one of asc, desc.',
+    ]);
+    expect(parseViewState("?direction=desc").problems).toEqual([
+      'The direction "desc" orders nothing without an order.',
     ]);
   });
 });

@@ -79,3 +79,23 @@ export const readScopeInput = (text: string): ScopeInput => {
 
   return { scope };
 };
+
+/**
+ * Whether a scope is a GitHub Projects v2 board, which GitHub lists in the board's own order and cannot filter.
+ * @param scope - A source-qualified scope.
+ * @returns Whether it is a well-formed board scope; a scope of another source, or a malformed GitHub one, is not.
+ */
+export const isBoardScope = (scope: string): boolean => {
+  if (!scope.startsWith(`${githubSource}:`)) {
+    return false;
+  }
+  try {
+    return parseScope(scope).kind === "project";
+  } catch (error) {
+    if (!(error instanceof GraphSourceError)) {
+      throw error;
+    }
+
+    return false;
+  }
+};
