@@ -1,0 +1,292 @@
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { afterEach, describe, expect, test } from "vitest";
+import { App } from "./app.tsx";
+import { testPorts, type TestPorts } from "./test-support/ports.ts";
+import { parseViewState } from "./url-state.ts";
+
+afterEach(cleanup);
+
+const acme = "?scope=github%3Aacme";
+const modelId = "github:acme";
+
+const addressOf = (ports: TestPorts) =>
+  parseViewState(ports.address.observable.get()).state;
+
+/** Renders the app on a store already synced from the fake `github:acme` scope. */
+const synced = async (search = acme): Promise<TestPorts> => {
+  const ports = testPorts({ token: "t", search });
+  render(<App ports={ports.ports} />);
+  fireEvent.click(screen.getByRole("button", { name: "Sync" }));
+  await waitFor(() => {
+    expect(document.querySelector("[data-progress]")?.textContent).toContain(
+      "Sync finished",
+    );
+  });
+
+  return ports;
+};
+
+const cardOf = async (id: string): Promise<Element> =>
+  waitFor(() => {
+    const card = document.querySelector(
+      `.react-flow__node [data-element-id="${id}"]`,
+    );
+    if (card === null) {
+      throw new Error(`no card for ${id}`);
+    }
+
+    return card;
+  });
+
+const optionsOf = (list: string): readonly string[] =>
+  within(screen.getByRole("listbox", { name: list }))
+    .getAllByRole("option")
+    .map((option) => option.textContent);
+
+describe("the process view", () => {
+  test("draws the swimlane by default and switches view from its tabs, writing the view to the address", async () => {
+    const ports = await synced();
+    await cardOf("github:acme/api#2");
+    expect(document.querySelector('[data-view="swimlane"]')).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Flowchart" }));
+
+    expect(addressOf(ports).view).toBe("flowchart");
+    expect(document.querySelector('[data-view="flowchart"]')).not.toBeNull();
+    await cardOf("github:acme/api#2");
+  });
+
+  test("moves between view tabs with the arrow keys", async () => {
+    const ports = await synced();
+    const tabs = screen.getByRole("tablist", { name: "View" });
+
+    fireEvent.keyDown(within(tabs).getByRole("tab", { name: "Swimlane" }), {
+      key: "ArrowRight",
+    });
+
+    expect(addressOf(ports).view).toBe("state");
+    expect(document.activeElement?.textContent).toBe("State machine");
+  });
+
+  test("says why a model of issues has no state machine", async () => {
+    await synced(`${acme}&view=state`);
+
+    expect(
+      within(
+        screen.getByRole("tabpanel", { name: /State machine of/u }),
+      ).getByRole("status").textContent,
+    ).toContain("this model declares no entity");
+  });
+
+  test("follows the critical path in the sequence view", async () => {
+    await synced(`${acme}&view=sequence`);
+
+    const figure = await screen.findByRole("figure");
+    expect(
+      [...figure.querySelectorAll("[data-lifeline]")].map(
+        (line) => line.textContent,
+      ),
+    ).toEqual(["acme/api", "acme/web"]);
+  });
+});
+
+describe("the lists", () => {
+  test("list the ready work and the blocked work with what it waits on", async () => {
+    const ports = await synced();
+
+    expect(optionsOf("Ready to start")).toEqual([
+      "Build the endpoint Ready",
+      "Publish the SDK Ready",
+    ]);
+    fireEvent.click(screen.getByRole("tab", { name: "Blocked" }));
+    expect(addressOf(ports).tab).toBe("blocked");
+    expect(optionsOf("Blocked")).toEqual([
+      "Build the page Blocked waits on Build the endpoint, Publish the SDK",
+      "Ship the release Blocked waits on Build the endpoint, Publish the SDK",
+    ]);
+  });
+
+  test("list the critical path and the hand-offs between repositories", async () => {
+    await synced();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Critical path" }));
+    expect(optionsOf("Critical path")).toEqual([
+      "Build the endpoint Ready",
+      "Build the page Blocked",
+      "Ship the release Blocked",
+    ]);
+    fireEvent.click(screen.getByRole("tab", { name: "Hand-offs" }));
+    expect(
+      within(screen.getByRole("list", { name: "Hand-offs" }))
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual([
+      "acme/api hands over to acme/web: Build the endpoint before Build the page",
+      "partner/sdk hands over to acme/web: Publish the SDK before Build the page",
+    ]);
+  });
+
+  test("share the selection with the address, the details and the keyboard", async () => {
+    const ports = await synced();
+    const ready = screen.getByRole("listbox", { name: "Ready to start" });
+
+    fireEvent.keyDown(ready, { key: "ArrowDown" });
+
+    expect(addressOf(ports).selected).toBe("github:acme/api#2");
+    const details = await screen.findByRole("complementary", {
+      name: "Build the endpoint",
+    });
+    expect(details.textContent).toContain("Everything it needs is done.");
+    expect(
+      [...details.querySelectorAll('[data-section="impact"] li')].map(
+        (item) => item.textContent,
+      ),
+    ).toEqual(["Build the page", "Ship the release"]);
+  });
+
+  test("follow the filter in the address", async () => {
+    const ports = await synced(`${acme}&source=github%3Apartner%2Fsdk`);
+
+    expect(optionsOf("Ready to start")).toEqual(["Publish the SDK Ready"]);
+
+    fireEvent.click(screen.getByRole("button", { name: /clear/iu }));
+
+    expect(addressOf(ports).filter.sources.size).toBe(0);
+    expect(optionsOf("Ready to start")).toEqual([
+      "Build the endpoint Ready",
+      "Publish the SDK Ready",
+    ]);
+  });
+});
+
+describe("the details", () => {
+  test("set an element's run state in the store", async () => {
+    const ports = await synced(`${acme}&select=github%3Aacme%2Fapi%232`);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Mark done" }));
+
+    await waitFor(async () => {
+      const stored = await ports.ports.store.v1.models.load({ modelId });
+      expect(stored.overlay["github:acme/api#2"]).toBe("done");
+    });
+    expect(
+      (await cardOf("github:acme/api#2")).getAttribute("data-status"),
+    ).toBe("done");
+  });
+
+  test("link the issue on GitHub and add its repository to the scope when it is outside it, then sync it", async () => {
+    const ports = await synced(`${acme}&select=github%3Apartner%2Fsdk%231`);
+
+    expect(
+      (
+        await screen.findByRole("link", { name: "Open the issue on GitHub" })
+      ).getAttribute("href"),
+    ).toBe("https://github.com/partner/sdk/issues/1");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add partner/sdk to the scope" }),
+    );
+
+    expect(addressOf(ports).scopes).toEqual([
+      "github:acme",
+      "github:partner/sdk",
+    ]);
+    await waitFor(() => {
+      expect(ports.records.get("github:acme github:partner/sdk")).toEqual({
+        modelId: "github:acme github:partner/sdk",
+        gaps: [],
+      });
+    });
+  });
+});
+
+describe("adding to the model", () => {
+  test("adds a record as the command line's add does, and shows the store's refusal", async () => {
+    const ports = await synced();
+    const form = screen.getByRole("region", { name: "Add to the model" });
+
+    fireEvent.change(within(form).getByLabelText("Identifier"), {
+      target: { value: "review" },
+    });
+    fireEvent.change(within(form).getByLabelText("Label"), {
+      target: { value: "Review the release" },
+    });
+    fireEvent.click(within(form).getByRole("button", { name: "Add activity" }));
+
+    expect(await within(form).findByRole("status")).toHaveProperty(
+      "textContent",
+      "Added review.",
+    );
+    const stored = await ports.ports.store.v1.models.load({ modelId });
+    expect(stored.model.elements.at(-1)).toEqual({
+      kind: "activity",
+      id: "review",
+      label: "Review the release",
+    });
+
+    fireEvent.change(within(form).getByLabelText("What to add"), {
+      target: { value: "transition" },
+    });
+    fireEvent.change(within(form).getByLabelText("From"), {
+      target: { value: "nothing" },
+    });
+    fireEvent.change(
+      within(form).getByLabelText("To, which waits on the first"),
+      {
+        target: { value: "review" },
+      },
+    );
+    fireEvent.click(
+      within(form).getByRole("button", { name: "Add transition" }),
+    );
+
+    await waitFor(() => {
+      expect(within(form).getByRole("status").textContent).toMatch(
+        /^Not added: /u,
+      );
+    });
+  });
+});
+
+describe("a model with an illegal cycle", () => {
+  test("lists the cycle in place of the view, since no status can be worked out through it", async () => {
+    const ports = testPorts({ token: "t", search: acme });
+    await ports.ports.store.v1.models.save({
+      modelId,
+      model: {
+        participants: [],
+        events: [],
+        actions: [],
+        artefacts: [],
+        elements: [
+          { kind: "activity", id: "a", label: "A" },
+          { kind: "activity", id: "b", label: "B" },
+        ],
+        transitions: [
+          { id: "a->b", source: "a", target: "b" },
+          { id: "b->a", source: "b", target: "a" },
+        ],
+        fragments: [],
+        projections: [],
+      },
+    });
+    render(<App ports={ports.ports} />);
+
+    const cycles = await screen.findByRole("list", { name: "Cycles" });
+    expect(
+      within(cycles)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual([
+      expect.stringMatching(
+        /^(A waits on B waits on A|B waits on A waits on B)$/u,
+      ),
+    ]);
+  });
+});
