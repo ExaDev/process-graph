@@ -1,4 +1,5 @@
 import { modelSchema, overlaySchema } from "@exadev/process-graph-schema";
+import { relationSchema } from "@exadev/process-graph-store-contract";
 import { createSelectSchema } from "drizzle-orm/zod";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
@@ -11,6 +12,7 @@ import {
   overlay,
   participants,
   projections,
+  relations,
   transitions,
 } from "./tables.ts";
 
@@ -166,6 +168,17 @@ describe("the row schemas Drizzle derives and the model schema", () => {
     expect(described(createSelectSchema(projections).shape.notation)).toEqual(
       z.toJSONSchema(z.enum(notations)),
     );
+  });
+
+  test("the relation kind column holds exactly the contract's relation kinds, and the ends are text", () => {
+    const row = createSelectSchema(relations).shape;
+    const relation = relationSchema.unwrap().shape;
+    expect(described(row.kind)).toEqual(z.toJSONSchema(relation.kind));
+    // The contract also requires the ends to be non-empty, which its input schema enforces before a write reaches the store.
+    expect([described(row.from), described(row.to)]).toEqual([
+      z.toJSONSchema(z.string()),
+      z.toJSONSchema(z.string()),
+    ]);
   });
 
   test("the overlay status column holds exactly the overlay's statuses", () => {
