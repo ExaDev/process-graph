@@ -32,6 +32,16 @@ const config: KnipConfig = {
       entry: ["src/index.{ts,tsx}"],
       project: ["src/**/*.{ts,tsx}!"],
     },
+    // An app rather than a library: its entries are the page's module and the store's worker, which index.html and main.tsx load, and its build script, tests and Playwright suite.
+    "packages/targets/graph-web": {
+      entry: [
+        "src/main.tsx!",
+        "src/store.worker.ts!",
+        "build/icons.ts",
+        "e2e/**/*.ts",
+      ],
+      project: ["src/**/*.{ts,tsx}!", "build/**/*.ts", "e2e/**/*.ts"],
+    },
   },
   ignoreDependencies: [
     // Resolved by name via each semantic-release plugin's own `preset: "conventionalcommits"` option string.
