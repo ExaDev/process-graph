@@ -14,6 +14,8 @@ export default defineConfig({
           name: "unit",
           include: ["src/**/*.test.{ts,tsx}", "build/**/*.test.ts"],
           environment: "happy-dom",
+          // Node 25 and later define their own `localStorage` global, which shadows happy-dom's and throws without a storage file. The flag turns that global off so the test environment's window storage is the one tests see.
+          execArgv: ["--no-experimental-webstorage"],
         },
       },
       {
