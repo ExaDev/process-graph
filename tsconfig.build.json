@@ -38,6 +38,9 @@
       "path": "packages/ui/graph/react/tsconfig.build.json"
     },
     {
+      "path": "packages/ui/graph/ui/tsconfig.build.json"
+    },
+    {
       "path": "packages/targets/process-graph/tsconfig.build.json"
     }
   ]
