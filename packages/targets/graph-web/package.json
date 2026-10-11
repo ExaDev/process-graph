@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-web",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "description": "The process-graph web app: an installable, offline-first PWA that syncs GitHub issues into a SQLite store on the origin private file system and shows the work as a flowchart, swimlane, state machine or sequence diagram, with what is ready, what is blocked and why.",
   "type": "module",

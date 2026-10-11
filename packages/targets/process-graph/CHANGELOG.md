@@ -1,3 +1,18 @@
+## [1.2.0](https://github.com/ExaDev/process-graph/compare/process-graph@1.1.1...process-graph@1.2.0) (2026-10-11)
+
+
+### Dependencies
+
+- Updated @exadev/process-graph-domain to 1.2.0
+- Updated @exadev/process-graph-store-contract to 1.2.0
+- Updated @exadev/process-graph-react to 1.1.1
+- Updated @exadev/process-graph-store-sqlite to 1.2.0
+- Updated @exadev/process-graph-sqlite-node to 1.0.6
+- Updated @exadev/process-graph-sqlite-wasm to 1.0.5
+- Updated @exadev/process-graph-ui to 1.0.3
+- Updated @exadev/process-graph-cli to 1.1.0
+- Updated @exadev/process-graph-react-flow to 1.1.1
+
 ## [1.1.1](https://github.com/ExaDev/process-graph/compare/process-graph@1.1.0...process-graph@1.1.1) (2026-10-11)
 
 ### Build System
