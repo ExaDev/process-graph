@@ -51,7 +51,7 @@
       "outputs": ["coverage/**"]
     },
     "_test:integration": {
-      "dependsOn": ["^_build"],
+      "dependsOn": ["_build", "^_build"],
       "outputs": []
     },
     "_test:smoke": {
