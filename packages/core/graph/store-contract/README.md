@@ -36,9 +36,13 @@ The contract is keyed by version: `graphStoreContract.v1`. A breaking change add
 | `models.delete`      | `modelId`                     | Whether there was a model to delete       |
 | `overlay.set`        | `modelId`, `overlay`          | The revision the change took              |
 | `items.upsert`       | `modelId`, `items`            | The revision the change took              |
+| `relations.list`     | `modelId`                     | The relations kept beside the model       |
 | `query.ready`        | `modelId`                     | The ready elements, in model order        |
 | `query.blockedChain` | `modelId`, `element`          | The unfinished work upstream              |
 | `query.impact`       | `modelId`, `element`          | The unfinished work downstream            |
+| `query.children`     | `modelId`, `element`          | The element's direct children             |
+| `query.descendants`  | `modelId`, `element`          | Everything beneath it, nearest first      |
+| `query.ancestors`    | `modelId`, `element`          | Everything above it, nearest first        |
 | `changes`            | `modelId`, optionally `since` | An event iterator of changes              |
 
 Every call takes the caller's abort signal through the oRPC client options. Failures are the contract's typed errors: `NOT_FOUND` (with `modelId`, and `element` for a query about an element the model lacks) and `UNPROCESSABLE_CONTENT` (with the `issues` that `validate` and `validateOverlay` report). Input that does not match the schemas is oRPC's `BAD_REQUEST`.
@@ -47,9 +51,13 @@ Every call takes the caller's abort signal through the oRPC client options. Fail
 
 Every write is atomic and checked: a change that would leave the model invalid, or the overlay naming an element the model does not declare, is rejected whole and the store is unchanged. A write whose signal has fired before it commits changes nothing.
 
-- `models.save` replaces the model and keeps the run state only of elements the new model still declares.
+- `models.save` replaces the model and keeps the run state only of elements the new model still declares, and the relations only of what it still declares.
 - `overlay.set` sets the run state of the elements it names and leaves the others.
-- `items.upsert` merges items read from a source: participants, bound activities and transitions replace the record with the same id in its place, or are appended in their given order; overlay entries replace the run state of the elements they name. It creates the model from an empty one when there is none. A bound activity's `source` is required and equals its id.
+- `items.upsert` merges items read from a source: participants, bound activities and transitions replace the record with the same id in its place, or are appended in their given order; overlay entries replace the run state of the elements they name; each relation not already stored is appended. It creates the model from an empty one when there is none. A bound activity's `source` is required and equals its id.
+
+## Relations
+
+A relation is a structural link the model has no field for, kept beside it: `child-of` from a sub-task element to its parent element, `assigned-to` from an element to a person participant, and `part-of` from one participant to the participant that contains it. These are the relations a `GraphSource` reports, so a sync's `relations` go straight into `items.upsert`. A relation is identified by its kind and its two ends, and is stored once however often it is sent. Each end must name what the model declares in the space its kind requires, or the write is rejected whole with an `unknown-reference` issue. Relations carry no ordering: the dependency queries never read them, so a parent does not wait on its children unless a transition says so.
 
 Each write takes the next revision from one store-wide sequence, so revisions only grow, a model's revision is the revision of its last change, and a model deleted and saved again never reuses an earlier one.
 
@@ -63,6 +71,7 @@ The queries are structural: they read the stored transitions and run state, and 
 - `query.ready` is every element whose run state is absent or `open`, that is not a control element, and whose blocked chain is empty. On a model with no conditions and no artefacts it agrees with `graph-domain`'s `readySet`.
 - `query.blockedChain` is everything not done upstream of the element, each with the fewest transitions to reach it, ordered by that distance and then by model order. A done element waits on nothing.
 - `query.impact` is the same downstream, whatever the element's own state.
+- `query.children` is every element related to the element by `child-of`, in model order. `query.descendants` and `query.ancestors` walk `child-of` relations down and up from it, each element reported once with the fewest relations it takes to reach it, ordered by that distance and then by model order. The walks never report the element asked about, so they end on a cycle of `child-of` relations, and they read run state not at all.
 
 ## Changes
 
@@ -74,7 +83,7 @@ A store's `ChangeFeed` only sees the writes made through that store. Where sever
 
 ## Implementing a store
 
-An adapter implements `GraphStore` (plain async functions taking a request object with the abort signal) and serves it with `createGraphStoreRouter`, which owns abort handling, error mapping and subscriptions. `checkStored`, `mergeBoundItems` and `overlayWithin` give every store the same write rules, and `structureOf`, `readyOf`, `blockedChainOf` and `impactOf` are the reference queries `createFakeGraphStore` uses.
+An adapter implements `GraphStore` (plain async functions taking a request object with the abort signal) and serves it with `createGraphStoreRouter`, which owns abort handling, error mapping and subscriptions. `checkStored`, `mergeBoundItems`, `overlayWithin`, `mergeRelations`, `relationsWithin` and `relationIssues` give every store the same write rules, and `structureOf`, `readyOf`, `blockedChainOf`, `impactOf`, `childrenOf`, `descendantsOf` and `ancestorsOf` are the reference queries `createFakeGraphStore` uses.
 
 Every adapter runs the conformance kit, through a real oRPC client:
 

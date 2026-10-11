@@ -29,8 +29,22 @@ export const boundActivitySchema = activityElementSchema
   })
   .readonly();
 
+/** The relation kinds a store keeps beside a model, the same kinds a source reports. */
+export const relationKinds = ["child-of", "assigned-to", "part-of"] as const;
+
 /**
- * Items read from a source, to be merged into a stored model by identifier. Each participant, activity and transition replaces the one with the same id or is appended after the existing ones; the overlay's entries replace the run state of the elements they name. Everything else in the model is left as it is.
+ * A structural link the model has no field for, kept beside it: `child-of` from a sub-task element to its parent element, `assigned-to` from an element to a person participant, `part-of` from one participant to the participant that contains it (a repository to its organisation). A relation is identified by its kind and its two ends. Relations carry no ordering, so the structural queries never treat a parent as waiting on its children.
+ */
+export const relationSchema = z
+  .strictObject({
+    kind: z.enum(relationKinds),
+    from: z.string().min(1),
+    to: z.string().min(1),
+  })
+  .readonly();
+
+/**
+ * Items read from a source, to be merged into a stored model by identifier. Each participant, activity and transition replaces the one with the same id or is appended after the existing ones; the overlay's entries replace the run state of the elements they name; each relation not already stored is appended. Everything else in the model is left as it is.
  */
 export const boundItemsSchema = z
   .strictObject({
@@ -38,6 +52,7 @@ export const boundItemsSchema = z
     activities: z.array(boundActivitySchema).readonly(),
     transitions: z.array(modelShape.transitions.unwrap().element).readonly(),
     overlay: overlaySchema,
+    relations: z.array(relationSchema).readonly().exactOptional(),
   })
   .readonly();
 
@@ -89,6 +104,8 @@ export type ModelId = z.infer<typeof modelIdSchema>;
 export type Revision = z.infer<typeof revisionSchema>;
 export type BoundActivity = z.infer<typeof boundActivitySchema>;
 export type BoundItems = z.infer<typeof boundItemsSchema>;
+export type Relation = z.infer<typeof relationSchema>;
+export type RelationKind = (typeof relationKinds)[number];
 export type StoredModel = z.infer<typeof storedModelSchema>;
 export type ModelSummary = z.infer<typeof modelSummarySchema>;
 export type Reach = z.infer<typeof reachSchema>;

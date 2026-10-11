@@ -12,6 +12,8 @@ export {
   modelIdSchema,
   modelSummarySchema,
   reachSchema,
+  relationKinds,
+  relationSchema,
   revisionSchema,
   storeChangeSchema,
   storedModelSchema,
@@ -21,6 +23,8 @@ export {
   type ModelId,
   type ModelSummary,
   type Reach,
+  type Relation,
+  type RelationKind,
   type Revision,
   type StoreChange,
   type StoredModel,
@@ -40,6 +44,14 @@ export {
   mergeBoundItems,
   overlayWithin,
 } from "./merge.ts";
+export {
+  ancestorsOf,
+  childrenOf,
+  descendantsOf,
+  mergeRelations,
+  relationIssues,
+  relationsWithin,
+} from "./hierarchy.ts";
 export {
   blockedChainOf,
   impactOf,

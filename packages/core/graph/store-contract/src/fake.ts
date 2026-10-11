@@ -2,12 +2,20 @@ import type { Model, OpenIds, Overlay } from "@exadev/process-graph-schema";
 import { GraphStoreError } from "./errors.ts";
 import { ChangeFeed } from "./feed.ts";
 import {
+  ancestorsOf,
+  childrenOf,
+  descendantsOf,
+  mergeRelations,
+  relationIssues,
+  relationsWithin,
+} from "./hierarchy.ts";
+import {
   checkStored,
   emptyModel,
   mergeBoundItems,
   overlayWithin,
 } from "./merge.ts";
-import type { ChangeKind, StoredModel } from "./schema.ts";
+import type { ChangeKind, Relation, StoredModel } from "./schema.ts";
 import type { GraphStore } from "./store.ts";
 import { blockedChainOf, impactOf, readyOf, structureOf } from "./structure.ts";
 
@@ -21,6 +29,7 @@ const later =
 interface Entry {
   readonly model: Model<OpenIds>;
   readonly overlay: Overlay<OpenIds>;
+  readonly relations: readonly Relation[];
   readonly revision: number;
 }
 
@@ -77,14 +86,26 @@ export const createFakeGraphStore = (): GraphStore => {
     readonly kind: ChangeKind;
     readonly model: Model<OpenIds>;
     readonly overlay: Overlay<OpenIds>;
+    readonly relations: readonly Relation[];
     readonly signal: AbortSignal | undefined;
   }
 
-  const write = ({ modelId, kind, model, overlay, signal }: Write): number => {
+  const write = ({
+    modelId,
+    kind,
+    model,
+    overlay,
+    relations,
+    signal,
+  }: Write): number => {
     checkStored(model, overlay);
+    const issues = relationIssues(model, relations);
+    if (issues.length > 0) {
+      throw new GraphStoreError({ kind: "invalid", issues });
+    }
     signal?.throwIfAborted();
     sequence += 1;
-    entries.set(modelId, { model, overlay, revision: sequence });
+    entries.set(modelId, { model, overlay, relations, revision: sequence });
     feed.publish({ modelId, kind, revision: sequence });
 
     return sequence;
@@ -97,15 +118,18 @@ export const createFakeGraphStore = (): GraphStore => {
         .map(([modelId, { revision }]) => ({ modelId, revision }))
         .sort((left, right) => byCodePoint(left.modelId, right.modelId)),
     ),
-    saveModel: later(({ modelId, model, signal }) =>
-      write({
+    saveModel: later(({ modelId, model, signal }) => {
+      const existing = entries.get(modelId);
+
+      return write({
         modelId,
         kind: "saved",
         model,
-        overlay: overlayWithin(model, entries.get(modelId)?.overlay ?? {}),
+        overlay: overlayWithin(model, existing?.overlay ?? {}),
+        relations: relationsWithin(model, existing?.relations ?? []),
         signal,
-      }),
-    ),
+      });
+    }),
     loadModel: later(({ modelId }): StoredModel => {
       const { model, overlay, revision } = entryOf(modelId);
 
@@ -130,18 +154,40 @@ export const createFakeGraphStore = (): GraphStore => {
         kind: "overlay",
         model: entry.model,
         overlay: { ...entry.overlay, ...overlay },
+        relations: entry.relations,
         signal,
       });
     }),
     upsertItems: later(({ modelId, items, signal }) => {
-      const entry = entries.get(modelId) ?? { model: emptyModel, overlay: {} };
+      const entry = entries.get(modelId) ?? {
+        model: emptyModel,
+        overlay: {},
+        relations: [],
+      };
 
       return write({
         modelId,
         kind: "items",
         ...mergeBoundItems(entry.model, entry.overlay, items),
+        relations: mergeRelations(entry.relations, items.relations ?? []),
         signal,
       });
+    }),
+    relations: later(({ modelId }) => entryOf(modelId).relations),
+    children: later(({ modelId, element }) => {
+      const { model, relations } = elementOf(modelId, element);
+
+      return childrenOf(model, relations, element);
+    }),
+    descendants: later(({ modelId, element }) => {
+      const { model, relations } = elementOf(modelId, element);
+
+      return descendantsOf(model, relations, element);
+    }),
+    ancestors: later(({ modelId, element }) => {
+      const { model, relations } = elementOf(modelId, element);
+
+      return ancestorsOf(model, relations, element);
     }),
     ready: later(({ modelId }) => {
       const { model, overlay } = entryOf(modelId);

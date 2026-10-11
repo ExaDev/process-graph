@@ -4,6 +4,7 @@ import type {
   BoundItems,
   ModelSummary,
   Reach,
+  Relation,
   Revision,
   StoredModel,
 } from "./schema.ts";
@@ -23,7 +24,7 @@ export interface ElementRequest extends ModelRequest {
 /**
  * What a store adapter implements. `createGraphStoreRouter` builds the whole port on it, so validation, error mapping, abort handling and change subscriptions behave identically for every store.
  *
- * Every write is atomic: it checks the result with `checkStored` and throws `GraphStoreError` with `invalid` before anything is visible, takes the next store-wide revision, and publishes the change to `feed` after it commits. A read or query of a model that does not exist, or of an element the model does not declare, throws `GraphStoreError` with `not-found`.
+ * Every write is atomic: it checks the result with `checkStored` (and `relationIssues` for the relations it stores) and throws `GraphStoreError` with `invalid` before anything is visible, takes the next store-wide revision, and publishes the change to `feed` after it commits. A read or query of a model that does not exist, or of an element the model does not declare, throws `GraphStoreError` with `not-found`.
  */
 export interface GraphStore {
   /** The feed this store publishes its committed changes to. */
@@ -36,7 +37,7 @@ export interface GraphStore {
     readonly signal: AbortSignal | undefined;
   }) => Promise<readonly ModelSummary[]>;
   /**
-   * Stores a model under an id, replacing any model stored there and dropping the run state of elements the new model does not declare.
+   * Stores a model under an id, replacing any model stored there and dropping the run state and relations of what the new model does not declare (see `relationsWithin`).
    * @returns The revision the save took.
    */
   readonly saveModel: (
@@ -48,7 +49,7 @@ export interface GraphStore {
    */
   readonly loadModel: (request: ModelRequest) => Promise<StoredModel>;
   /**
-   * Removes a model and its run state.
+   * Removes a model, its run state and its relations.
    * @returns The revision the deletion took, or `undefined` when there was no such model and nothing changed.
    */
   readonly deleteModel: (
@@ -62,12 +63,32 @@ export interface GraphStore {
     request: ModelRequest & { readonly overlay: Overlay<OpenIds> },
   ) => Promise<Revision>;
   /**
-   * Merges items read from a source into a model by id (see `mergeBoundItems`), creating the model from an empty one when it does not exist.
+   * Merges items read from a source into a model by id (see `mergeBoundItems`), and adds their relations (see `mergeRelations`), creating the model from an empty one when it does not exist. Every relation stored must name what the merged model declares (`relationIssues`); otherwise nothing is written.
    * @returns The revision the change took.
    */
   readonly upsertItems: (
     request: ModelRequest & { readonly items: BoundItems },
   ) => Promise<Revision>;
+  /**
+   * The relations kept beside a model.
+   * @returns The relations, in the order they were first stored.
+   */
+  readonly relations: (request: ModelRequest) => Promise<readonly Relation[]>;
+  /**
+   * The direct children of an element (see `childrenOf`).
+   * @returns The children, in model order.
+   */
+  readonly children: (request: ElementRequest) => Promise<readonly string[]>;
+  /**
+   * Everything beneath an element along `child-of` relations (see `descendantsOf`).
+   * @returns The descendants, by distance and then model order.
+   */
+  readonly descendants: (request: ElementRequest) => Promise<readonly Reach[]>;
+  /**
+   * Everything above an element along `child-of` relations (see `ancestorsOf`).
+   * @returns The ancestors, by distance and then model order.
+   */
+  readonly ancestors: (request: ElementRequest) => Promise<readonly Reach[]>;
   /**
    * The work that can start now (see `readyOf`).
    * @returns The ready elements, in model order.

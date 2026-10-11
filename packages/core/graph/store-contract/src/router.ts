@@ -99,6 +99,13 @@ export const createGraphStoreRouter = (store: GraphStore): GraphStoreRouter =>
           })),
         ),
       },
+      relations: {
+        list: os.v1.relations.list.handler(async ({ input, signal, errors }) =>
+          call(signal, errors, async () => ({
+            relations: await store.relations({ ...input, signal }),
+          })),
+        ),
+      },
       query: {
         ready: os.v1.query.ready.handler(async ({ input, signal, errors }) =>
           call(signal, errors, async () => ({
@@ -115,6 +122,24 @@ export const createGraphStoreRouter = (store: GraphStore): GraphStoreRouter =>
           call(signal, errors, async () => ({
             impacted: await store.impact({ ...input, signal }),
           })),
+        ),
+        children: os.v1.query.children.handler(
+          async ({ input, signal, errors }) =>
+            call(signal, errors, async () => ({
+              children: await store.children({ ...input, signal }),
+            })),
+        ),
+        descendants: os.v1.query.descendants.handler(
+          async ({ input, signal, errors }) =>
+            call(signal, errors, async () => ({
+              descendants: await store.descendants({ ...input, signal }),
+            })),
+        ),
+        ancestors: os.v1.query.ancestors.handler(
+          async ({ input, signal, errors }) =>
+            call(signal, errors, async () => ({
+              ancestors: await store.ancestors({ ...input, signal }),
+            })),
         ),
       },
       changes: os.v1.changes.handler(async ({ input, signal, errors }) => {

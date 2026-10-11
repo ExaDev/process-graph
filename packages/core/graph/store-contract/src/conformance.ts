@@ -1,8 +1,10 @@
 import type { Model, OpenIds } from "@exadev/process-graph-schema";
 import { describe, expect, test } from "vitest";
-import type { GraphStoreClient } from "./contract.ts";
+import { relationConformance } from "./conformance-relations.ts";
 import {
+  type ClientFactory,
   failureOf,
+  withClient,
   firstOf,
   inSequence,
   issueItems,
@@ -163,26 +165,8 @@ export interface GraphStoreConformanceOptions {
   /**
    * Makes a client for a store with no models in it. Called once per test, so every test starts empty and any transport can be used, in process or over a link. `close` is called when the test ends.
    */
-  readonly createClient: () => Promise<{
-    readonly client: GraphStoreClient;
-    readonly close: () => Promise<void>;
-  }>;
+  readonly createClient: ClientFactory;
 }
-
-/** Runs a test body against a fresh client and closes it afterwards, pass or fail. */
-const withClient =
-  (
-    options: GraphStoreConformanceOptions,
-    body: (client: GraphStoreClient) => Promise<void>,
-  ) =>
-  async (): Promise<void> => {
-    const { client, close } = await options.createClient();
-    try {
-      await body(client);
-    } finally {
-      await close();
-    }
-  };
 
 /**
  * The behaviour every `GraphStore` adapter must show, as Vitest tests. Call it at the top level of a test file; every test runs through the oRPC client the options create, so the kit checks the port as consumers see it, transport included.
@@ -194,14 +178,14 @@ export const graphStoreConformance = (
   describe(`GraphStore conformance: ${options.name}`, () => {
     test(
       "a new store lists no models",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await expect(client.v1.models.list()).resolves.toEqual([]);
       }),
     );
 
     test(
       "a saved model loads back unchanged, every field and order kept",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         const { revision } = await client.v1.models.save({
           modelId: "orders",
           model: everyFieldModel,
@@ -220,7 +204,7 @@ export const graphStoreConformance = (
 
     test(
       "loading a model that was never saved is NOT_FOUND",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await expect(
           failureOf(client.v1.models.load({ modelId: "missing" })),
         ).resolves.toMatchObject({
@@ -232,7 +216,7 @@ export const graphStoreConformance = (
 
     test(
       "an invalid model is rejected whole with its issues",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         const duplicated: Model<OpenIds> = {
           ...pairModel,
           elements: [...pairModel.elements, ...pairModel.elements],
@@ -257,7 +241,7 @@ export const graphStoreConformance = (
 
     test(
       "every write takes a later revision, store-wide, and list reports each model's last",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         const first = await client.v1.models.save({
           modelId: "b",
           model: pairModel,
@@ -282,7 +266,7 @@ export const graphStoreConformance = (
 
     test(
       "saving over a model replaces it and drops the run state of elements it no longer declares",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await client.v1.models.save({ modelId: "pair", model: pairModel });
         await client.v1.overlay.set({
           modelId: "pair",
@@ -311,7 +295,7 @@ export const graphStoreConformance = (
 
     test(
       "an overlay sets the elements it names and leaves the rest",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await client.v1.models.save({ modelId: "pair", model: pairModel });
         await client.v1.overlay.set({
           modelId: "pair",
@@ -333,7 +317,7 @@ export const graphStoreConformance = (
 
     test(
       "an overlay naming an element the model lacks is rejected and changes nothing",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         const { revision } = await client.v1.models.save({
           modelId: "pair",
           model: pairModel,
@@ -365,7 +349,7 @@ export const graphStoreConformance = (
 
     test(
       "an overlay for a model that does not exist is NOT_FOUND",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await expect(
           failureOf(
             client.v1.overlay.set({
@@ -382,7 +366,7 @@ export const graphStoreConformance = (
 
     test(
       "deleting removes a model once, and it no longer loads",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         const saved = await client.v1.models.save({
           modelId: "pair",
           model: pairModel,
@@ -404,7 +388,7 @@ export const graphStoreConformance = (
 
     test(
       "upserting items into a missing model creates it from the items",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         const { revision } = await client.v1.items.upsert({
           modelId: "issues",
           items: issueItems,
@@ -432,7 +416,7 @@ export const graphStoreConformance = (
 
     test(
       "upserting replaces records with the same id in place and appends the rest",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         const model: Model<OpenIds> = {
           ...pairModel,
           elements: [
@@ -475,7 +459,7 @@ export const graphStoreConformance = (
 
     test(
       "an upsert that would break the model is rejected and changes nothing",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         const { revision } = await client.v1.models.save({
           modelId: "pair",
           model: pairModel,
@@ -520,7 +504,7 @@ export const graphStoreConformance = (
 
     test(
       "a bound activity whose id is not its source is refused before it reaches the store",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await expect(
           failureOf(
             client.v1.items.upsert({
@@ -545,7 +529,7 @@ export const graphStoreConformance = (
 
     test(
       "ready lists open work with nothing unfinished upstream, passing through control elements and loop edges",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await client.v1.models.save({ modelId: "q", model: queryModel });
         await client.v1.overlay.set({
           modelId: "q",
@@ -569,7 +553,7 @@ export const graphStoreConformance = (
 
     test(
       "the blocked chain is the unfinished work upstream, nearest first, stopping at done work",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await client.v1.models.save({ modelId: "q", model: queryModel });
         await client.v1.overlay.set({
           modelId: "q",
@@ -597,7 +581,7 @@ export const graphStoreConformance = (
 
     test(
       "impact is the unfinished work downstream, nearest first, whatever the element's own state",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await client.v1.models.save({ modelId: "q", model: queryModel });
         await client.v1.overlay.set({
           modelId: "q",
@@ -623,7 +607,7 @@ export const graphStoreConformance = (
 
     test(
       "queries terminate on a cycle no decision closes, and never report the element asked about",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         const cycle: Model<OpenIds> = {
           ...pairModel,
           elements: [
@@ -665,7 +649,7 @@ export const graphStoreConformance = (
 
     test(
       "a query about an element the model lacks is NOT_FOUND naming it",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await client.v1.models.save({ modelId: "q", model: queryModel });
 
         await expect(
@@ -683,9 +667,11 @@ export const graphStoreConformance = (
       }),
     );
 
+    relationConformance(options.createClient);
+
     test(
       "a write whose signal has already fired is refused and changes nothing",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         const controller = new AbortController();
         controller.abort();
 
@@ -701,7 +687,7 @@ export const graphStoreConformance = (
 
     test(
       "a subscriber receives every later change to its model, in order, and none of another's",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await client.v1.models.save({ modelId: "pair", model: pairModel });
         const events = await client.v1.changes({ modelId: "pair" });
         const received = takeUntil(events, ({ kind }) => kind === "deleted");
@@ -736,7 +722,7 @@ export const graphStoreConformance = (
 
     test(
       "a subscriber that stops reading under sustained writes is never left unaware of a change it lost",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         await client.v1.models.save({ modelId: "pair", model: pairModel });
         const events = await client.v1.changes({ modelId: "pair" });
         // More writes than a subscription holds by default, so a store that buffers per subscription has to overflow; the property checked holds for any capacity.
@@ -767,7 +753,7 @@ export const graphStoreConformance = (
 
     test(
       "a subscriber that names a revision the model has moved past is told it missed changes",
-      withClient(options, async (client) => {
+      withClient(options.createClient, async (client) => {
         const first = await client.v1.models.save({
           modelId: "pair",
           model: pairModel,
