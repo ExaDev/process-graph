@@ -4,7 +4,13 @@ import {
   type OverlayStatus,
   type ParticipantKind,
 } from "@exadev/process-graph-schema";
-import { Argument, Command, Option } from "commander";
+import {
+  filterStates,
+  orderFields,
+  type FilterState,
+  type SyncFilter,
+} from "@exadev/process-graph-source-contract";
+import { Argument, Command, InvalidArgumentError, Option } from "commander";
 import type { ComputedValue } from "trilean";
 import {
   add,
@@ -57,7 +63,7 @@ import {
   type FormatName,
   type ViewName,
 } from "./show.ts";
-import { sync, SyncInterruptedError } from "./sync.ts";
+import { directionNames, sync, SyncInterruptedError } from "./sync.ts";
 import { terminalJson, terminalText } from "./terminal-text.ts";
 import { validateDocument, validateStored } from "./validate.ts";
 
@@ -127,6 +133,79 @@ const choice = <T extends string>(
   }
 
   return value;
+};
+
+/** The direction names `--direction` takes. */
+const directions = Object.keys(directionNames);
+
+const isDirection = (value: unknown): value is keyof typeof directionNames =>
+  isOneOf(directions, value);
+
+/**
+ * A commander option parser that collects every occurrence of an option, in order, so the option can be repeated.
+ * @param value - This occurrence's value.
+ * @param previous - The values collected before it.
+ */
+const collect = (
+  value: string,
+  previous: readonly string[] | undefined,
+): readonly string[] => [...(previous ?? []), value];
+
+/**
+ * A commander option parser that checks each value against its choices and collects every occurrence, in order. Commander's own `choices` replaces an option's parser, so the two cannot be combined.
+ * @param choices - The values allowed.
+ */
+const collectChoice =
+  <T extends string>(choices: readonly T[]) =>
+  (value: string, previous: readonly T[] | undefined): readonly T[] => {
+    if (!isOneOf(choices, value)) {
+      throw new InvalidArgumentError(
+        `Allowed choices are ${choices.join(", ")}.`,
+      );
+    }
+
+    return [...(previous ?? []), value];
+  };
+
+/**
+ * Reads `sync`'s filter options into the source contract's filter, or nothing when none is given.
+ * @param options - The `sync` command's options.
+ * @returns The filter.
+ * @throws CliError with `usage` for `--direction` without `--order`.
+ */
+const syncFilterOf = (
+  options: Record<string, unknown>,
+): SyncFilter | undefined => {
+  const { state, label, order, direction } = options;
+  const states: readonly FilterState[] = Array.isArray(state)
+    ? state.filter((value): value is FilterState =>
+        isOneOf(filterStates, value),
+      )
+    : [];
+  const labels: readonly string[] = Array.isArray(label)
+    ? label.filter(isText)
+    : [];
+  if (direction !== undefined && order === undefined) {
+    throw new CliError(
+      exitCodes.usage,
+      "--direction orders by --order: give both",
+    );
+  }
+  const filter: SyncFilter = {
+    ...(states.length === 0 ? {} : { states }),
+    ...(labels.length === 0 ? {} : { labels }),
+    ...(order === undefined
+      ? {}
+      : {
+          order: {
+            field: choice(orderFields, order, "order"),
+            direction:
+              directionNames[isDirection(direction) ? direction : "asc"],
+          },
+        }),
+  };
+
+  return Object.keys(filter).length === 0 ? undefined : filter;
 };
 
 /** The word that forgets a named fact rather than giving it a value. */
@@ -243,6 +322,33 @@ export const runCli = async (
       "source-qualified scopes, such as github:owner or github:owner/repo",
     )
     .option("--after <cursor>", "resume an interrupted sync after this cursor")
+    .addOption(
+      new Option(
+        "--state <state>",
+        `list only work in this state, one of ${filterStates.join(", ")}; repeat for more than one`,
+      ).argParser(collectChoice(filterStates)),
+    )
+    .addOption(
+      new Option(
+        "--label <label>",
+        "list only work carrying this label; repeat to keep work carrying any of them",
+      ).argParser(collect),
+    )
+    .addOption(
+      new Option("--order <field>", "list the work in this order").choices(
+        orderFields,
+      ),
+    )
+    .addOption(
+      new Option(
+        "--direction <direction>",
+        "the direction of --order; ascending when not given",
+      ).choices(directions),
+    )
+    .addHelpText(
+      "after",
+      "\nA filter narrows what each scope lists, not the work it depends on. A source that cannot filter a scope, such as a GitHub Projects v2 board, refuses the sync. A cursor from --after is valid only with the filter it was issued under.",
+    )
     .action(
       async (
         scopes: readonly string[],
@@ -250,11 +356,13 @@ export const runCli = async (
         command: Command,
       ) => {
         const { after } = options;
+        const filter = syncFilterOf(options);
         await withSession(async (session) => {
           try {
             const result = await sync(session, ports.source, {
               scopes,
               ...(typeof after === "string" ? { after } : {}),
+              ...(filter === undefined ? {} : { filter }),
             });
 
             return { json: result, text: renderSync(result) };

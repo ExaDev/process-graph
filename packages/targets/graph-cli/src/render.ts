@@ -1,4 +1,5 @@
 import type { Status, StatusRule } from "@exadev/process-graph-domain";
+import type { SyncFilter } from "@exadev/process-graph-source-contract";
 import type { ComputedValue } from "trilean";
 import type {
   FactsResult,
@@ -19,7 +20,11 @@ import type {
   WhyResult,
 } from "./queries.ts";
 import type { ElementSummary } from "./session.ts";
-import type { SyncInterruption, SyncResult } from "./sync.ts";
+import {
+  directionNames,
+  type SyncInterruption,
+  type SyncResult,
+} from "./sync.ts";
 import type { ValidateResult } from "./validate.ts";
 
 /**
@@ -188,6 +193,22 @@ export const renderSync = (result: SyncResult): string =>
   ]);
 
 /**
+ * The `sync` options that give a filter, as they would be typed again to resume under it, since a cursor is valid only under the filter it was issued with.
+ * @param filter - The filter, if any.
+ * @returns The options, each with a leading space, or the empty string.
+ */
+const filterOptions = (filter: SyncFilter | undefined): string =>
+  [
+    ...(filter?.states ?? []).map((state) => ` --state ${state}`),
+    ...(filter?.labels ?? []).map((label) => ` --label ${label}`),
+    ...(filter?.order === undefined
+      ? []
+      : [
+          ` --order ${filter.order.field} --direction ${filter.order.direction === directionNames.desc ? "desc" : "asc"}`,
+        ]),
+  ].join("");
+
+/**
  * A sync a source interrupted: the source's failure, whether the pages read before it were saved, and the commands that carry on, `resume with: sync <scopes> --after <cursor>` for the failing source and `then: sync <scopes>` for the sources not reached.
  * @param message - The source's failure.
  * @param interruption - Where the sync carries on.
@@ -202,8 +223,10 @@ export const renderSyncInterruption = (
   return [
     message,
     ...(saved ? ["the pages read before the failure are saved"] : []),
-    `resume with: sync ${resume.scopes.join(" ")}${resume.after === undefined ? "" : ` --after ${resume.after}`}`,
-    ...(remaining.length === 0 ? [] : [`then: sync ${remaining.join(" ")}`]),
+    `resume with: sync ${resume.scopes.join(" ")}${resume.after === undefined ? "" : ` --after ${resume.after}`}${filterOptions(resume.filter)}`,
+    ...(remaining.length === 0
+      ? []
+      : [`then: sync ${remaining.join(" ")}${filterOptions(resume.filter)}`]),
   ].join("\n");
 };
 
