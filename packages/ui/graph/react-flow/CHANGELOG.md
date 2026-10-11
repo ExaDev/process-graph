@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-react-flow@1.0.0...@exadev/process-graph-react-flow@1.0.1) (2026-10-11)
+
+
+### Dependencies
+
+- Updated @exadev/process-graph-react to 1.0.1
+- Updated @exadev/process-graph-ui to 1.0.1
+
 ## 1.0.0 (2026-10-11)
 
 ### Features

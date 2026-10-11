@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-store-contract@1.0.3...@exadev/process-graph-store-contract@1.1.0) (2026-10-11)
+
+### Features
+
+* **store-contract:** keep relations beside a model and walk the child-of hierarchy ([4d60d1b](https://github.com/ExaDev/process-graph/commit/4d60d1b2a6b34e62cccb462cd73c16f7606bbcff))
+
 ## [1.0.3](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-store-contract@1.0.2...@exadev/process-graph-store-contract@1.0.3) (2026-10-11)
 
 

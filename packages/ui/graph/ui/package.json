@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-ui",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Styled React components for the process model over the headless graph-react package, styled with Vanilla Extract: a typed theme contract with light and dark themes, recipes for variants, and an SVG sequence diagram. Ships compiled CSS, so a consumer needs no build plugin.",
   "type": "module",
@@ -57,7 +57,7 @@
   "dependencies": {
     "@exadev/process-graph-domain": "1.1.1",
     "@exadev/process-graph-projection": "1.1.0",
-    "@exadev/process-graph-react": "1.0.0",
+    "@exadev/process-graph-react": "1.0.1",
     "@exadev/process-graph-schema": "1.1.0",
     "@vanilla-extract/recipes": "0.5.7"
   },

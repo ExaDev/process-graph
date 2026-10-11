@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-sqlite-wasm",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "The SQLite graph store in the browser: SQLite compiled to WebAssembly in a dedicated worker on the OPFS sahpool VFS, shared safely between tabs with no special headers, served to the page over oRPC.",
   "private": true,
   "type": "module",
@@ -62,8 +62,8 @@
     "worker"
   ],
   "dependencies": {
-    "@exadev/process-graph-store-contract": "1.0.3",
-    "@exadev/process-graph-store-sqlite": "1.0.3",
+    "@exadev/process-graph-store-contract": "1.1.0",
+    "@exadev/process-graph-store-sqlite": "1.1.0",
     "@orpc/client": "2.0.0-beta.41",
     "@orpc/server": "2.0.0-beta.41",
     "@sqlite.org/sqlite-wasm": "3.53.4-build2",

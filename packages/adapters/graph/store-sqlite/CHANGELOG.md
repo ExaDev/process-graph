@@ -1,3 +1,14 @@
+## [1.1.0](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-store-sqlite@1.0.3...@exadev/process-graph-store-sqlite@1.1.0) (2026-10-11)
+
+### Features
+
+* **store-sqlite:** persist relations and answer the hierarchy queries in SQL ([73bae2a](https://github.com/ExaDev/process-graph/commit/73bae2af4528822b796dc3736ed0785a80bdeaf9))
+
+
+### Dependencies
+
+- Updated @exadev/process-graph-store-contract to 1.1.0
+
 ## [1.0.3](https://github.com/ExaDev/process-graph/compare/@exadev/process-graph-store-sqlite@1.0.2...@exadev/process-graph-store-sqlite@1.0.3) (2026-10-11)
 
 

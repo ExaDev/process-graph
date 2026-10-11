@@ -278,7 +278,7 @@ importers:
   packages/adapters/graph/source-github-issues:
     dependencies:
       '@exadev/process-graph-source-contract':
-        specifier: 1.0.1
+        specifier: 1.1.0
         version: link:../../../core/graph/source-contract
       zod:
         specifier: 4.6.5
@@ -318,10 +318,10 @@ importers:
   packages/adapters/graph/sqlite-node:
     dependencies:
       '@exadev/process-graph-store-contract':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../../../core/graph/store-contract
       '@exadev/process-graph-store-sqlite':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../store-sqlite
       drizzle-orm:
         specifier: 1.0.0-rc.4
@@ -367,10 +367,10 @@ importers:
   packages/adapters/graph/sqlite-wasm:
     dependencies:
       '@exadev/process-graph-store-contract':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../../../core/graph/store-contract
       '@exadev/process-graph-store-sqlite':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../store-sqlite
       '@orpc/client':
         specifier: 2.0.0-beta.41
@@ -422,7 +422,7 @@ importers:
         specifier: 1.1.0
         version: link:../../../core/graph/schema
       '@exadev/process-graph-store-contract':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../../../core/graph/store-contract
       '@orpc/server':
         specifier: 2.0.0-beta.41
@@ -835,7 +835,7 @@ importers:
         specifier: 1.1.0
         version: link:../../../core/graph/schema
       '@exadev/process-graph-store-contract':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../../../core/graph/store-contract
     devDependencies:
       '@arethetypeswrong/cli':
@@ -902,13 +902,13 @@ importers:
         specifier: 1.1.0
         version: link:../../../core/graph/projection
       '@exadev/process-graph-react':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../react
       '@exadev/process-graph-schema':
         specifier: 1.1.0
         version: link:../../../core/graph/schema
       '@exadev/process-graph-ui':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../ui
       '@xyflow/react':
         specifier: 12.12.0
@@ -981,7 +981,7 @@ importers:
         specifier: 1.1.0
         version: link:../../../core/graph/projection
       '@exadev/process-graph-react':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../react
       '@exadev/process-graph-schema':
         specifier: 1.1.0
