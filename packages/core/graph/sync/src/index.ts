@@ -2,8 +2,10 @@
  * Syncs work from `GraphSource`s into a `GraphStore`: page by page, resumable from a checkpoint, with an optional typed filter, writing participants, bound activities, transitions, relations and run state. One function serves every consumer, so the command line and the web app write a sync the same way.
  */
 export {
+  InterruptedSyncError,
   syncScopes,
   UnknownSourceError,
+  type SyncInterruption,
   type SourceLookup,
   type SyncProgress,
   type SyncRequest,

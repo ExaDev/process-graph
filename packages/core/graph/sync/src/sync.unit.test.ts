@@ -6,7 +6,12 @@ import {
 } from "@exadev/process-graph-source-contract";
 import { describe, expect, test } from "vitest";
 import { InvalidScopeError, scopesBySource } from "./scopes.ts";
-import { syncScopes, UnknownSourceError, type SyncProgress } from "./sync.ts";
+import {
+  InterruptedSyncError,
+  syncScopes,
+  UnknownSourceError,
+  type SyncProgress,
+} from "./sync.ts";
 import {
   apiPage,
   fakeScopes,
@@ -288,7 +293,19 @@ describe("syncScopes", () => {
           progress.push(step);
         },
       }),
-    ).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+    ).rejects.toMatchObject({
+      name: "InterruptedSyncError",
+      message: "rate limited",
+      resume: {
+        modelId,
+        scopes: ["github:acme"],
+        source: "github",
+        after: "github%3Aacme@0",
+      },
+      remaining: [],
+      saved: true,
+      cause: { code: "TOO_MANY_REQUESTS" },
+    });
     expect(progress.at(-1)?.checkpoint).toEqual({
       modelId,
       scopes: ["github:acme"],
@@ -300,6 +317,79 @@ describe("syncScopes", () => {
       "github:acme/api#1",
       "github:acme/api#2",
     ]);
+  });
+
+  test("reports a source that fails before its first page with the cursor it was resumed from, and the sources it did not reach", async () => {
+    const refusing: GraphSourcePager = {
+      source: "github",
+      page: async () =>
+        Promise.reject(
+          new GraphSourceError({ kind: "unauthorised", message: "bad token" }),
+        ),
+    };
+    const jira = createFakeGraphSource({
+      source: "jira",
+      scopes: { "jira:ACME": [] },
+    });
+
+    const failure = await syncScopes({
+      store: newStore(),
+      sources: lookup(refusing, jira),
+      modelId,
+      scopes: ["github:acme", "jira:ACME", "github:partner"],
+      resume: {
+        modelId,
+        scopes: ["github:acme", "jira:ACME", "github:partner"],
+        source: "github",
+        after: "github%3Aacme@0",
+      },
+    }).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+
+    expect(failure).toBeInstanceOf(InterruptedSyncError);
+    expect(failure).toMatchObject({
+      message: "bad token",
+      resume: {
+        source: "github",
+        scopes: ["github:acme", "jira:ACME", "github:partner"],
+        after: "github%3Aacme@0",
+      },
+      remaining: ["jira:ACME"],
+      saved: false,
+      cause: { code: "UNAUTHORIZED" },
+    });
+  });
+
+  test("passes a store's refusal on as it is, not as an interruption of the source", async () => {
+    const orphan = pageOf([
+      {
+        id: "github:acme/web#1",
+        label: "Build the page",
+        repository: "github:acme/web",
+        state: "open",
+        parent: "github:acme/web#404",
+      },
+    ]);
+
+    const failure = await syncScopes({
+      store: newStore(),
+      sources: lookup(
+        createFakeGraphSource({
+          source: "github",
+          scopes: { "github:acme": [orphan] },
+        }),
+      ),
+      modelId,
+      scopes: ["github:acme"],
+    }).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+
+    expect(failure).not.toBeInstanceOf(InterruptedSyncError);
+    expect(failure).toMatchObject({ code: "UNPROCESSABLE_CONTENT" });
   });
 
   test("reads the sources in order and checkpoints the start of the next source between them", async () => {

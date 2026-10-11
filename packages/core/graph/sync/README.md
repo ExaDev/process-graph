@@ -32,7 +32,7 @@ A store rejects a write that leaves a transition or relation naming an element o
 
 After every page, `onProgress` receives the pages written, the revision of the last write, the distinct participants, activities, transitions and relations written, the gaps met and a `SyncCheckpoint`. A checkpoint names the model, the scopes, the filter, the source to read next and the cursor after the last page written within it; passing it back as `resume` reads only what is left. A source's cursor is valid only with the scopes and filter it was issued for, which is why the checkpoint carries both. `syncCheckpointSchema` is its Zod schema, for a consumer that stores it. The final progress has no checkpoint.
 
-A failure part way leaves every page before it written, and is passed on as the source or store threw it; the last progress's checkpoint says where to carry on. An abort rejects with the signal's reason.
+A failure part way leaves every page before it written. A source that fails while it is read, an abort included, ends the sync with an `InterruptedSyncError`: its message and cause are the source's failure, `resume` is the checkpoint that continues the failing source after the last page read from it, `remaining` the scopes of the sources after it that were not reached, and `saved` whether any page was written. A store's failure is thrown as the store threw it.
 
 ## Filters
 
@@ -40,14 +40,15 @@ A failure part way leaves every page before it written, and is passed on as the 
 
 ## Functions
 
-| Export                 | What it is                                                                          |
-| ---------------------- | ----------------------------------------------------------------------------------- |
-| `syncScopes(request)`  | Syncs the scopes into the store and resolves with the final progress.               |
-| `scopesBySource`       | Groups source-qualified scopes by source prefix, in the order a sync reads them.    |
-| `syncCheckpointSchema` | The Zod schema of a `SyncCheckpoint`.                                               |
-| `UnknownSourceError`   | Thrown for a scope whose source prefix no reader serves; carries the `prefix`.      |
-| `InvalidScopeError`    | Thrown for a scope that names no source; carries the `scope`.                       |
-| `SyncStore`            | The part of the `GraphStore` client a sync calls: `models.load` and `items.upsert`. |
+| Export                 | What it is                                                                                                                 |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `syncScopes(request)`  | Syncs the scopes into the store and resolves with the final progress.                                                      |
+| `scopesBySource`       | Groups source-qualified scopes by source prefix, in the order a sync reads them.                                           |
+| `syncCheckpointSchema` | The Zod schema of a `SyncCheckpoint`.                                                                                      |
+| `InterruptedSyncError` | Thrown when a source fails while it is read; carries `resume`, `remaining`, `saved` and the source's failure as its cause. |
+| `UnknownSourceError`   | Thrown for a scope whose source prefix no reader serves; carries the `prefix`.                                             |
+| `InvalidScopeError`    | Thrown for a scope that names no source; carries the `scope`.                                                              |
+| `SyncStore`            | The part of the `GraphStore` client a sync calls: `models.load` and `items.upsert`.                                        |
 
 ## Commands
 

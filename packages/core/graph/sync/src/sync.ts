@@ -72,6 +72,39 @@ export class UnknownSourceError extends Error {
   }
 }
 
+/** Where a sync a source interrupted carries on, as data. */
+export interface SyncInterruption {
+  /** The checkpoint that continues the failing source: its prefix, after the cursor of the last page read from it, or from the start of its scopes when none was read. */
+  readonly resume: SyncCheckpoint;
+  /** The scopes of the sources after the failing one, which were not read. */
+  readonly remaining: readonly string[];
+  /** Whether this sync wrote any pages before the failure. */
+  readonly saved: boolean;
+}
+
+/**
+ * Thrown by `syncScopes` when a source fails while it is being read: opening its stream or reading a page. Its message is the source's, its cause is what the source threw, and where to carry on is data in `resume` and `remaining`. A failure of the store, or of the request itself (an unknown source, a malformed scope), is thrown as it is.
+ */
+export class InterruptedSyncError extends Error implements SyncInterruption {
+  readonly resume: SyncCheckpoint;
+
+  readonly remaining: readonly string[];
+
+  readonly saved: boolean;
+
+  /**
+   * @param interruption - Where the sync carries on.
+   * @param cause - What the source threw.
+   */
+  constructor(interruption: SyncInterruption, cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    this.name = "InterruptedSyncError";
+    this.resume = interruption.resume;
+    this.remaining = interruption.remaining;
+    this.saved = interruption.saved;
+  }
+}
+
 /** The oRPC client options carrying a signal, leaving the key out when there is none, since the options type does not accept an explicit `undefined`. */
 const callOptions = (
   signal: AbortSignal | undefined,
@@ -122,7 +155,7 @@ const settle = <T>(
  * A store rejects a write that leaves a transition or a relation naming an element or participant the model lacks, and a source may report a dependency or a sub-issue whose other end a later page brings. A transition or relation is therefore held back until the model has both of its ends, and written with the page that completes it. One whose end never arrives is written with the last page, where the store's rejection says which reference is missing.
  * @param request - The store, sources, model, scopes, an optional filter and checkpoint, the signal and a progress listener.
  * @returns The final progress, with no checkpoint.
- * @throws InvalidScopeError for a scope that names no source; UnknownSourceError for a scope whose source no reader serves; an Error for a checkpoint naming a source none of the scopes use, and for a sync of no scopes; and whatever a source or the store throws, after the pages before it are written. An abort rejects with the signal's reason.
+ * @throws InvalidScopeError for a scope that names no source; UnknownSourceError for a scope whose source no reader serves; an Error for a checkpoint naming a source none of the scopes use, and for a sync of no scopes; InterruptedSyncError, after the pages before it are written, when a source fails while it is read, an abort included; and whatever the store throws.
  */
 export const syncScopes = async (
   request: SyncRequest,
@@ -235,44 +268,60 @@ export const syncScopes = async (
     request.onProgress?.(latest);
   };
 
-  /** Writes each page an iterator yields, in order, each only after the one before is written. */
-  const drain = async (
-    pagesOf: Readonly<AsyncIterator<SyncPage>>,
-    checkpointAfter: (page: SyncPage) => SyncCheckpoint | undefined,
-  ): Promise<void> => {
-    const next = await pagesOf.next();
-    if (next.done === true) {
-      return;
-    }
-    await write(next.value, checkpointAfter(next.value));
-    await drain(pagesOf, checkpointAfter);
-  };
-
   /** Reads the sources in order, each only after the one before has finished, since a source's failure must stop the ones after it. */
   const readFrom = async (index: number): Promise<void> => {
     const group = groups[index];
     if (group === undefined) {
       return;
     }
-    const after = index === startGroup ? resume?.after : undefined;
+    // The cursor after the last page read from this source, which is where it carries on if it fails.
+    let after = index === startGroup ? resume?.after : undefined;
     const following = groups[index + 1];
-    const stream = await group.client.v1.sync.stream(
-      {
-        scope: group.scopes,
-        ...(after === undefined ? {} : { after }),
-        ...(filter === undefined ? {} : { filter }),
-      },
-      callOptions(signal),
-    );
+    const interrupted = (cause: unknown): InterruptedSyncError =>
+      new InterruptedSyncError(
+        {
+          resume: checkpointAt(group.prefix, after),
+          remaining: groups.slice(index + 1).flatMap((next) => next.scopes),
+          saved: pages > 0,
+        },
+        cause,
+      );
+    const stream = await group.client.v1.sync
+      .stream(
+        {
+          scope: group.scopes,
+          ...(after === undefined ? {} : { after }),
+          ...(filter === undefined ? {} : { filter }),
+        },
+        callOptions(signal),
+      )
+      .catch((cause: unknown) => {
+        throw interrupted(cause);
+      });
     const iterator = stream[Symbol.asyncIterator]();
-    try {
-      await drain(iterator, (page) =>
+
+    /** Writes each page the source yields, in order, each only after the one before is written. */
+    const drain = async (): Promise<void> => {
+      const next = await iterator.next().catch((cause: unknown) => {
+        throw interrupted(cause);
+      });
+      if (next.done === true) {
+        return;
+      }
+      const page = next.value;
+      await write(
+        page,
         page.next !== undefined
           ? checkpointAt(group.prefix, page.next)
           : following === undefined
             ? undefined
             : checkpointAt(following.prefix, undefined),
       );
+      after = page.next;
+      await drain();
+    };
+    try {
+      await drain();
     } catch (error) {
       // Closing the stream stops the source reading pages nobody will write.
       await iterator.return();
