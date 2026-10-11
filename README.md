@@ -16,12 +16,12 @@ pnpm build
 pnpm test
 ```
 
-Dependencies are added with `pnpm add`, never by editing a version by hand. Every manifest pins exact versions (`syncpack` enforces it), and the install age gate in `pnpm-workspace.yaml` is never lowered; ExaDev's own packages are the only entries in `minimumReleaseAgeExclude`.
+Dependencies are added with `pnpm add`, never by editing a version by hand. Every third-party version is written once, exactly, in the catalog in `pnpm-workspace.yaml`: a private package names it as `catalog:` (`pnpm add --save-catalog <name>@<version>`) and a sibling as `workspace:*`. The published `process-graph` manifest names exact literal versions instead, because `npm publish` ships a protocol specifier verbatim; `pnpm run deps:lint` (`syncpack` and `scripts/check-published-manifests.ts`) holds both rules. The install age gate in `pnpm-workspace.yaml` is never lowered; ExaDev's own packages are the only entries in `minimumReleaseAgeExclude`.
 
 ## Commands
 
 ```sh
-pnpm build              # tsc -b across the workspace, dependency-ordered
+pnpm build              # every package, dependency-ordered; process-graph last, bundled by tsdown
 pnpm lint               pnpm lint:fix               pnpm typecheck
 pnpm test               pnpm test:coverage          pnpm test:smoke
 pnpm test:mutation      pnpm exec knip              pnpm run deps:lint
@@ -39,11 +39,19 @@ packages/
 └── targets/<package>/              # deployable entry points, deliberately flat
 ```
 
-A package may depend on its own layer and the layers below it, never above; `no-uphill-dependency` and `no-dependency-cycle` from `@exadev/eslint-config` enforce it from the manifests, configured in `eslint.shared.ts`. Published names are `@exadev/process-graph-<name>`; the unscoped [`process-graph`](packages/targets/process-graph/README.md) package, in the `targets` layer, is the primary entry point: it re-exports the model, projection, domain and DAG packages so a consumer installs one dependency.
+A package may depend on its own layer and the layers below it, never above; `no-uphill-dependency` and `no-dependency-cycle` from `@exadev/eslint-config` enforce it from the manifests, configured in `eslint.shared.ts`. One package is published: the unscoped [`process-graph`](packages/targets/process-graph/README.md), in the `targets` layer. Every other package is private, named `@exadev/process-graph-<name>`, and reaches consumers only bundled into `process-graph` behind one of its subpath exports, so a consumer installs one dependency and imports each part from its own subpath.
 
 Configuration lives at exactly one of two levels: in the package (`eslint.config.ts`, `tsconfig*.json`, Vitest projects, Stryker) or at the root (commit rules, git hooks, formatting, release).
 
 ## Packages
+
+The published package:
+
+| Package                                                     | What it is                                                                                                                                                                                                                                                |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`process-graph`](packages/targets/process-graph/README.md) | The one install: the model, projection, domain and DAG APIs at the root entry, layout, the GitHub issues source, the SQLite store for Node and the browser, the React UI and the command line library each behind a subpath, and the `process-graph` bin. |
+
+The internal packages, private and bundled into `process-graph`:
 
 | Package                                                                                | What it is                                                                                                                                                                                                                                        |
 | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -62,8 +70,12 @@ Configuration lives at exactly one of two levels: in the package (`eslint.config
 | [`graph-ui`](packages/ui/graph/ui/README.md)                                           | Styled components over `graph-react` and an SVG sequence diagram, in Vanilla Extract with a typed theme contract and light and dark themes, shipped as compiled CSS.                                                                              |
 | [`graph-react-flow`](packages/ui/graph/react-flow/README.md)                           | React Flow views of the model: flowchart, swimlane with lanes as group nodes, and state machine, laid out by `graph-layout`, showing each status and the critical path; sequence projections drawn by `graph-ui`.                                 |
 | [`graph-cli`](packages/targets/graph-cli/README.md)                                    | The command line and its library entry: sync GitHub issues into the SQLite store, ready, blocked, impact, critical path, cycles, hand-offs and status explanations, and every view drawn in Mermaid or Graphviz DOT.                              |
-| [`process-graph`](packages/targets/process-graph/README.md)                            | The primary entry point: re-exports the schema, projection and domain APIs flat and the DAG API as the `dag` namespace, and carries the `process-graph` bin.                                                                                      |
-| [`graph-web`](packages/targets/graph-web/README.md)                                    | The web app: an installable, offline-first PWA that syncs GitHub issues into SQLite on the device and shows the work in every view, with what is ready, what is blocked and why, linkable by address.                                             |
+
+The web app, private and deployed rather than published:
+
+| Package                                             | What it is                                                                                                                                                                                            |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`graph-web`](packages/targets/graph-web/README.md) | The web app: an installable, offline-first PWA that syncs GitHub issues into SQLite on the device and shows the work in every view, with what is ready, what is blocked and why, linkable by address. |
 
 ## Conventions
 
@@ -77,12 +89,10 @@ Configuration lives at exactly one of two levels: in the package (`eslint.config
 
 ## Releases
 
-Each package versions and publishes independently through [`@exadev/semantic-release-workspace`](https://github.com/ExaDev/semantic-release-workspace), configured in `release-workspace.config.ts` and run by the `release` job in CI. A package releases when commits touch its own directory, or when a sibling it depends on releases; packages release in dependency order, so the entry point follows the packages it re-exports. Tags are `<name>@<version>`, and each package keeps its own `CHANGELOG.md`.
+Releases run through [`@exadev/semantic-release-workspace`](https://github.com/ExaDev/semantic-release-workspace), configured in `release-workspace.config.ts` and run by the `release` job in CI. Every package versions independently and is tagged `<name>@<version>`; a package releases when commits touch its own directory, or when a sibling it depends on releases, in dependency order. Only `process-graph` is published, with its own `CHANGELOG.md` and GitHub Release; a private package gets a version and a tag and nothing else. Because `process-graph` lists every package it bundles in `devDependencies`, a change to any of them releases `process-graph` too.
 
 The release commit and tags are pushed to the protected `main` with a repository deploy key (the `RELEASE_DEPLOY_KEY` secret) over SSH, because `GITHUB_TOKEN` cannot bypass a ruleset; the `main` ruleset lists that deploy key as a bypass actor. `GITHUB_TOKEN` is still used for the GitHub API calls that create releases and comment on issues and pull requests.
 
-A new package name must be reserved on npm, and its trusted publisher registered, by a person before its first CI publish; the steps are in CONTRIBUTING.md.
-
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for adding a package, the release strategy and bootstrapping a package name.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for adding a package and the release strategy.
