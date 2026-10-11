@@ -1,5 +1,6 @@
 import { CycleError, UnknownNodeError } from "@exadev/process-graph-dag";
 import { ModelParseError } from "@exadev/process-graph-schema";
+import { GraphSourceError } from "@exadev/process-graph-source-contract";
 import { ORPCError } from "@orpc/server";
 import { CommanderError } from "commander";
 import { exitCodes, type ExitCode } from "./exit-codes.ts";
@@ -54,6 +55,23 @@ const issueLines = (data: unknown): readonly string[] => {
       ? [`${issue.code}: ${issue.message}`]
       : [],
   );
+};
+
+/**
+ * The error underneath a source's failure, for a failure's cause. A source called in process through oRPC fails with an `ORPCError` whose cause is the `GraphSourceError` the source threw, whose own cause, when it has one, is what went wrong underneath, such as a token port's error. Those two layers say nothing more than the failure's message and exit status already do, so the innermost error is the one worth keeping.
+ * @param error - What the source call threw.
+ * @returns The `GraphSourceError`'s cause when it has one, otherwise that `GraphSourceError`; anything else as it is.
+ */
+export const underlyingCause = (error: unknown): unknown => {
+  const sourceError =
+    error instanceof ORPCError && error.cause instanceof GraphSourceError
+      ? error.cause
+      : error;
+  if (!(sourceError instanceof GraphSourceError)) {
+    return error;
+  }
+
+  return sourceError.cause === undefined ? sourceError : sourceError.cause;
 };
 
 /** The exit status and message an error is reported with. */

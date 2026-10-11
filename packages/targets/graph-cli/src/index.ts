@@ -73,7 +73,9 @@ export {
 } from "./validate.ts";
 export {
   sync,
+  SyncInterruptedError,
   type SourceLookup,
+  type SyncInterruption,
   type SyncRequest,
   type SyncResult,
 } from "./sync.ts";

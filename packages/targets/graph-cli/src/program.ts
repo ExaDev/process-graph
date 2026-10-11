@@ -16,7 +16,7 @@ import {
   type Addition,
   type ArtefactState,
 } from "./edit.ts";
-import { failureOf } from "./errors.ts";
+import { CliError, failureOf } from "./errors.ts";
 import { exitCodes, type ExitCode } from "./exit-codes.ts";
 import type { CliPorts } from "./ports.ts";
 import {
@@ -41,6 +41,7 @@ import {
   renderSetArtefact,
   renderSetFact,
   renderSync,
+  renderSyncInterruption,
   renderValidate,
   renderWhy,
 } from "./render.ts";
@@ -52,7 +53,7 @@ import {
   type FormatName,
   type ViewName,
 } from "./show.ts";
-import { sync } from "./sync.ts";
+import { sync, SyncInterruptedError } from "./sync.ts";
 import { terminalJson, terminalText } from "./terminal-text.ts";
 import { validateDocument, validateStored } from "./validate.ts";
 
@@ -246,13 +247,25 @@ export const runCli = async (
       ) => {
         const { after } = options;
         await withSession(async (session) => {
-          const result = await sync(
-            session,
-            ports.source,
-            typeof after === "string" ? { scopes, after } : { scopes },
-          );
+          try {
+            const result = await sync(
+              session,
+              ports.source,
+              typeof after === "string" ? { scopes, after } : { scopes },
+            );
 
-          return { json: result, text: renderSync(result) };
+            return { json: result, text: renderSync(result) };
+          } catch (error) {
+            // The library reports where to carry on as data; the command line says it as the commands to run.
+            if (error instanceof SyncInterruptedError) {
+              throw new CliError(
+                error.exitCode,
+                renderSyncInterruption(error.message, error),
+                { cause: error },
+              );
+            }
+            throw error;
+          }
         })(command);
       },
     );

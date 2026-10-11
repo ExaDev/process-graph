@@ -5,7 +5,7 @@ import {
   type SyncPage,
 } from "@exadev/process-graph-source-contract";
 import type { BoundActivity } from "@exadev/process-graph-store-contract";
-import { CliError, failureOf } from "./errors.ts";
+import { CliError, failureOf, underlyingCause } from "./errors.ts";
 import { exitCodes } from "./exit-codes.ts";
 import { callOptions, type GraphSession } from "./session.ts";
 
@@ -18,6 +18,46 @@ export interface SyncRequest {
   readonly scopes: readonly string[];
   /** A cursor from an interrupted sync: the first source's sync continues after it. */
   readonly after?: string;
+}
+
+/** Where a sync a source interrupted carries on, as data a host acts on; the command line renders it as the commands to run. */
+export interface SyncInterruption {
+  /** The request that continues the failing source: its scopes, after the cursor of the last page read from it, or from the start when none was read. */
+  readonly resume: SyncRequest;
+  /** The scopes of the sources after the failing one, which were not read; sync them afresh once `resume` has finished. */
+  readonly remaining: readonly string[];
+  /** Whether pages read before the failure were written to the model. */
+  readonly saved: boolean;
+}
+
+/**
+ * Thrown by `sync` when a source fails part way. Its exit status and message are the source's failure, classified as `failureOf` classifies it; its cause is the error underneath that failure, such as the token port's own error; and what to run next is data, in `resume` and `remaining`, never text.
+ */
+export class SyncInterruptedError extends CliError implements SyncInterruption {
+  readonly resume: SyncRequest;
+
+  readonly remaining: readonly string[];
+
+  readonly saved: boolean;
+
+  /**
+   * @param exitCode - The exit status the source's failure maps to.
+   * @param message - The source's failure.
+   * @param interruption - Where the sync carries on.
+   * @param options - The underlying error, kept as the cause.
+   */
+  constructor(
+    exitCode: CliError["exitCode"],
+    message: string,
+    interruption: SyncInterruption,
+    options?: ErrorOptions,
+  ) {
+    super(exitCode, message, options);
+    this.name = "SyncInterruptedError";
+    this.resume = interruption.resume;
+    this.remaining = interruption.remaining;
+    this.saved = interruption.saved;
+  }
 }
 
 /** What a sync wrote. */
@@ -82,12 +122,12 @@ const boundActivities = (pages: readonly SyncPage[]) => {
 /**
  * Reads every page of the scopes from their sources and merges them into the session's model in one write, creating the model when the store has none. Records already in the model are replaced by identifier and the rest are kept, so syncing again refreshes what changed.
  *
- * When a source fails part way, the pages read before the failure are still written, and the error says how to resume: the failing source's scopes with `--after` and the cursor of its last page read.
+ * When a source fails part way, the pages read before the failure are still written, and the error carries where to carry on: the request that resumes the failing source after the cursor of its last page read, and the scopes of the sources not reached.
  * @param session - The store and model.
  * @param sources - The source for each identifier prefix.
  * @param request - The scopes, and a cursor to resume after.
  * @returns What was written, and the gaps the sources reported.
- * @throws CliError with `usage` for a scope with no source prefix, a prefix no source serves, or `after` with scopes of more than one source; and with the source's failure, the resume command added, when a source refuses the sync.
+ * @throws CliError with `usage` for a scope with no source prefix, a prefix no source serves, or `after` with scopes of more than one source; and SyncInterruptedError, with the source's failure and where to carry on, when a source fails part way.
  */
 export const sync = async (
   session: GraphSession,
@@ -155,16 +195,18 @@ export const sync = async (
       if (saved) {
         await write();
       }
-      const later = clients.slice(index + 1).flatMap((next) => next.scopes);
-      throw new CliError(
+      throw new SyncInterruptedError(
         failure.exitCode,
-        [
-          failure.message,
-          ...(saved ? ["the pages read before the failure are saved"] : []),
-          `resume with: sync ${group.scopes.join(" ")}${cursor === undefined ? "" : ` --after ${cursor}`}`,
-          ...(later.length === 0 ? [] : [`then: sync ${later.join(" ")}`]),
-        ].join("\n"),
-        { cause: error },
+        failure.message,
+        {
+          resume:
+            cursor === undefined
+              ? { scopes: group.scopes }
+              : { scopes: group.scopes, after: cursor },
+          remaining: clients.slice(index + 1).flatMap((next) => next.scopes),
+          saved,
+        },
+        { cause: underlyingCause(error) },
       );
     }
     await readFrom(index + 1);
