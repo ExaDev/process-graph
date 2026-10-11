@@ -7,6 +7,22 @@ export const fixtureScope: readonly string[] = [
   "github:Mearman/agent-permissions",
 ];
 
+/** A public Projects v2 board in GitHub's own organisation, holding issues, pull requests and draft issues, so passing over what is not an issue is exercised. */
+export const fixtureProjectScope = "github:github/projects/16737";
+
+/** An owner whose repositories span more than one listing page at the fixture page size. */
+export const fixtureListingParent = "github:octo-org";
+
+/** A repository synced under a filter that narrows by state and label and orders newest first. */
+export const fixtureFilteredScope = "github:Mearman/agent-permissions";
+
+/** The filter `fixtureFilteredScope` is synced under. */
+export const fixtureFilter = {
+  states: ["done"],
+  labels: ["bug"],
+  order: { field: "created", direction: "descending" },
+} as const;
+
 /** An owner that cannot exist: GitHub logins cannot contain a dot. */
 export const missingOwnerScope = "github:not.a.login";
 

@@ -10,6 +10,12 @@ const prefix = `${githubSource}:`;
  */
 const namePattern = /^[\w.-]+$/u;
 
+/** A Projects v2 board's number as its URL shows it: a positive integer with no leading zero. */
+const numberPattern = /^[1-9]\d*$/u;
+
+/** The path segment between an owner and a board's number in a project scope, as in the board's own URL. */
+const projectsSegment = "projects";
+
 /** What one scope identifier selects. */
 export type Scope =
   | { readonly kind: "owner"; readonly id: string; readonly owner: string }
@@ -18,35 +24,53 @@ export type Scope =
       readonly id: string;
       readonly owner: string;
       readonly name: string;
+    }
+  | {
+      readonly kind: "project";
+      readonly id: string;
+      readonly owner: string;
+      readonly number: number;
     };
 
+const invalidScope = (id: string): GraphSourceError =>
+  new GraphSourceError({
+    kind: "bad-request",
+    message: `"${id}" is not a GitHub scope; expected github:owner, github:owner/repo or github:owner/projects/number`,
+    reason: "invalid-scope",
+    value: id,
+  });
+
 /**
- * Parses a scope identifier: `github:owner` selects every repository the account owns, `github:owner/repo` selects one.
+ * Parses a scope identifier: `github:owner` selects every repository the account owns, `github:owner/repo` one repository, and `github:owner/projects/number` the issues on an organisation's or user's Projects v2 board. A repository name cannot hold a slash, so the three forms never overlap.
  * @param id - The scope identifier.
  * @returns The parsed scope.
- * @throws GraphSourceError with `bad-request` and `invalid-scope` when it is neither form.
+ * @throws GraphSourceError with `bad-request` and `invalid-scope` when it is none of the forms.
  */
 export const parseScope = (id: string): Scope => {
   const parts = id.startsWith(prefix) ? id.slice(prefix.length).split("/") : [];
-  const [owner, name, ...rest] = parts;
-  const valid =
-    owner !== undefined &&
-    namePattern.test(owner) &&
-    rest.length === 0 &&
-    (name === undefined || namePattern.test(name));
-  if (!valid) {
-    throw new GraphSourceError({
-      kind: "bad-request",
-      message: `"${id}" is not a GitHub scope; expected github:owner or github:owner/repo`,
-      reason: "invalid-scope",
-      value: id,
-    });
+  const [owner, name, number, ...rest] = parts;
+  if (owner === undefined || !namePattern.test(owner) || rest.length > 0) {
+    throw invalidScope(id);
+  }
+  if (name === undefined) {
+    return { kind: "owner", id, owner };
+  }
+  if (number === undefined && namePattern.test(name)) {
+    return { kind: "repository", id, owner, name };
+  }
+  if (
+    name === projectsSegment &&
+    number !== undefined &&
+    numberPattern.test(number)
+  ) {
+    return { kind: "project", id, owner, number: Number(number) };
   }
 
-  return name === undefined
-    ? { kind: "owner", id, owner }
-    : { kind: "repository", id, owner, name };
+  throw invalidScope(id);
 };
+
+/** The scope identifier of an owner: `github:owner`. */
+export const ownerScopeId = (login: string): string => `${prefix}${login}`;
 
 /** The identifier of an issue: `github:owner/repo#number`, which is also its element identifier. */
 export const issueId = (owner: string, name: string, number: number): string =>

@@ -21,6 +21,8 @@ export interface PageBuilder {
   readonly assignee: (issue: string, user: Readonly<User>) => void;
   /** Adds a blocker and the transition from it to the issue it blocks. */
   readonly blockedBy: (issue: string, blocker: Readonly<IssueRef>) => void;
+  /** Adds an issue the given one blocks, and the transition from the given one to it: the same transition `blockedBy` adds from the other side, so a dependency read from both ends is one transition. */
+  readonly blocking: (issue: string, blocked: Readonly<IssueRef>) => void;
   /** Adds a sub-issue and the `child-of` relation to its parent. */
   readonly subIssue: (parent: string, child: Readonly<IssueRef>) => void;
   /** Records a gap. */
@@ -72,6 +74,12 @@ export const createPageBuilder = (): PageBuilder => {
     return id;
   };
 
+  /** The transition from a prerequisite to the work that waits on it, identified by both ends so either side's read gives the same one. */
+  const depend = (source: string, target: string): void => {
+    const id = `${source}->${target}`;
+    transitions.set(id, { id, source, target });
+  };
+
   const issue = (ref: Readonly<IssueRef>): string => {
     const { owner, name } = ref.repository;
     const actor = repository(owner, name);
@@ -98,9 +106,10 @@ export const createPageBuilder = (): PageBuilder => {
       relate({ kind: "assigned-to", from: issueIdentifier, to: id });
     },
     blockedBy: (issueIdentifier, blocker) => {
-      const source = issue(blocker);
-      const id = `${source}->${issueIdentifier}`;
-      transitions.set(id, { id, source, target: issueIdentifier });
+      depend(issue(blocker), issueIdentifier);
+    },
+    blocking: (issueIdentifier, blocked) => {
+      depend(issueIdentifier, issue(blocked));
     },
     subIssue: (parent, child) => {
       relate({ kind: "child-of", from: issue(child), to: parent });

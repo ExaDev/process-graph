@@ -45,6 +45,7 @@ const issue = (
     },
     assignees: empty,
     blockedBy: empty,
+    blocking: empty,
     subIssues: empty,
     ...extra,
   };

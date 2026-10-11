@@ -10,7 +10,12 @@ import {
 import { describe, expect, test } from "vitest";
 import { githubTokenFromEnvironment } from "./node.ts";
 import { createGitHubIssuesSource } from "./source.ts";
-import { fixtureScope, missingOwnerScope } from "./test-support/scopes.ts";
+import {
+  fixtureListingParent,
+  fixtureProjectScope,
+  fixtureScope,
+  missingOwnerScope,
+} from "./test-support/scopes.ts";
 
 /**
  * Live tests against GitHub run only when `PROCESS_GRAPH_LIVE_GITHUB` is `1`, with a token in `GITHUB_TOKEN` or the GitHub CLI logged in. Without it they are reported as skipped, never silently absent.
@@ -38,6 +43,27 @@ describe.skipIf(!live)(
       scope: fixtureScope,
       missingScope: missingOwnerScope,
       malformedScope: "ExaDev/document-schema.js",
+      listing: {
+        roots: true,
+        parent: fixtureListingParent,
+        missingParent: missingOwnerScope,
+        malformedParent: "octo-org",
+      },
+    });
+
+    test("a Projects v2 board syncs its issues", async () => {
+      const pages: SyncPage[] = [];
+      const client = inProcessClient(liveRouter());
+      for await (const page of await client.v1.sync.stream({
+        scope: [fixtureProjectScope],
+      })) {
+        pages.push(page);
+      }
+      const { model, gaps } = assembleSync(pages);
+      expect(gaps).toEqual([]);
+      expect(model.elements.map((element) => element.id)).toContain(
+        "github:github/semantic#480",
+      );
     });
 
     test("a sync across two organisations keeps the transition between them", async () => {
