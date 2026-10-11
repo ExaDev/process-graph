@@ -148,6 +148,10 @@ const Workspace = (props: WorkspaceProps): ReactElement => {
     [ports.store, modelId, run.model],
   );
   const viewName = `${viewLabels[state.view]} of ${state.scopes.join(", ")}`;
+  // A link can name an element the model does not have (not synced yet, or gone); the reasoning hooks would throw on it, so it is reported rather than explained.
+  const selectedElement = run.model.elements.find(
+    (element) => element.id === state.selected,
+  );
 
   return (
     <div className={workspace}>
@@ -197,10 +201,16 @@ const Workspace = (props: WorkspaceProps): ReactElement => {
         <Legend critical />
       </div>
       <div className={sidebar}>
-        {state.selected === undefined ? null : (
+        {selectedElement === undefined ? (
+          state.selected === undefined ? null : (
+            <p className={muted} role="status" data-screen="details">
+              The selected element, {state.selected}, is not in this model.
+            </p>
+          )
+        ) : (
           <ElementDetails
             run={run}
-            id={state.selected}
+            element={selectedElement}
             labelOf={labelOf}
             scopes={state.scopes}
             onSetState={setState}

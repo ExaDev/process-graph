@@ -4,7 +4,11 @@ import {
   useWhyStatus,
   type Run,
 } from "@exadev/process-graph-react";
-import type { OpenIds, OverlayStatus } from "@exadev/process-graph-schema";
+import type {
+  Element,
+  OpenIds,
+  OverlayStatus,
+} from "@exadev/process-graph-schema";
 import { DetailPanel } from "@exadev/process-graph-ui";
 import { useId, useState, type ReactElement } from "react";
 import { button, muted, row, section, sectionHeading } from "./app.css.ts";
@@ -23,8 +27,8 @@ const settable: readonly {
 
 export interface ElementDetailsProps {
   readonly run: Run<OpenIds>;
-  /** The selected element. */
-  readonly id: string;
+  /** The selected element, which the model declares. */
+  readonly element: Element<string, OpenIds>;
   readonly labelOf: (id: string) => string;
   /** The scopes the model was synced from. */
   readonly scopes: readonly string[];
@@ -37,21 +41,19 @@ export interface ElementDetailsProps {
 /**
  * The selected element: why it has its status, what blocks it and what it holds up (the command line's `why`, `blocked` and `impact`), its issue on GitHub, controls to set its run state, and, for an issue in a repository outside the scope, a control that adds that repository to the scope.
  * @param props - The run, the element and the actions.
- * @returns The details, or a note when the element is not in the model.
+ * @returns The details.
  */
 export const ElementDetails = (props: ElementDetailsProps): ReactElement => {
-  const { run, id, labelOf, scopes, onSetState, onAddScope } = props;
+  const { run, element, labelOf, scopes, onSetState, onAddScope } = props;
+  const { id } = element;
   const explanation = useWhyStatus(run, id);
   const { blockers } = useBlockedChain(run, id);
   const impact = useImpact(run, id);
   const [problem, setProblem] = useState<string | undefined>(undefined);
   const headingId = useId();
-  const element = run.model.elements.find((candidate) => candidate.id === id);
-  if (element === undefined || explanation === undefined) {
-    return (
-      <p className={muted} role="status">
-        The selected element, {id}, is not in this model.
-      </p>
+  if (explanation === undefined) {
+    throw new Error(
+      "unreachable: useWhyStatus explains every element it is given",
     );
   }
   const issue =

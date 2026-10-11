@@ -204,6 +204,17 @@ describe("the details", () => {
       });
     });
   });
+
+  test("say when a link selects an element the model does not have", async () => {
+    await synced(`${acme}&select=github%3Aacme%2Fapi%2399`);
+
+    expect(document.querySelector('[data-screen="details"]')?.textContent).toBe(
+      "The selected element, github:acme/api#99, is not in this model.",
+    );
+    expect(
+      screen.getByRole("listbox", { name: "Ready to start" }),
+    ).toBeDefined();
+  });
 });
 
 describe("adding to the model", () => {
