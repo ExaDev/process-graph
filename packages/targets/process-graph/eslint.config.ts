@@ -10,6 +10,7 @@ const subpathEntries = [
   "src/store/node.ts",
   "src/store/wasm.ts",
   "src/store/wasm/worker.ts",
+  "src/sync.ts",
   "src/react.ts",
   "src/ui.ts",
   "src/ui/theme.ts",

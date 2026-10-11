@@ -50,6 +50,7 @@ The package is built from the repository's internal packages, which are bundled 
 | `process-graph/store/node`           | `openNodeGraphStore`: the SQLite store on Node's built-in `node:sqlite`; `prepareDataFile`: makes its data file and directory private before it opens.                                              | Node                  |
 | `process-graph/store/wasm`           | `connectGraphStore`: connects a page to the store a dedicated worker serves.                                                                                                                        | Browser               |
 | `process-graph/store/wasm/worker`    | `serveGraphStoreInWorker`: serves the store from a dedicated worker on SQLite wasm and OPFS, shared between tabs with no special headers.                                                           | Dedicated worker      |
+| `process-graph/sync`                 | `syncScopes`: syncs sources into a store page by page, relations included, resumable from a checkpoint and narrowed by a typed filter.                                                              | Browser, Worker, Node |
 | `process-graph/react`                | Headless React hooks and unstyled components: follow a stored model, derive its run, project, filter and select.                                                                                    | Browser               |
 | `process-graph/ui`                   | Styled components over `process-graph/react`, the SVG sequence diagram and the theme contract with light and dark themes.                                                                           | Browser               |
 | `process-graph/ui/theme`             | The theme contract `vars`, `lightTheme`, `darkTheme`, `lightValues` and `darkValues` without the components, for a Vanilla Extract stylesheet that themes `process-graph/ui` without loading React. | Any                   |
@@ -69,6 +70,7 @@ The package is built from the repository's internal packages, which are bundled 
 | `store/node`        | `drizzle-orm`                                                                |
 | `store/wasm`        | `@orpc/client`                                                               |
 | `store/wasm/worker` | `@orpc/contract`, `@orpc/server`, `drizzle-orm`, `@sqlite.org/sqlite-wasm`   |
+| `sync`              | `@orpc/client`                                                               |
 | `react`             | `react`                                                                      |
 | `ui`                | `react`, `@vanilla-extract/recipes`, `@vanilla-extract/css` (types)          |
 | `ui/theme`          | `@vanilla-extract/css` (types)                                               |

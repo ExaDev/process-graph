@@ -25,6 +25,7 @@ export default defineConfig({
     "store/node": "src/store/node.ts",
     "store/wasm": "src/store/wasm.ts",
     "store/wasm/worker": "src/store/wasm/worker.ts",
+    sync: "src/sync.ts",
     react: "src/react.ts",
     ui: "src/ui.ts",
     "ui/theme": "src/ui/theme.ts",
