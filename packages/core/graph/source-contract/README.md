@@ -124,7 +124,7 @@ graphSourceConformance({
 });
 ```
 
-The entry point also exports `inProcessClient(router)` and `messagePortClient(router)`, the two transports this package's own tests run the kit over; a `messagePortClient` closes its channel after the test file.
+`graphSourceListingConformance` runs the listing's share on its own, for a client that differs from the sync's, such as one with a smaller page size so the parent spans two pages. The entry point also exports `conformanceFilter`, the filter the kit syncs with, so an adapter that replays recorded responses can record them, and `inProcessClient(router)` and `messagePortClient(router)`, the two transports this package's own tests run the kit over; a `messagePortClient` closes its channel after the test file.
 
 It checks that paging and streaming agree; that a stream closed after any page resumes from that page's `next` with exactly the pages that follow; that a cursor never repeats; that a sync is deterministic; that the assembled model and overlay pass the schema's validation and every identifier carries the source prefix; that relations name what the sync returned; that an unknown scope is a gap beside the rest; that malformed scopes and foreign cursors are typed errors; that a filtered sync pages consistently, reads nothing the unfiltered sync does not and refuses a cursor issued under another filter; and that an aborted signal ends both procedures. With `listing`, it also checks the scope listing's paging and resumption, the gap for an unknown parent, its typed errors and aborts, and that a listed child syncs.
 

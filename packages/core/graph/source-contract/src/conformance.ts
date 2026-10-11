@@ -187,14 +187,25 @@ const identifiersOf = (pages: readonly SyncPage[]): readonly string[] =>
     ...page.transitions.map((transition) => transition.id),
   ]);
 
-/** The scope listing's share of the kit: paging, resumption, gaps, typed errors and aborts, and entries that sync. */
-const scopeListingConformance = (
-  name: string,
-  createClient: () => GraphSourceClient,
-  { roots, parent, missingParent, malformedParent }: ScopeListingConformance,
+/** What the scope listing's conformance tests need: a name and client factory, as for the whole kit, and the listing's own scopes. */
+export interface GraphSourceListingConformanceOptions extends ScopeListingConformance {
+  /** A name for the `describe` block, such as the adapter and transport under test. */
+  readonly name: string;
+  /** Makes a client for the source under test, once per test. */
+  readonly createClient: () => GraphSourceClient;
+}
+
+/**
+ * The scope listing's share of the kit, as Vitest tests: paging and resumption, determinism, the gap for an unknown parent, typed errors, aborts, and that a listed child syncs. `graphSourceConformance` runs it when given `listing`; call it on its own to exercise the listing with a different client, such as one with a smaller page size so the parent spans two pages.
+ * @param options - The client factory and the listing's scopes.
+ */
+export const graphSourceListingConformance = (
+  options: GraphSourceListingConformanceOptions,
 ): void => {
+  const { name, createClient, roots, parent, missingParent, malformedParent } =
+    options;
   describe(`GraphSource scope listing conformance: ${name}`, () => {
-    test("an owner's children span at least two pages, resume from every next, and are deterministic", async () => {
+    test("a parent's children span at least two pages, resume from every next, and are deterministic", async () => {
       const client = createClient();
       const pages = await expectListingPages(
         client,
@@ -460,7 +471,7 @@ export const graphSourceConformance = (
   });
 
   if (listing !== undefined) {
-    scopeListingConformance(name, createClient, listing);
+    graphSourceListingConformance({ ...listing, name, createClient });
   }
 };
 
