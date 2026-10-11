@@ -1,6 +1,8 @@
 # @exadev/process-graph-cli
 
-[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@exadev/process-graph-cli) [![Release](https://img.shields.io/github/v/release/ExaDev/process-graph)](https://github.com/ExaDev/process-graph/releases/latest) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+
+A private workspace package, not published on its own: it is bundled into [`process-graph`](../process-graph/README.md), which exposes it as `process-graph/cli`, and its command line is the `process-graph` bin.
 
 The process-graph command line, and the same commands as a library. It syncs work from GitHub issues into a SQLite store, answers what is ready, blocked, affected, on the critical path or handed off between owners, explains why an element has its status, builds and edits a model by hand, and draws the model as a flowchart, swimlane, state machine or sequence diagram in Mermaid or Graphviz DOT.
 
@@ -75,10 +77,10 @@ A sync merges everything it reads into the model in one write, so a record synce
 
 `runCli(args, ports, identity)` runs the whole command surface as a function and resolves with the exit status; it never reads `process.argv`, writes to the process's streams or exits. `CliPorts` is everything it touches: `stdout` and `stderr`, `openStore(path)` (any `GraphStoreClient`, over any transport), `defaultDataPath`, `source(prefix)` (any `GraphSourceClient`), `readFile`, the `facts` decision conditions read, and the abort `signal`. `nodePorts(options)` builds them for a Node process, with the environment, home directory, GitHub token port, `fetch`, clock, facts, signal and streams each replaceable; `runProcess(identity)` is what the bins run.
 
-A host program mounts the command line as a subcommand by forwarding its arguments:
+A host program imports the library from `process-graph/cli` and mounts the command line as a subcommand by forwarding its arguments:
 
 ```ts
-import { nodePorts, packageVersion, runCli } from "@exadev/process-graph-cli";
+import { nodePorts, packageVersion, runCli } from "process-graph/cli";
 
 // sb graph <args...>
 process.exitCode = await runCli(args, nodePorts(), {

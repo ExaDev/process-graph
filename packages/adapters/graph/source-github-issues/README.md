@@ -1,6 +1,8 @@
 # @exadev/process-graph-source-github-issues
 
-[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@exadev/process-graph-source-github-issues) [![Release](https://img.shields.io/github/v/release/ExaDev/process-graph)](https://github.com/ExaDev/process-graph/releases/latest) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+
+A private workspace package, not published on its own: it is bundled into [`process-graph`](../../../targets/process-graph/README.md), which exposes it as `process-graph/source/github`, with its Node token port at `process-graph/source/github/node`.
 
 The GitHub issues adapter for the `GraphSource` port in `@exadev/process-graph-source-contract`. It reads issues, what blocks them, what they block and their sub-issues through GitHub's GraphQL API across any number of organisations, repositories and Projects v2 boards, and returns them as pages of the process model. It also lists the scopes a picker offers. It passes the port's conformance kit. The main entry point imports nothing Node-only; `./node` adds a token helper for Node.
 

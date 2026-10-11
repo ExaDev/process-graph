@@ -1,6 +1,8 @@
 # @exadev/process-graph-store-sqlite
 
-[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@exadev/process-graph-store-sqlite) [![Release](https://img.shields.io/github/v/release/ExaDev/process-graph)](https://github.com/ExaDev/process-graph/releases/latest) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/ExaDev/process-graph) [![CI](https://img.shields.io/github/actions/workflow/status/ExaDev/process-graph/ci.yml?branch=main)](https://github.com/ExaDev/process-graph/actions)
+
+A private workspace package, not published on its own: it is bundled into [`process-graph`](../../../targets/process-graph/README.md), which exposes it as `process-graph/store`, beside the store contract.
 
 The `GraphStore` port from `@exadev/process-graph-store-contract` on SQLite through [Drizzle](https://orm.drizzle.team) (`drizzle-orm` 1.0.0-rc.4). It is written against Drizzle's async SQLite database type, so any Drizzle SQLite driver plugs in: `@exadev/process-graph-sqlite-node` supplies `node:sqlite`, `@exadev/process-graph-sqlite-wasm` supplies SQLite in a browser worker on OPFS. `src/` imports nothing Node-only.
 
