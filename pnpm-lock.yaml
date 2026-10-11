@@ -783,10 +783,10 @@ importers:
         specifier: 1.1.0
         version: link:../../core/graph/projection
       '@exadev/process-graph-react':
-        specifier: 0.0.0
+        specifier: 1.0.0
         version: link:../../ui/graph/react
       '@exadev/process-graph-react-flow':
-        specifier: 0.0.0
+        specifier: 1.0.0
         version: link:../../ui/graph/react-flow
       '@exadev/process-graph-schema':
         specifier: 1.1.0
@@ -804,7 +804,7 @@ importers:
         specifier: 1.0.3
         version: link:../../core/graph/store-contract
       '@exadev/process-graph-ui':
-        specifier: 0.0.0
+        specifier: 1.0.0
         version: link:../../ui/graph/ui
       '@orpc/client':
         specifier: 2.0.0-beta.41
