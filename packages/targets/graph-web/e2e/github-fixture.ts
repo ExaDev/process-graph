@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
 /**
- * A stand-in for GitHub's GraphQL API, served on a local port for the end-to-end tests. It answers the three operations the GitHub issues source sends (`OwnerRepositories`, `RepositoryIssues` and `IssueConnection`) from a fixed set of issues, with the response shapes GitHub gives, and the same refusals: HTTP 401 for a token it does not know, and HTTP 403 with no requests remaining for the rate-limited token. CORS headers are the ones api.github.com sends, so a browser reads the rate limit headers as it would from GitHub.
+ * A stand-in for GitHub's GraphQL API, served on a local port for the end-to-end tests. It answers the operations the GitHub issues source sends for a sync and a scope listing (`ViewerScopes`, `OwnerRepositories`, `RepositoryIssues` and `ProjectItems`) from a fixed set of issues, with every field the source selects and the response shapes GitHub gives, so a change to the source's queries that the fixture does not follow fails the tests at the source's own parse, and the same refusals: HTTP 401 for a token it does not know, and HTTP 403 with no requests remaining for the rate-limited token. CORS headers are the ones api.github.com sends, so a browser reads the rate limit headers as it would from GitHub.
  */
 
 type AccountType = "Organization" | "User";
@@ -118,7 +118,7 @@ const ownerOf = (login: string) => {
   return { __typename: account.type, login };
 };
 
-const refOf = (owner: string, repository: string, number: number) => {
+const findIssue = (owner: string, repository: string, number: number) => {
   const issue = fixtureIssues.find(
     (candidate) =>
       candidate.owner === owner &&
@@ -131,13 +131,15 @@ const refOf = (owner: string, repository: string, number: number) => {
     );
   }
 
-  return {
-    number,
-    title: issue.title,
-    state: issue.state,
-    repository: { name: repository, owner: ownerOf(owner) },
-  };
+  return issue;
 };
+
+const refOf = (owner: string, repository: string, number: number) => ({
+  number,
+  title: findIssue(owner, repository, number).title,
+  state: findIssue(owner, repository, number).state,
+  repository: { name: repository, owner: ownerOf(owner) },
+});
 
 const connection = <T>(nodes: readonly T[]) => ({
   pageInfo: { hasNextPage: false, endCursor: null },
@@ -168,23 +170,94 @@ interface Answer {
   }[];
 }
 
+/** The viewer the fixture token belongs to: a user who is a member of both organisations. */
+const viewer = { login: "alice", organisations: ["acme", "partner"] } as const;
+
+/** The Projects v2 boards, by owner and number: their items in board order, an issue by its owner, repository and number, or a draft that is not an issue. */
+const boards: Readonly<
+  Record<string, readonly (readonly [string, string, number] | "draft")[]>
+> = {
+  "acme/1": [["acme", "web", 2], "draft", ["acme", "api", 2]],
+};
+
+const sameIssue =
+  (owner: string, repository: string, number: number) =>
+  (candidate: readonly [string, string, number]): boolean =>
+    candidate[0] === owner &&
+    candidate[1] === repository &&
+    candidate[2] === number;
+
+/** An issue as a listing or a board item returns it: its fields and the first page of each connection. `blocking` is the inverse of every issue's `blockedBy`, as GitHub keeps the two. */
+const issueOf = (issue: FixtureIssue) => ({
+  ...refOf(issue.owner, issue.repository, issue.number),
+  assignees: connection(issue.assignees.map((login) => ({ login }))),
+  blockedBy: connection(
+    issue.blockedBy.map(([owner, repository, number]) =>
+      refOf(owner, repository, number),
+    ),
+  ),
+  blocking: connection(
+    fixtureIssues
+      .filter((other) =>
+        other.blockedBy.some(
+          sameIssue(issue.owner, issue.repository, issue.number),
+        ),
+      )
+      .map((other) => refOf(other.owner, other.repository, other.number)),
+  ),
+  subIssues: connection([]),
+});
+
+const notFound = (data: unknown, message: string): Answer => ({
+  data,
+  errors: [{ type: "NOT_FOUND", message }],
+});
+
+/** GitHub's `IssueState` values the listing's `states` variable selects. */
+const statesOf = (variables: Readonly<Record<string, unknown>>) => {
+  const states = variables.states;
+  if (
+    !Array.isArray(states) ||
+    !states.every((state) => state === "OPEN" || state === "CLOSED")
+  ) {
+    throw new Error("the request's states are not GitHub issue states");
+  }
+
+  return new Set<string>(states);
+};
+
 const answer = (
   query: string,
   variables: Readonly<Record<string, unknown>>,
 ): Answer => {
+  if (query.includes("query ViewerScopes")) {
+    return {
+      data: {
+        viewer: {
+          login: viewer.login,
+          name: "Alice",
+          url: `https://github.com/${viewer.login}`,
+          organizations: connection(
+            viewer.organisations.map((login) => ({
+              login,
+              name: login,
+              description: null,
+              url: `https://github.com/${login}`,
+              archivedAt: null,
+            })),
+          ),
+        },
+      },
+    };
+  }
   if (query.includes("query OwnerRepositories")) {
     const login = stringOf(variables, "login");
     const account = accounts[login];
     if (account === undefined) {
-      return {
-        data: { repositoryOwner: null },
-        errors: [
-          {
-            type: "NOT_FOUND",
-            message: `Could not resolve to a RepositoryOwner with the login of '${login}'.`,
-          },
-        ],
-      };
+      return notFound(
+        { repositoryOwner: null },
+        `Could not resolve to a RepositoryOwner with the login of '${login}'.`,
+      );
     }
 
     return {
@@ -192,7 +265,12 @@ const answer = (
         repositoryOwner: {
           ...ownerOf(login),
           repositories: connection(
-            account.repositories.map((name) => ({ name })),
+            account.repositories.map((name) => ({
+              name,
+              description: null,
+              url: `https://github.com/${login}/${name}`,
+              isArchived: false,
+            })),
           ),
         },
       },
@@ -202,28 +280,23 @@ const answer = (
     const owner = stringOf(variables, "owner");
     const name = stringOf(variables, "name");
     if (accounts[owner]?.repositories.includes(name) !== true) {
-      return {
-        data: { repository: null },
-        errors: [
-          {
-            type: "NOT_FOUND",
-            message: `Could not resolve to a Repository with the name '${owner}/${name}'.`,
-          },
-        ],
-      };
+      return notFound(
+        { repository: null },
+        `Could not resolve to a Repository with the name '${owner}/${name}'.`,
+      );
     }
+    if (variables.labels !== null) {
+      throw new Error("the fixture's issues carry no labels to filter by");
+    }
+    const states = statesOf(variables);
     const issues = fixtureIssues
-      .filter((issue) => issue.owner === owner && issue.repository === name)
-      .map((issue) => ({
-        ...refOf(issue.owner, issue.repository, issue.number),
-        assignees: connection(issue.assignees.map((login) => ({ login }))),
-        blockedBy: connection(
-          issue.blockedBy.map(([blockerOwner, repository, number]) =>
-            refOf(blockerOwner, repository, number),
-          ),
-        ),
-        subIssues: connection([]),
-      }));
+      .filter(
+        (issue) =>
+          issue.owner === owner &&
+          issue.repository === name &&
+          states.has(issue.state),
+      )
+      .map(issueOf);
 
     return {
       data: {
@@ -231,8 +304,49 @@ const answer = (
       },
     };
   }
+  if (query.includes("query ProjectItems")) {
+    const login = stringOf(variables, "login");
+    const number = variables.number;
+    if (typeof number !== "number") {
+      throw new Error("the request's project number is not a number");
+    }
+    const items = boards[`${login}/${String(number)}`];
+    if (accounts[login] === undefined) {
+      return notFound(
+        { repositoryOwner: null },
+        `Could not resolve to a RepositoryOwner with the login of '${login}'.`,
+      );
+    }
+    if (items === undefined) {
+      return notFound(
+        { repositoryOwner: { ...ownerOf(login), projectV2: null } },
+        `Could not resolve to a ProjectV2 with the number ${String(number)}.`,
+      );
+    }
+
+    return {
+      data: {
+        repositoryOwner: {
+          ...ownerOf(login),
+          projectV2: {
+            items: connection(
+              items.map((item) => ({
+                content:
+                  item === "draft"
+                    ? { __typename: "DraftIssue" }
+                    : {
+                        __typename: "Issue",
+                        ...issueOf(findIssue(...item)),
+                      },
+              })),
+            ),
+          },
+        },
+      },
+    };
+  }
   throw new Error(
-    "the fixture answers only the GitHub issues source's queries",
+    "the fixture answers only the GitHub issues source's sync and listing queries",
   );
 };
 
