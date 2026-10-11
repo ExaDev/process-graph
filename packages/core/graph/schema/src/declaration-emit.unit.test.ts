@@ -60,10 +60,17 @@ const declarationsOf = (
   return { declarations, diagnostics };
 };
 
-test("a consumer's schema embedding modelSchema emits declarations that name ModelSchema rather than writing it out", () => {
-  const { declarations, diagnostics } = declarationsOf(consumerSource);
+/** No per-test time limit: the test builds a whole TypeScript program over this package and zod's declarations, so how long it takes is the compiler's work on the machine at hand, not a property of this code, and a clock bound only fails it under load or coverage instrumentation. The CI job's own timeout still ends a hang. */
+const unbounded = 0;
 
-  expect(diagnostics).toEqual([]);
-  expect(declarations).toMatch(/model: import\("[^"]+"\)\.ModelSchema;/);
-  expect(declarations).not.toContain("participants");
-});
+test(
+  "a consumer's schema embedding modelSchema emits declarations that name ModelSchema rather than writing it out",
+  { timeout: unbounded },
+  () => {
+    const { declarations, diagnostics } = declarationsOf(consumerSource);
+
+    expect(diagnostics).toEqual([]);
+    expect(declarations).toMatch(/model: import\("[^"]+"\)\.ModelSchema;/);
+    expect(declarations).not.toContain("participants");
+  },
+);
