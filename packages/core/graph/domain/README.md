@@ -41,6 +41,8 @@ deriveStatuses(model, overlay, facts); // Map { "triage" => "done", ... }
 | `whatIfDone(model, overlay, facts, id)`       | The elements that become ready and every status change if `id` were done.                |
 | `criticalPath(model, overlay, facts, weight)` | The heaviest chain through the work still ahead.                                         |
 | `unmetOutputs(model, overlay, facts)`         | Each deliverable not yet produced, with the elements and missing inputs it still needs.  |
+| `factsFrom(record)`                           | The `Facts` port over a `FactRecord` of provided artefacts and named fact values.        |
+| `layeredFacts(...ports)`                      | A `Facts` port answering each key from the first port that finds it.                     |
 
 Every function that derives status throws `CycleError` (from `graph-dag`, carrying the cycles) when `illegalCycles` is not empty, `UnknownNodeError` when a transition names an element the model does not declare, and `UnsupportedConditionError` for a condition the facts port cannot serve.
 
@@ -82,6 +84,8 @@ The `Facts` port is `(key: JsonValue) => Resolution`: an opaque key in, `{ found
 | ---------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `elementStatusKey(id)` | This package, from the overlay | The text `"done"` or `"open"`. Not found, so indeterminate, when the overlay says `unknown` or `id` is not an element. It reads the overlay, never the derived status, so no cycle is possible. |
 | `artefactKey(id)`      | The port: the package asks it  | The boolean `true` when the input artefact is provided. Not found or `false` means it is not.                                                                                                   |
+
+A `FactRecord` is the plain data a store keeps for one run: `artefacts` maps an artefact id to `true` (provided) or `false` (known not to be), and `values` maps a fact's name to its trilean value. Whatever it does not name is unknown. `factsFrom(record)` is the `Facts` port over it: a string key is a named fact, `artefactKey(id)` reads `artefacts`, and anything else is not found, so an artefact recorded `false` is definite in a condition that reads its key while one not recorded leaves that condition indeterminate. `layeredFacts(...ports)` answers each key from the first port that finds it, so stored facts can sit in front of facts a host supplies.
 
 `lookup`, `some`, `every` and fold conditions need tables or collections, which the port does not serve; they throw `UnsupportedConditionError` rather than being read as an empty collection.
 
