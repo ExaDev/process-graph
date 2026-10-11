@@ -1,3 +1,4 @@
+import { discoverWorkspace } from "@exadev/semantic-release-workspace";
 import { describe, expect, it } from "vitest";
 
 import { commitTypes } from "./commit-types.ts";
@@ -110,5 +111,24 @@ describe("release-workspace.config.ts", () => {
         `type "${type}"`,
       ).toBe(false);
     }
+  });
+
+  it("gives every private package the version step alone and the published package the whole pipeline", async () => {
+    const workspace = await discoverWorkspace(import.meta.dirname);
+    const overridden = Object.keys(config.packagePlugins ?? {}).sort();
+    const privateNames = workspace.packages
+      .filter((pkg) => pkg.private)
+      .map((pkg) => pkg.name)
+      .sort();
+
+    expect(overridden).toStrictEqual(privateNames);
+    expect(privateNames).not.toContain("process-graph");
+    for (const name of privateNames) {
+      expect(config.packagePlugins?.[name]).toStrictEqual([
+        ["@semantic-release/npm", { npmPublish: true }],
+      ]);
+    }
+    expect(config.plugins).toContain("@semantic-release/changelog");
+    expect(config.plugins).toContain("@semantic-release/github");
   });
 });

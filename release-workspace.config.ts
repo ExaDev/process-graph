@@ -1,8 +1,12 @@
-import type { ReleaseWorkspaceOptions } from "@exadev/semantic-release-workspace";
+import {
+  discoverWorkspace,
+  type PublishPluginSpec,
+  type ReleaseWorkspaceOptions,
+} from "@exadev/semantic-release-workspace";
 import { commitTypes } from "./commit-types.ts";
 
 /**
- * Independent per-package releases through `@exadev/semantic-release-workspace`, invoked as `pnpm release`. Each publishable package gets its own version, `<name>@<version>` tag, CHANGELOG.md and GitHub Release, decided from the commits that touched its own directory, and a package is released after every sibling it depends on.
+ * Independent per-package releases through `@exadev/semantic-release-workspace`, invoked as `pnpm release`. Every package gets its own version and `<name>@<version>` tag, decided from the commits that touched its own directory, and a package is released after every sibling it depends on. `process-graph`, the one published package, also gets a CHANGELOG.md and a GitHub Release; the private packages it bundles get neither (see `privatePlugins`).
  *
  * The commit types and which of them release come from `commit-types.ts`, the same list `commitlint.config.ts` validates against, so a type cannot trigger a release without also passing commit-message validation, or the reverse.
  *
@@ -31,17 +35,38 @@ const noteTypes = commitTypes.map((entry) => ({
   hidden: false,
 }));
 
+const plugins: readonly PublishPluginSpec[] = [
+  "@semantic-release/changelog",
+  ["@semantic-release/npm", { npmPublish: true }],
+  "@semantic-release/github",
+];
+
+/**
+ * A private package is bundled into `process-graph` and never published, so it keeps only the step that bumps its version: `@semantic-release/npm`, which skips publishing for a manifest marked `private`. It writes no CHANGELOG.md and creates no GitHub Release, since neither describes anything a consumer installs; the orchestrator would drop the Release on its own, but an explicit list is taken exactly as written. It still takes a version and a `<name>@<version>` tag, which the orchestrator needs to find its last release, and its release still cascades: `process-graph` lists it in `devDependencies`, which the orchestrator follows like any other dependency field, so a change to a bundled package releases `process-graph`.
+ */
+const privatePlugins: readonly PublishPluginSpec[] = [
+  ["@semantic-release/npm", { npmPublish: true }],
+];
+
+const workspace = await discoverWorkspace(import.meta.dirname);
+
 const config: Pick<
   ReleaseWorkspaceOptions,
-  "branches" | "commitStrategy" | "plugins" | "analyzeCommits" | "generateNotes"
+  | "branches"
+  | "commitStrategy"
+  | "plugins"
+  | "packagePlugins"
+  | "analyzeCommits"
+  | "generateNotes"
 > = {
   branches: ["main"],
   commitStrategy: "single",
-  plugins: [
-    "@semantic-release/changelog",
-    ["@semantic-release/npm", { npmPublish: true }],
-    "@semantic-release/github",
-  ],
+  plugins,
+  packagePlugins: Object.fromEntries(
+    workspace.packages
+      .filter((pkg) => pkg.private)
+      .map((pkg) => [pkg.name, privatePlugins]),
+  ),
   analyzeCommits: {
     preset: "conventionalcommits",
     releaseRules,
