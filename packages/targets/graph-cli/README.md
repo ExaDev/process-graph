@@ -50,6 +50,8 @@ Every command takes the global options:
 
 Without `--data` or `PROCESS_GRAPH_DATA`, the store is `process-graph/graph.sqlite3` under `XDG_DATA_HOME`, or under `~/.local/share` when that is not set.
 
+The store holds synced work that other users on the host must not read. On Unix, the command line creates its default directory, and any missing directories above it, readable by its owner only (`0700`), and creates the database file the same way (`0600`) before SQLite opens it, so the `-wal` and `-shm` files SQLite derives from it are private too. A default store that already exists readable by others is narrowed to those modes, with one warning on standard error naming what changed. At a path given with `--data` or `PROCESS_GRAPH_DATA`, only a database file the command line creates is made private; the directory and an existing file are left as the user made them. Windows has no such modes, and nothing is set there.
+
 ## Output
 
 Text output is stable and made for scripts: a list is one item per line with tab-separated fields (an element is its identifier and label), and an empty list prints nothing. `--json` writes the same result as one JSON document; for `show` it is the projection when the format is `json`, and otherwise the view, the format and the diagram text. Errors go to standard error as one message, with no stack trace.

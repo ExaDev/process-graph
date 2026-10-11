@@ -1,7 +1,7 @@
-import { mkdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import type { Facts } from "@exadev/process-graph-domain";
 import { createGraphSourceRouter } from "@exadev/process-graph-source-contract";
 import {
@@ -14,6 +14,7 @@ import { githubTokenFromEnvironment } from "@exadev/process-graph-source-github-
 import { openNodeGraphStore } from "@exadev/process-graph-sqlite-node";
 import { createGraphStoreRouter } from "@exadev/process-graph-store-contract";
 import { createRouterClient } from "@orpc/server";
+import { prepareDataFile } from "./data-file.ts";
 import type { CliPorts } from "./ports.ts";
 import type { ExitCode } from "./exit-codes.ts";
 import { runCli, type ProgramIdentity } from "./program.ts";
@@ -38,6 +39,8 @@ export interface NodePortsOptions {
   readonly stdout?: (text: string) => void;
   /** Standard error; the process's when absent. */
   readonly stderr?: (text: string) => void;
+  /** The platform, which decides whether file modes are set; the process's when absent. */
+  readonly platform?: NodeJS.Platform;
 }
 
 /** The variable that names the data file outright. */
@@ -50,6 +53,24 @@ const dataFile = join("process-graph", "graph.sqlite3");
 const inMemory = ":memory:";
 
 /**
+ * The command line's own data file: `process-graph/graph.sqlite3` under the XDG data directory (`XDG_DATA_HOME`, or `.local/share` in the home directory).
+ * @param env - The environment.
+ * @param home - The home directory.
+ * @returns The path.
+ */
+const xdgDataPath = (
+  env: Readonly<Record<string, string | undefined>>,
+  home: string,
+): string => {
+  const xdg = env.XDG_DATA_HOME;
+
+  return join(
+    xdg !== undefined && xdg !== "" ? xdg : join(home, ".local", "share"),
+    dataFile,
+  );
+};
+
+/**
  * The data file used when `--data` is not given: `PROCESS_GRAPH_DATA` when it is set and not empty, otherwise `process-graph/graph.sqlite3` under the XDG data directory (`XDG_DATA_HOME`, or `.local/share` in the home directory).
  * @param env - The environment.
  * @param home - The home directory.
@@ -60,15 +81,8 @@ export const defaultDataPath = (
   home: string,
 ): string => {
   const named = env[dataVariable];
-  if (named !== undefined && named !== "") {
-    return named;
-  }
-  const xdg = env.XDG_DATA_HOME;
 
-  return join(
-    xdg !== undefined && xdg !== "" ? xdg : join(home, ".local", "share"),
-    dataFile,
-  );
+  return named !== undefined && named !== "" ? named : xdgDataPath(env, home);
 };
 
 /** A fact port that knows nothing: every condition is indeterminate and no input artefact is provided. */
@@ -102,6 +116,9 @@ export const packageVersion = (manifest: URL): string => {
 export const nodePorts = (options: NodePortsOptions = {}): CliPorts => {
   const env = options.env ?? process.env;
   const token = options.token ?? githubTokenFromEnvironment({ env });
+  const home = options.home ?? homedir();
+  // The command line's own data file, in the XDG data directory, whose directory it creates and keeps private; a path the user names is theirs.
+  const ownDataPath = xdgDataPath(env, home);
 
   return {
     stdout:
@@ -114,16 +131,21 @@ export const nodePorts = (options: NodePortsOptions = {}): CliPorts => {
       ((text) => {
         process.stderr.write(text);
       }),
-    defaultDataPath: defaultDataPath(env, options.home ?? homedir()),
+    defaultDataPath: defaultDataPath(env, home),
     openStore: (path) => {
-      if (path !== inMemory) {
-        mkdirSync(dirname(path), { recursive: true });
-      }
+      const warnings =
+        path === inMemory
+          ? []
+          : prepareDataFile(path, {
+              ownsDirectory: path === ownDataPath,
+              platform: options.platform ?? process.platform,
+            });
       const { store, close } = openNodeGraphStore(path);
 
       return {
         client: createRouterClient(createGraphStoreRouter(store)),
         close,
+        warnings,
       };
     },
     source: (prefix) =>
