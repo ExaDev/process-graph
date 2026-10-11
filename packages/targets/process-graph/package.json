@@ -56,6 +56,10 @@
       "types": "./dist/ui.d.ts",
       "import": "./dist/ui.js"
     },
+    "./ui/theme": {
+      "types": "./dist/ui/theme.d.ts",
+      "import": "./dist/ui/theme.js"
+    },
     "./react-flow": {
       "types": "./dist/react-flow.d.ts",
       "import": "./dist/react-flow.js"
