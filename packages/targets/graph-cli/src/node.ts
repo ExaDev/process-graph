@@ -11,10 +11,12 @@ import {
   type GraphqlFetch,
 } from "@exadev/process-graph-source-github-issues";
 import { githubTokenFromEnvironment } from "@exadev/process-graph-source-github-issues/node";
-import { openNodeGraphStore } from "@exadev/process-graph-sqlite-node";
+import {
+  openNodeGraphStore,
+  prepareDataFile,
+} from "@exadev/process-graph-sqlite-node";
 import { createGraphStoreRouter } from "@exadev/process-graph-store-contract";
 import { createRouterClient } from "@orpc/server";
-import { prepareDataFile } from "./data-file.ts";
 import type { CliPorts } from "./ports.ts";
 import type { ExitCode } from "./exit-codes.ts";
 import { runCli, type ProgramIdentity } from "./program.ts";
@@ -25,6 +27,10 @@ export interface NodePortsOptions {
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** The home directory the default data path falls back on; the user's when absent. */
   readonly home?: string;
+  /**
+   * A data file the host owns, such as one under its own home directory. It becomes the default data path in place of `PROCESS_GRAPH_DATA` and the XDG data file, and it gets the treatment the command line gives its own XDG data file: its directory, and any missing directories above it, are created readable by the owner only and kept that way, the database is created owner-only before SQLite opens it, and an existing store others can read is narrowed, with a warning on standard error (see `prepareDataFile` in `process-graph/store/node`). A path given with `--data` still wins, and is treated as the user's. The XDG data file when absent.
+   */
+  readonly dataPath?: string;
   /** Supplies GitHub tokens; `GITHUB_TOKEN` or the GitHub CLI's token (`githubTokenFromEnvironment`) when absent. */
   readonly token?: GitHubTokenPort;
   /** How requests reach GitHub; the global `fetch` when absent. */
@@ -109,7 +115,7 @@ export const packageVersion = (manifest: URL): string => {
 };
 
 /**
- * The ports for a Node process: the SQLite store over `node:sqlite` (creating the data file's directory when needed), the GitHub issues source for `github:` scopes, the file system and the process's streams.
+ * The ports for a Node process: the SQLite store over `node:sqlite` (creating the data file's directory when needed, private when the command line or the host owns it), the GitHub issues source for `github:` scopes, the file system and the process's streams.
  * @param options - Replacements for any of the defaults.
  * @returns The ports.
  */
@@ -117,8 +123,8 @@ export const nodePorts = (options: NodePortsOptions = {}): CliPorts => {
   const env = options.env ?? process.env;
   const token = options.token ?? githubTokenFromEnvironment({ env });
   const home = options.home ?? homedir();
-  // The command line's own data file, in the XDG data directory, whose directory it creates and keeps private; a path the user names is theirs.
-  const ownDataPath = xdgDataPath(env, home);
+  // The data file the command line owns, the host's or else its own in the XDG data directory, whose directory it creates and keeps private; a path the user names is theirs.
+  const ownDataPath = options.dataPath ?? xdgDataPath(env, home);
 
   return {
     stdout:
@@ -131,7 +137,7 @@ export const nodePorts = (options: NodePortsOptions = {}): CliPorts => {
       ((text) => {
         process.stderr.write(text);
       }),
-    defaultDataPath: defaultDataPath(env, home),
+    defaultDataPath: options.dataPath ?? defaultDataPath(env, home),
     openStore: (path) => {
       const warnings =
         path === inMemory

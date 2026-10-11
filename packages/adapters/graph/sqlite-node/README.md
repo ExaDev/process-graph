@@ -20,4 +20,22 @@ close();
 
 `openNodeGraphStore(path, options)` opens the file (or `":memory:"`), passing `node:sqlite`'s own options through, and the store migrates the schema on its first operation with the migrations embedded in `graph-store-sqlite`, the same ones the browser driver applies. A file database is switched to write-ahead logging, so a reader in another process is not blocked by a writer; set `timeout` to have a write wait for another process's lock. The store's change feed sees only the writes made through it, so a subscriber in one process does not hear another process's changes.
 
+`prepareDataFile(path, { ownsDirectory, platform })` makes a data file private before the store opens it, since a store holds synced work that other users on the host must not read. It creates the directory when missing, readable by its owner only (`privateDirectoryMode`, `0700`) when the caller owns it, and creates the database file owner-only (`privateFileMode`, `0600`) before SQLite opens it, so the `-wal` and `-shm` files SQLite derives from it are private too, whatever the umask. In a directory the caller owns, an existing directory or store file others can read is narrowed to those modes and the call returns one warning naming what changed, for the caller to show; in a directory someone else chose, the directory and an existing file are left as they are. On Windows, where file modes mean nothing, it only creates the directory.
+
+```ts
+import {
+  openNodeGraphStore,
+  prepareDataFile,
+} from "@exadev/process-graph-sqlite-node";
+
+const path = join(appHome, "graph", "graph.sqlite3");
+for (const warning of prepareDataFile(path, {
+  ownsDirectory: true,
+  platform: process.platform,
+})) {
+  console.warn(warning);
+}
+const { store, close } = openNodeGraphStore(path);
+```
+
 The contract's conformance kit runs against an in-memory database in process and against a file database over a `MessageChannel`.
