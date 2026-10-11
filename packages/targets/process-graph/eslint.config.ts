@@ -19,7 +19,14 @@ const subpathEntries = [
 export default defineConfig(
   packageLintConfig({
     tsconfigRootDir: import.meta.dirname,
+    projects: [
+      "./tsconfig.json",
+      "./tsconfig.node.json",
+      "./tsconfig.browser.json",
+    ],
     isomorphic: true,
+    // The browser integration test starts workers on the bundled browser store.
+    browserGlobals: true,
     // The bin is a Node launcher that is run, never imported, and these subpaths are the Node-only ones by design; the root entry and every other subpath stay isomorphic.
     isomorphicExemptions: [
       "src/bin.ts",
