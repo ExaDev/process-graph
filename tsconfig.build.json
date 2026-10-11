@@ -35,6 +35,9 @@
       "path": "packages/adapters/graph/sqlite-wasm/tsconfig.build.json"
     },
     {
+      "path": "packages/ui/graph/react/tsconfig.build.json"
+    },
+    {
       "path": "packages/targets/process-graph/tsconfig.build.json"
     }
   ]

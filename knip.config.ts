@@ -24,6 +24,10 @@ const config: KnipConfig = {
       entry: ["src/index.{ts,tsx}"],
       project: ["src/**/*.{ts,tsx}!"],
     },
+    "packages/ui/*/*": {
+      entry: ["src/index.{ts,tsx}"],
+      project: ["src/**/*.{ts,tsx}!"],
+    },
     "packages/targets/*": {
       entry: ["src/index.{ts,tsx}"],
       project: ["src/**/*.{ts,tsx}!"],

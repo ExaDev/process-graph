@@ -84,7 +84,11 @@ const dataFileLintConfig = defineConfig(
     files: ["**/package.json"],
     plugins: { depend, exadev },
     rules: {
-      "depend/ban-dependencies": ["error", { allowed: ["lint-staged"] }],
+      // eslint-plugin-react is the plugin @exadev/eslint-config's React block is built on, so the React packages' lint needs it whatever replacement the ban list suggests.
+      "depend/ban-dependencies": [
+        "error",
+        { allowed: ["lint-staged", "eslint-plugin-react"] },
+      ],
       // A script turbo caches must not pass a fixing flag: turbo hashes a task's inputs before it runs, so a cached check that rewrites them passes in CI having fixed files only inside the runner, and a later cache hit replays a log describing a fix that was never applied. Checking stays in the cached `_lint`; fixing is the uncached `_lint:fix`.
       "exadev/no-fix-in-cached-task-script": "error",
     },
@@ -159,6 +163,11 @@ export interface PackageLintOptions {
 
   /** `@exadev/eslint-config`'s own `exadev/barrel-policy` rule defaults to `"banned"` in its recommended type-checked preset. Every published package here exposes exactly one barrel at `src/index.ts`, so this defaults to `"single"` instead. It explicitly overrides the base preset's own default, rather than merely relying on it. */
   readonly barrelPolicy?: "banned" | "single" | "siblings" | "off";
+
+  /**
+   * Set for a package that renders React components: `.tsx` files get `@exadev/eslint-config`'s React block (eslint-plugin-react with the automatic JSX runtime, the hooks rules and the jsx-a11y rules). `version` is the React version the rules assume; pass React's own `version` export, so it follows the package's dependency. eslint-plugin-react's `"detect"` cannot be used, because it reads the file name through a context method ESLint 10 removed.
+   */
+  readonly react?: { readonly version: string };
 }
 
 export function packageLintConfig(options: PackageLintOptions): Config[] {
@@ -173,11 +182,14 @@ export function packageLintConfig(options: PackageLintOptions): Config[] {
     isomorphicExemptions = [],
     additionalRestrictedSyntax = [],
     barrelPolicy = "single",
+    react,
   } = options;
 
   const typeScriptFiles = ["**/*.ts", "**/*.tsx"];
+  const runtimeSrcFiles = ["src/**/*.ts", "src/**/*.tsx"];
   const runtimeSrcExemptions = [
     "src/**/*.test.ts",
+    "src/**/*.test.tsx",
     "src/test-support/**",
     ...isomorphicExemptions,
   ];
@@ -248,7 +260,7 @@ export function packageLintConfig(options: PackageLintOptions): Config[] {
     },
     isomorphicImportPatterns.length > 0
       ? {
-          files: ["src/**/*.ts"],
+          files: runtimeSrcFiles,
           ignores: [...runtimeSrcExemptions],
           rules: {
             "no-restricted-imports": [
@@ -260,7 +272,7 @@ export function packageLintConfig(options: PackageLintOptions): Config[] {
       : [],
     isomorphic
       ? {
-          files: ["src/**/*.ts"],
+          files: runtimeSrcFiles,
           ignores: [...runtimeSrcExemptions],
           rules: {
             "no-restricted-globals": [
@@ -272,13 +284,20 @@ export function packageLintConfig(options: PackageLintOptions): Config[] {
       : [],
     additionalRestrictedSyntax.length > 0
       ? {
-          files: ["src/**/*.ts"],
+          files: runtimeSrcFiles,
           ignores: [...runtimeSrcExemptions],
           rules: {
             "no-restricted-syntax": ["error", ...additionalRestrictedSyntax],
           },
         }
       : [],
+    react === undefined
+      ? []
+      : [
+          // Nested rather than spread: at runtime this is an array of config blocks, which defineConfig flattens.
+          exadev.configs.react,
+          { settings: { react: { version: react.version } } },
+        ],
     dataFileLintConfig,
     // Last, deliberately: bundles eslint-config-prettier, turning off every stylistic rule that would otherwise fight the formatter. Placed earlier, a later config could re-enable one and the two would disagree forever, each "fixing" the other's output.
     prettierRecommended,
