@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/ExaDev/process-graph/compare/process-graph@1.1.0...process-graph@1.1.1) (2026-10-11)
+
+### Build System
+
+* **deps:** return vitest to 4.1.11 so mutation testing exercises mutants ([b37f840](https://github.com/ExaDev/process-graph/commit/b37f840435693b46bb1e21962f51b627671e535f))
+
 ## [1.1.0](https://github.com/ExaDev/process-graph/compare/process-graph@1.0.6...process-graph@1.1.0) (2026-10-11)
 
 ### Features

@@ -1,6 +1,6 @@
 {
   "name": "process-graph",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A process and dependency graph model with projections into flowcharts, swimlanes, state machines and sequence diagrams, reasoning over a run, layout, the GitHub issues source, the SQLite store for Node and the browser, and the process-graph command line, each behind its own subpath.",
   "type": "module",
   "repository": {
