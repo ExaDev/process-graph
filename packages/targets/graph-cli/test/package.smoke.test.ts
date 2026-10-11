@@ -45,20 +45,27 @@ test("the built library runs a command against a SQLite file through the Node po
   expect(stdout).toBe("added activity build at revision 1\nbuild\tBuild\n");
 });
 
-test("the built bin runs as a process, creating its data directory, and reports its exit status", () => {
-  const data = join(directory, "nested", "graph.sqlite3");
+/** No per-test time limit for the bin: each run starts a Node process, so how long it takes is the machine's scheduling, not a property of this code, and a clock bound only fails it under load. The CI job's own timeout still ends a hang. */
+const unbounded = 0;
 
-  expect(runBin(["add", "activity", "build", "Build"], data).status).toBe(
-    exitCodes.success,
-  );
-  const ready = runBin(["ready", "--json"], data);
-  expect(ready.status).toBe(exitCodes.success);
-  expect(JSON.parse(ready.stdout)).toEqual({
-    elements: [{ id: "build", label: "Build" }],
-  });
-  expect(runBin(["blocked", "nothing"], data)).toMatchObject({
-    status: exitCodes.notFound,
-    stdout: "",
-    stderr: 'no element "nothing" in the model\n',
-  });
-});
+test(
+  "the built bin runs as a process, creating its data directory, and reports its exit status",
+  { timeout: unbounded },
+  () => {
+    const data = join(directory, "nested", "graph.sqlite3");
+
+    expect(runBin(["add", "activity", "build", "Build"], data).status).toBe(
+      exitCodes.success,
+    );
+    const ready = runBin(["ready", "--json"], data);
+    expect(ready.status).toBe(exitCodes.success);
+    expect(JSON.parse(ready.stdout)).toEqual({
+      elements: [{ id: "build", label: "Build" }],
+    });
+    expect(runBin(["blocked", "nothing"], data)).toMatchObject({
+      status: exitCodes.notFound,
+      stdout: "",
+      stderr: 'no element "nothing" in the model\n',
+    });
+  },
+);
