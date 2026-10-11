@@ -783,28 +783,28 @@ importers:
         specifier: 1.1.0
         version: link:../../core/graph/projection
       '@exadev/process-graph-react':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../../ui/graph/react
       '@exadev/process-graph-react-flow':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../../ui/graph/react-flow
       '@exadev/process-graph-schema':
         specifier: 1.1.0
         version: link:../../core/graph/schema
       '@exadev/process-graph-source-contract':
-        specifier: 1.0.1
+        specifier: 1.1.0
         version: link:../../core/graph/source-contract
       '@exadev/process-graph-source-github-issues':
-        specifier: 1.0.1
+        specifier: 1.1.0
         version: link:../../adapters/graph/source-github-issues
       '@exadev/process-graph-sqlite-wasm':
-        specifier: 1.0.2
+        specifier: 1.0.3
         version: link:../../adapters/graph/sqlite-wasm
       '@exadev/process-graph-store-contract':
-        specifier: 1.0.3
+        specifier: 1.1.0
         version: link:../../core/graph/store-contract
       '@exadev/process-graph-ui':
-        specifier: 1.0.0
+        specifier: 1.0.1
         version: link:../../ui/graph/ui
       '@orpc/client':
         specifier: 2.0.0-beta.41
