@@ -78,8 +78,8 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           task: test
-          # The SQLite wasm store's integration tests run in Chromium through Vitest's browser mode; Playwright installs the browser build its pinned version expects.
-          command: pnpm --filter @exadev/process-graph-sqlite-wasm exec playwright install --with-deps chromium && pnpm test:coverage && pnpm test:integration && pnpm test:smoke
+          # The SQLite wasm store's integration tests run in Chromium through Vitest's browser mode, and the web app's end-to-end tests in the same Chromium through Playwright, which pins the same version; Playwright installs the browser build that version expects.
+          command: pnpm --filter @exadev/process-graph-sqlite-wasm exec playwright install --with-deps chromium && pnpm test:coverage && pnpm test:integration && pnpm test:smoke && pnpm test:e2e
 
   knip:
     name: Knip

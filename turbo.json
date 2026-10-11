@@ -53,6 +53,10 @@
       "dependsOn": ["_build", "^_build", "^_test:smoke"],
       "outputs": []
     },
+    "_test:e2e": {
+      "dependsOn": ["_build", "^_build"],
+      "outputs": []
+    },
     "_test:mutation": {
       "dependsOn": ["_build", "^_build"],
       "outputs": ["reports/**"],

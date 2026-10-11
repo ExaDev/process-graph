@@ -7,6 +7,10 @@ coverage
 .env
 .stryker-tmp
 reports
+# Playwright's run output, and the service worker vite-plugin-pwa writes when it runs in development.
+test-results
+playwright-report
+dev-dist
 
 # Un-ignore AGENTS.md/CLAUDE.md against a machine-wide global gitignore that excludes them everywhere by default. README.md symlinked to AGENTS.md and CLAUDE.md is this repository's deliberate "one instruction file" pattern, so these symlinks must be tracked.
 !AGENTS.md
