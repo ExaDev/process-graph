@@ -78,8 +78,8 @@ export interface ModelAreaProps {
   readonly update: (change: (state: ViewState) => ViewState) => void;
   /** The theme in use, for React Flow's own controls. */
   readonly colourScheme: "light" | "dark";
-  /** Adds a scope and syncs it: expanding the model on demand to work it depends on outside the scope. */
-  readonly onAddScope: (scope: string) => void;
+  /** Adds scopes and syncs them: expanding the model on demand to work it is linked to outside the scope. */
+  readonly onAddScopes: (scopes: readonly string[]) => void;
 }
 
 interface LoadedModelProps extends ModelAreaProps {
@@ -130,7 +130,7 @@ const Workspace = (props: WorkspaceProps): ReactElement => {
     state,
     update,
     colourScheme,
-    onAddScope,
+    onAddScopes,
     run,
     labelOf,
   } = props;
@@ -295,7 +295,7 @@ const Workspace = (props: WorkspaceProps): ReactElement => {
             onSetState={setState}
             onSetArtefact={setArtefact}
             onSetFact={setFact}
-            onAddScope={onAddScope}
+            onAddScopes={onAddScopes}
             store={ports.store}
             modelId={modelId}
             revision={props.stored.revision}

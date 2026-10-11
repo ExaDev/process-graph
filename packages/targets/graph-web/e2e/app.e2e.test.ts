@@ -240,6 +240,39 @@ test("expands the scope on demand to a repository a dependency leads to", async 
   await expect(card(page, "github:partner/sdk#1")).toBeVisible();
 });
 
+test("loads every repository an issue's linked work lives in, in one step, and shows its sub-tasks", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await syncScopes(page, fixtureToken, ["acme"]);
+  await syncFinished(page);
+
+  await page.getByRole("tab", { name: "Blocked" }).click();
+  await page
+    .getByRole("listbox", { name: "Blocked" })
+    .getByRole("option", { name: /Build the page/u })
+    .click();
+  const details = page.locator('[data-screen="details"]');
+  // The sub-issue in another organisation's repository is read as a stub with the page that reaches it.
+  await expect(
+    details.locator('[data-hierarchy="child"]').getByRole("button"),
+  ).toHaveText(["Document the page"]);
+  await expect(card(page, "github:partner/docs#2")).toHaveCount(0);
+  await details
+    .getByRole("button", { name: "Load what this links to" })
+    .click();
+
+  await syncFinished(page);
+  expect(new URL(page.url()).searchParams.getAll("scope")).toEqual([
+    "github:acme",
+    "github:partner/docs",
+    "github:partner/sdk",
+  ]);
+  // An issue nothing links to arrives only with a sync of its whole repository.
+  await expect(card(page, "github:partner/docs#2")).toBeVisible();
+  await expect(card(page, "github:partner/sdk#1")).toBeVisible();
+});
+
 test("says when GitHub's rate limit resets", async ({ page }) => {
   await page.goto("/");
   await syncScopes(page, rateLimitedToken, ["acme"]);

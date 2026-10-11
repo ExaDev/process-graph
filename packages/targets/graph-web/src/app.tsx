@@ -114,7 +114,7 @@ export const App = (props: AppProps): ReactElement => {
     );
   };
 
-  // A scope added from an element's details is synced as soon as its model is the one shown, so expanding on demand is one action.
+  // Scopes added from an element's details are synced as soon as their model is the one shown, so expanding on demand is one action.
   useEffect(() => {
     if (syncWhenShown.current === modelId) {
       syncWhenShown.current = undefined;
@@ -230,10 +230,11 @@ export const App = (props: AppProps): ReactElement => {
                 state={state}
                 update={update}
                 colourScheme={theme}
-                onAddScope={(scope) => {
-                  const scopes = state.scopes.includes(scope)
-                    ? state.scopes
-                    : [...state.scopes, scope];
+                onAddScopes={(added) => {
+                  const scopes = [
+                    ...state.scopes,
+                    ...added.filter((scope) => !state.scopes.includes(scope)),
+                  ];
                   update((current) => withScopes(current, scopes));
                   syncWhenShown.current = modelIdOf(scopes);
                 }}

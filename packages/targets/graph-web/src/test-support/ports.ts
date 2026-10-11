@@ -157,6 +157,25 @@ const sdk: Issue = {
   blockedBy: [],
 };
 
+/** Documentation for the page, a finished sub-issue of it in another organisation's repository. */
+const docs: Issue = {
+  id: "github:partner/docs#1",
+  label: "Document the page",
+  repository: "github:partner/docs",
+  state: "done",
+  blockedBy: [],
+  parent: "github:acme/web#1",
+};
+
+/** An issue in the same repository as `docs` that nothing links to, so only a sync of that repository reads it. */
+const guide: Issue = {
+  id: "github:partner/docs#2",
+  label: "Proofread the guide",
+  repository: "github:partner/docs",
+  state: "done",
+  blockedBy: [],
+};
+
 /** The first page of the fake `github:acme` scope: the API repository's issues. */
 const apiPage: FakePage = pageOf([
   {
@@ -185,6 +204,7 @@ const webPage: FakePage = pageOf([
     blockedBy: [],
   },
   sdk,
+  docs,
   {
     id: "github:acme/web#1",
     label: "Build the page",
@@ -227,6 +247,7 @@ const fakeChildren: Readonly<Record<string, readonly ScopeEntry[]>> = {
 export const fakeScopes: Readonly<Record<string, readonly FakePage[]>> = {
   "github:acme": [apiPage, webPage],
   "github:partner/sdk": [pageOf([sdk])],
+  "github:partner/docs": [pageOf([docs, guide])],
 };
 
 /** What a test can do to the ports beyond what the app does. */
