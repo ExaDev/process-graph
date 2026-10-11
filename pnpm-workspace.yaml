@@ -10,10 +10,8 @@ packages:
 # - ui/<domain>/<package>: components that render the model.
 # - targets/<package>: deployable entry points, deliberately flat.
 
+# Every private package names its siblings with `workspace:*` and its third-party libraries with `catalog:`, so a version is written once, in the catalog below, and nothing installs a sibling from the registry. The published `process-graph` package is the exception: `@semantic-release/npm` publishes with `npm publish`, which ships a `workspace:` or `catalog:` specifier verbatim, so its manifest names exact versions, which `scripts/check-published-manifests.ts` holds equal to the catalog and to each sibling's own version. linkWorkspacePackages lets those exact sibling versions link the workspace copy rather than resolve from the registry.
 linkWorkspacePackages: true
-
-# Sibling dependencies are declared as plain exact versions, never with the `workspace:` protocol: a published manifest must stay installable from the registry, and linkWorkspacePackages above still symlinks a sibling locally whenever the workspace version satisfies the range. pnpm's default writes `workspace:^` on `pnpm add <sibling>`; false writes the plain version, pinned exact by saveExact below.
-saveWorkspaceProtocol: false
 
 saveExact: true
 
@@ -28,9 +26,81 @@ minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - "@exadev/eslint-config"
   - "@exadev/json-compose"
-  - "@exadev/process-graph-*"
   - "@exadev/semantic-release-workspace"
-  - process-graph
   - cosmiconfig-extends
   - trilean
   - trilean-regex
+
+# One exact version per third-party library (and per ExaDev tool), referenced as `catalog:` from every private manifest. Add or bump an entry with `pnpm add --save-catalog <name>@<version>` in a private package; the install age gate above applies to every entry.
+catalog:
+  "@arethetypeswrong/cli": 0.18.5
+  "@commitlint/cli": 21.2.3
+  "@commitlint/config-conventional": 21.2.3
+  "@commitlint/types": 21.2.3
+  "@eslint/js": 10.0.1
+  "@eslint/json": 2.1.0
+  "@eslint/markdown": 8.0.3
+  "@exadev/eslint-config": 2.36.3
+  "@exadev/semantic-release-workspace": 3.1.29
+  "@orpc/client": 2.0.0-beta.41
+  "@orpc/contract": 2.0.0-beta.41
+  "@orpc/server": 2.0.0-beta.41
+  "@playwright/test": 1.63.0
+  "@resvg/resvg-js": 2.6.2
+  "@semantic-release/changelog": 7.0.0
+  "@semantic-release/commit-analyzer": 13.0.1
+  "@semantic-release/git": 11.0.1
+  "@semantic-release/github": 12.0.10
+  "@semantic-release/npm": 13.2.0
+  "@semantic-release/release-notes-generator": 14.1.1
+  "@sqlite.org/sqlite-wasm": 3.53.4-build2
+  "@stryker-mutator/api": 10.0.0
+  "@stryker-mutator/core": 10.0.0
+  "@stryker-mutator/typescript-checker": 10.0.0
+  "@stryker-mutator/vitest-runner": 10.0.0
+  "@testing-library/dom": 10.4.2
+  "@testing-library/react": 16.3.3
+  "@types/node": 26.6.4
+  "@types/react": 19.3.0
+  "@types/react-dom": 19.3.0
+  "@vanilla-extract/css": 1.21.2
+  "@vanilla-extract/recipes": 0.5.7
+  "@vanilla-extract/vite-plugin": 5.2.6
+  "@vitest/browser-playwright": 5.0.3
+  "@vitest/coverage-v8": 5.0.3
+  "@xyflow/react": 12.12.0
+  commander: 15.0.0
+  conventional-changelog-conventionalcommits: 9.3.1
+  drizzle-kit: 1.0.0-rc.4
+  drizzle-orm: 1.0.0-rc.4
+  elkjs: 0.12.0
+  eslint: 10.12.0
+  eslint-config-prettier: 10.1.8
+  eslint-plugin-depend: 1.5.0
+  eslint-plugin-jsx-a11y: 6.10.2
+  eslint-plugin-prettier: 5.5.6
+  eslint-plugin-react: 7.37.5
+  eslint-plugin-react-hooks: 7.1.1
+  eslint-plugin-yml: 3.8.1
+  globals: 17.13.0
+  happy-dom: 20.14.5
+  husky: 9.1.7
+  knip: 6.39.0
+  lint-staged: 17.6.0
+  playwright: 1.63.0
+  prettier: 3.9.9
+  publint: 0.3.25
+  react: 19.3.0
+  react-dom: 19.3.0
+  semantic-release: 25.0.9
+  syncpack: 15.3.3
+  trilean: 1.7.2
+  turbo: 2.11.7
+  typescript: 6.0.3
+  typescript-eslint: 8.71.0
+  vite: 8.3.2
+  vite-plugin-pwa: 2.0.0
+  vitest: 5.0.3
+  workbox-window: 7.4.1
+  yaml: 2.9.1
+  zod: 4.6.5

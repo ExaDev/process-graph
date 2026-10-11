@@ -8,9 +8,10 @@ import type { KnipConfig } from "knip";
 const config: KnipConfig = {
   workspaces: {
     ".": {
-      entry: ["*.config.ts"],
+      entry: ["*.config.ts", "scripts/*.ts"],
       project: [
         "*.config.ts",
+        "scripts/*.ts",
         "commit-types.ts",
         "eslint.shared.ts",
         "stryker.shared.ts",
@@ -20,6 +21,20 @@ const config: KnipConfig = {
       entry: ["src/index.{ts,tsx}"],
       project: ["src/**/*.{ts,tsx}!"],
     },
+    // The contracts' Zod schemas embed the model's, which are built on trilean's expression and JSON schemas, so their emitted declarations import trilean although no source file names it, and knip traces source alone.
+    ...Object.fromEntries(
+      [
+        "packages/core/graph/source-contract",
+        "packages/core/graph/store-contract",
+      ].map((workspace) => [
+        workspace,
+        {
+          entry: ["src/index.{ts,tsx}"],
+          project: ["src/**/*.{ts,tsx}!"],
+          ignoreDependencies: ["trilean"],
+        },
+      ]),
+    ),
     "packages/adapters/*/*": {
       entry: ["src/index.{ts,tsx}"],
       project: ["src/**/*.{ts,tsx}!"],

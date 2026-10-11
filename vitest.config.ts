@@ -9,6 +9,7 @@ export default defineConfig({
           name: "unit",
           include: [
             ".github/scripts/**/*.test.ts",
+            "scripts/**/*.test.ts",
             "release-workspace.config.unit.test.ts",
           ],
         },

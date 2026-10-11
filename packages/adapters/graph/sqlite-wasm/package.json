@@ -62,22 +62,22 @@
     "worker"
   ],
   "dependencies": {
-    "@exadev/process-graph-store-contract": "1.1.0",
-    "@exadev/process-graph-store-sqlite": "1.1.0",
-    "@orpc/client": "2.0.0-beta.41",
-    "@orpc/server": "2.0.0-beta.41",
-    "@sqlite.org/sqlite-wasm": "3.53.4-build2",
-    "drizzle-orm": "1.0.0-rc.4"
+    "@exadev/process-graph-store-contract": "workspace:*",
+    "@exadev/process-graph-store-sqlite": "workspace:*",
+    "@orpc/client": "catalog:",
+    "@orpc/server": "catalog:",
+    "@sqlite.org/sqlite-wasm": "catalog:",
+    "drizzle-orm": "catalog:"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "0.18.5",
-    "@types/node": "26.6.4",
-    "@vitest/browser-playwright": "5.0.3",
-    "@vitest/coverage-v8": "5.0.3",
-    "eslint": "10.12.0",
-    "playwright": "1.63.0",
-    "publint": "0.3.25",
-    "typescript": "6.0.3",
-    "vitest": "5.0.3"
+    "@arethetypeswrong/cli": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
+    "playwright": "catalog:",
+    "publint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
