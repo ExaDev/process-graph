@@ -3,7 +3,9 @@ import {
   GraphSourceError,
   type FakePage,
   type GraphSourcePager,
+  type SyncFilter,
 } from "@exadev/process-graph-source-contract";
+import { createGitHubIssuesSource } from "@exadev/process-graph-source-github-issues";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { exitCodes } from "./exit-codes.ts";
 import { githubLikeSource, issues } from "./test-support/fixtures.ts";
@@ -149,6 +151,158 @@ describe("sync", () => {
         "then: sync jira:ACME\n",
     );
     expect((await harness.run("ready")).stdout).toBe(`${api}\tBuild the API\n`);
+  });
+});
+
+describe("sync filters", () => {
+  /** The fixture's source, telling a listener the filter of every page it is asked for. */
+  const recording = (
+    onFilter: (filter: SyncFilter | undefined) => void,
+  ): GraphSourcePager => {
+    const fake = createFakeGraphSource(githubLikeSource);
+
+    return {
+      source: fake.source,
+      page: async (request) => {
+        onFilter(request.filter);
+
+        return fake.page(request);
+      },
+    };
+  };
+
+  test("passes the state, label and order options to the source as one filter", async () => {
+    const filters: (SyncFilter | undefined)[] = [];
+    harness.remove();
+    harness = createHarness(
+      recording((filter) => {
+        filters.push(filter);
+      }),
+    );
+
+    const result = await harness.run(
+      "sync",
+      "github:acme/web",
+      "--state",
+      "open",
+      "--label",
+      "bug",
+      "--label",
+      "ui",
+      "--order",
+      "updated",
+      "--direction",
+      "desc",
+    );
+
+    expect(result.code).toBe(exitCodes.success);
+    expect(filters).toEqual([
+      {
+        states: ["open"],
+        labels: ["bug", "ui"],
+        order: { field: "updated", direction: "descending" },
+      },
+    ]);
+  });
+
+  test("orders ascending when --order is given without --direction, and passes no filter when none is given", async () => {
+    const filters: (SyncFilter | undefined)[] = [];
+    harness.remove();
+    harness = createHarness(
+      recording((filter) => {
+        filters.push(filter);
+      }),
+    );
+
+    await harness.run("sync", "github:acme/web", "--order", "created");
+    await harness.run("sync", "github:acme/web");
+
+    expect(filters).toEqual([
+      { order: { field: "created", direction: "ascending" } },
+      undefined,
+    ]);
+  });
+
+  test("refuses a state outside its choices, and --direction without --order, as usage errors", async () => {
+    const state = await harness.run(
+      "sync",
+      "github:acme/web",
+      "--state",
+      "closed",
+    );
+    const direction = await harness.run(
+      "sync",
+      "github:acme/web",
+      "--direction",
+      "asc",
+    );
+
+    expect(state.code).toBe(exitCodes.usage);
+    expect(state.stderr).toContain("Allowed choices are open, done.");
+    expect(direction).toEqual({
+      code: exitCodes.usage,
+      stdout: "",
+      stderr: "--direction orders by --order: give both\n",
+    });
+  });
+
+  test("says how to resume under the same filter when a source fails part way", async () => {
+    const fake = createFakeGraphSource(githubLikeSource);
+    const failing: GraphSourcePager = {
+      source: fake.source,
+      page: async (request) => {
+        if (request.cursor !== undefined) {
+          throw new GraphSourceError({
+            kind: "rate-limited",
+            message: "rate limited",
+            resetAt: undefined,
+          });
+        }
+
+        return fake.page(request);
+      },
+    };
+    harness.remove();
+    harness = createHarness(failing);
+
+    const result = await harness.run(
+      "sync",
+      "github:acme/app",
+      "--state",
+      "open",
+      "--label",
+      "bug",
+    );
+
+    expect(result.code).toBe(exitCodes.sourceFailure);
+    const [, , resume] = result.stderr.split("\n");
+    expect(resume).toMatch(
+      /^resume with: sync github:acme\/app --after \S+ --state open --label bug$/u,
+    );
+  });
+
+  test("reports the GitHub source's refusal to filter a Projects v2 board as a source failure", async () => {
+    harness.remove();
+    harness = createHarness(
+      createGitHubIssuesSource({
+        token: async () => Promise.resolve("unused"),
+        fetch: async () =>
+          Promise.reject(new Error("a refused sync reaches no network")),
+      }),
+    );
+
+    const result = await harness.run(
+      "sync",
+      "github:acme/projects/3",
+      "--state",
+      "open",
+    );
+
+    expect(result.code).toBe(exitCodes.sourceFailure);
+    expect(result.stderr).toBe(
+      '"github:acme/projects/3" is a Projects v2 board, which lists its items in the board\'s own order and cannot be filtered; sync it without a filter\n' +
+        "resume with: sync github:acme/projects/3 --state open\n",
+    );
   });
 });
 
