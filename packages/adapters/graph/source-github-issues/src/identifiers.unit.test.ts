@@ -32,6 +32,20 @@ describe("parseScope", () => {
     });
   });
 
+  test("reads a Projects v2 scope, and a repository named projects is still a repository", () => {
+    const number = 16737;
+    expect(parseScope("github:github/projects/16737")).toEqual({
+      kind: "project",
+      id: "github:github/projects/16737",
+      owner: "github",
+      number,
+    });
+    expect(parseScope("github:ExaDev/projects")).toMatchObject({
+      kind: "repository",
+      name: "projects",
+    });
+  });
+
   test.each([
     "ExaDev",
     "github:",
@@ -40,10 +54,15 @@ describe("parseScope", () => {
     "github:a b",
     "linear:team",
     "github:ExaDev/",
+    "github:o/projects/0",
+    "github:o/projects/01",
+    "github:o/projects/x",
+    "github:o/projects/1/2",
+    "github:o/boards/1",
   ])("rejects %s as invalid-scope", (scope) => {
     expect(failureOf(() => parseScope(scope))).toEqual({
       kind: "bad-request",
-      message: `"${scope}" is not a GitHub scope; expected github:owner or github:owner/repo`,
+      message: `"${scope}" is not a GitHub scope; expected github:owner, github:owner/repo or github:owner/projects/number`,
       reason: "invalid-scope",
       value: scope,
     });

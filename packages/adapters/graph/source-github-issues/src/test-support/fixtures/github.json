@@ -45,6 +45,49 @@
     },
     {
       "request": {
+        "query": "query IssueConnection($owner: String!, $name: String!, $number: Int!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    issue(number: $number) {\n      blocking(first: $first, after: $after) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n    }\n  }\n}",
+        "variables": {
+          "owner": "ExaDev",
+          "name": "document-schema.js",
+          "number": 13,
+          "first": 3,
+          "after": "Mw"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "issue": {
+                "blocking": {
+                  "pageInfo": {
+                    "hasNextPage": false,
+                    "endCursor": "NA"
+                  },
+                  "nodes": [
+                    {
+                      "number": 14,
+                      "title": "New sibling package: build a heading-based hierarchy over ContentDocument",
+                      "state": "CLOSED",
+                      "repository": {
+                        "name": "document-schema.js",
+                        "owner": {
+                          "__typename": "Organization",
+                          "login": "ExaDev"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
         "query": "query IssueConnection($owner: String!, $name: String!, $number: Int!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    issue(number: $number) {\n      subIssues(first: $first, after: $after) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n    }\n  }\n}",
         "variables": {
           "owner": "ExaDev",
@@ -179,7 +222,7 @@
     },
     {
       "request": {
-        "query": "query OwnerRepositories($login: String!, $first: Int!, $after: String) {\n  repositoryOwner(login: $login) {\n    __typename login\n    repositories(first: $first, after: $after, ownerAffiliations: [OWNER], orderBy: { field: NAME, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes { name }\n    }\n  }\n}",
+        "query": "query OwnerRepositories($login: String!, $first: Int!, $after: String) {\n  repositoryOwner(login: $login) {\n    __typename login\n    repositories(first: $first, after: $after, ownerAffiliations: [OWNER], orderBy: { field: NAME, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes { name description url isArchived }\n    }\n  }\n}",
         "variables": {
           "login": "octo-org",
           "first": 3,
@@ -200,7 +243,10 @@
                 },
                 "nodes": [
                   {
-                    "name": "sabrowning1-test"
+                    "name": "sabrowning1-test",
+                    "description": null,
+                    "url": "https://github.com/octo-org/sabrowning1-test",
+                    "isArchived": false
                   }
                 ]
               }
@@ -211,7 +257,7 @@
     },
     {
       "request": {
-        "query": "query OwnerRepositories($login: String!, $first: Int!, $after: String) {\n  repositoryOwner(login: $login) {\n    __typename login\n    repositories(first: $first, after: $after, ownerAffiliations: [OWNER], orderBy: { field: NAME, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes { name }\n    }\n  }\n}",
+        "query": "query OwnerRepositories($login: String!, $first: Int!, $after: String) {\n  repositoryOwner(login: $login) {\n    __typename login\n    repositories(first: $first, after: $after, ownerAffiliations: [OWNER], orderBy: { field: NAME, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes { name description url isArchived }\n    }\n  }\n}",
         "variables": {
           "login": "not.a.login",
           "first": 3,
@@ -229,7 +275,7 @@
     },
     {
       "request": {
-        "query": "query OwnerRepositories($login: String!, $first: Int!, $after: String) {\n  repositoryOwner(login: $login) {\n    __typename login\n    repositories(first: $first, after: $after, ownerAffiliations: [OWNER], orderBy: { field: NAME, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes { name }\n    }\n  }\n}",
+        "query": "query OwnerRepositories($login: String!, $first: Int!, $after: String) {\n  repositoryOwner(login: $login) {\n    __typename login\n    repositories(first: $first, after: $after, ownerAffiliations: [OWNER], orderBy: { field: NAME, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes { name description url isArchived }\n    }\n  }\n}",
         "variables": {
           "login": "octo-org",
           "first": 3,
@@ -250,13 +296,22 @@
                 },
                 "nodes": [
                   {
-                    "name": "hello-world-javascript-action"
+                    "name": "hello-world-javascript-action",
+                    "description": null,
+                    "url": "https://github.com/octo-org/hello-world-javascript-action",
+                    "isArchived": false
                   },
                   {
-                    "name": "octo-repo-go"
+                    "name": "octo-repo-go",
+                    "description": "fork of octodemo/advanced-security-go",
+                    "url": "https://github.com/octo-org/octo-repo-go",
+                    "isArchived": false
                   },
                   {
-                    "name": "octo-template"
+                    "name": "octo-template",
+                    "description": "Welcome to the Octo template.",
+                    "url": "https://github.com/octo-org/octo-template",
+                    "isArchived": false
                   }
                 ]
               }
@@ -267,12 +322,518 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query ProjectItems($login: String!, $number: Int!, $first: Int!, $after: String) {\n  repositoryOwner(login: $login) {\n    __typename login\n    ... on ProjectV2Owner {\n      projectV2(number: $number) {\n        items(first: $first, after: $after) {\n          pageInfo { hasNextPage endCursor }\n          nodes {\n            content {\n              __typename\n              ... on Issue {\n                number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+        "variables": {
+          "login": "github",
+          "number": 16737,
+          "first": 3,
+          "after": "Y3Vyc29yOnYyOpK5MDAwMDAwMDAuMDgzMzMzMzMzMzMzMzMzM84EaseP"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repositoryOwner": {
+              "__typename": "Organization",
+              "login": "github",
+              "projectV2": {
+                "items": {
+                  "pageInfo": {
+                    "hasNextPage": false,
+                    "endCursor": "Y3Vyc29yOnYyOpK5MDAwMDAwMDAuMDcxNDI4NTcxNDI4NTcxNM4EaseS"
+                  },
+                  "nodes": [
+                    {
+                      "content": {
+                        "__typename": "DraftIssue"
+                      }
+                    },
+                    {
+                      "content": {
+                        "__typename": "DraftIssue"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query ProjectItems($login: String!, $number: Int!, $first: Int!, $after: String) {\n  repositoryOwner(login: $login) {\n    __typename login\n    ... on ProjectV2Owner {\n      projectV2(number: $number) {\n        items(first: $first, after: $after) {\n          pageInfo { hasNextPage endCursor }\n          nodes {\n            content {\n              __typename\n              ... on Issue {\n                number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+        "variables": {
+          "login": "github",
+          "number": 16737,
+          "first": 3,
+          "after": "Y3Vyc29yOnYyOpK5MDAwMDAwMDAuMTExMTExMTExMTExMTExMc4EaseM"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repositoryOwner": {
+              "__typename": "Organization",
+              "login": "github",
+              "projectV2": {
+                "items": {
+                  "pageInfo": {
+                    "hasNextPage": true,
+                    "endCursor": "Y3Vyc29yOnYyOpK5MDAwMDAwMDAuMDgzMzMzMzMzMzMzMzMzM84EaseP"
+                  },
+                  "nodes": [
+                    {
+                      "content": {
+                        "__typename": "PullRequest"
+                      }
+                    },
+                    {
+                      "content": {
+                        "__typename": "DraftIssue"
+                      }
+                    },
+                    {
+                      "content": {
+                        "__typename": "DraftIssue"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query ProjectItems($login: String!, $number: Int!, $first: Int!, $after: String) {\n  repositoryOwner(login: $login) {\n    __typename login\n    ... on ProjectV2Owner {\n      projectV2(number: $number) {\n        items(first: $first, after: $after) {\n          pageInfo { hasNextPage endCursor }\n          nodes {\n            content {\n              __typename\n              ... on Issue {\n                number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+        "variables": {
+          "login": "github",
+          "number": 16737,
+          "first": 3,
+          "after": "Y3Vyc29yOnYyOpK5MDAwMDAwMDAuMTY2NjY2NjY2NjY2NjY2Ns4EaseJ"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repositoryOwner": {
+              "__typename": "Organization",
+              "login": "github",
+              "projectV2": {
+                "items": {
+                  "pageInfo": {
+                    "hasNextPage": true,
+                    "endCursor": "Y3Vyc29yOnYyOpK5MDAwMDAwMDAuMTExMTExMTExMTExMTExMc4EaseM"
+                  },
+                  "nodes": [
+                    {
+                      "content": {
+                        "__typename": "PullRequest"
+                      }
+                    },
+                    {
+                      "content": {
+                        "__typename": "PullRequest"
+                      }
+                    },
+                    {
+                      "content": {
+                        "__typename": "Issue",
+                        "number": 126,
+                        "title": "Document the process for increasing language support",
+                        "state": "CLOSED",
+                        "repository": {
+                          "name": "semantic",
+                          "owner": {
+                            "__typename": "Organization",
+                            "login": "github"
+                          }
+                        },
+                        "assignees": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blockedBy": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blocking": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "subIssues": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query ProjectItems($login: String!, $number: Int!, $first: Int!, $after: String) {\n  repositoryOwner(login: $login) {\n    __typename login\n    ... on ProjectV2Owner {\n      projectV2(number: $number) {\n        items(first: $first, after: $after) {\n          pageInfo { hasNextPage endCursor }\n          nodes {\n            content {\n              __typename\n              ... on Issue {\n                number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+        "variables": {
+          "login": "github",
+          "number": 16737,
+          "first": 3,
+          "after": "Y3Vyc29yOnYyOpK5MDAwMDAwMDAuMzMzMzMzMzMzMzMzMzMzM84EaseE"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repositoryOwner": {
+              "__typename": "Organization",
+              "login": "github",
+              "projectV2": {
+                "items": {
+                  "pageInfo": {
+                    "hasNextPage": true,
+                    "endCursor": "Y3Vyc29yOnYyOpK5MDAwMDAwMDAuMTY2NjY2NjY2NjY2NjY2Ns4EaseJ"
+                  },
+                  "nodes": [
+                    {
+                      "content": {
+                        "__typename": "Issue",
+                        "number": 173,
+                        "title": "Document the changes to the process for increasing language support due to precise ASTs",
+                        "state": "CLOSED",
+                        "repository": {
+                          "name": "semantic",
+                          "owner": {
+                            "__typename": "Organization",
+                            "login": "github"
+                          }
+                        },
+                        "assignees": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blockedBy": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blocking": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "subIssues": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        }
+                      }
+                    },
+                    {
+                      "content": {
+                        "__typename": "Issue",
+                        "number": 172,
+                        "title": "Remove ts-parse CLI command",
+                        "state": "CLOSED",
+                        "repository": {
+                          "name": "semantic",
+                          "owner": {
+                            "__typename": "Organization",
+                            "login": "github"
+                          }
+                        },
+                        "assignees": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blockedBy": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blocking": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "subIssues": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        }
+                      }
+                    },
+                    {
+                      "content": {
+                        "__typename": "Issue",
+                        "number": 146,
+                        "title": "Tag computation only supports à la carte ASTs",
+                        "state": "CLOSED",
+                        "repository": {
+                          "name": "semantic",
+                          "owner": {
+                            "__typename": "Organization",
+                            "login": "github"
+                          }
+                        },
+                        "assignees": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": "MQ"
+                          },
+                          "nodes": [
+                            {
+                              "login": "robrix"
+                            }
+                          ]
+                        },
+                        "blockedBy": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blocking": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "subIssues": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query ProjectItems($login: String!, $number: Int!, $first: Int!, $after: String) {\n  repositoryOwner(login: $login) {\n    __typename login\n    ... on ProjectV2Owner {\n      projectV2(number: $number) {\n        items(first: $first, after: $after) {\n          pageInfo { hasNextPage endCursor }\n          nodes {\n            content {\n              __typename\n              ... on Issue {\n                number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+        "variables": {
+          "login": "github",
+          "number": 16737,
+          "first": 3,
+          "after": null
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repositoryOwner": {
+              "__typename": "Organization",
+              "login": "github",
+              "projectV2": {
+                "items": {
+                  "pageInfo": {
+                    "hasNextPage": true,
+                    "endCursor": "Y3Vyc29yOnYyOpK5MDAwMDAwMDAuMzMzMzMzMzMzMzMzMzMzM84EaseE"
+                  },
+                  "nodes": [
+                    {
+                      "content": {
+                        "__typename": "Issue",
+                        "number": 480,
+                        "title": "Precise ASTs don’t support comments",
+                        "state": "CLOSED",
+                        "repository": {
+                          "name": "semantic",
+                          "owner": {
+                            "__typename": "Organization",
+                            "login": "github"
+                          }
+                        },
+                        "assignees": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blockedBy": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blocking": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "subIssues": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        }
+                      }
+                    },
+                    {
+                      "content": {
+                        "__typename": "Issue",
+                        "number": 482,
+                        "title": "Precise AST datatypes don’t support diffing",
+                        "state": "CLOSED",
+                        "repository": {
+                          "name": "semantic",
+                          "owner": {
+                            "__typename": "Organization",
+                            "login": "github"
+                          }
+                        },
+                        "assignees": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blockedBy": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blocking": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "subIssues": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        }
+                      }
+                    },
+                    {
+                      "content": {
+                        "__typename": "Issue",
+                        "number": 481,
+                        "title": "Precise ASTs don’t support parse errors",
+                        "state": "CLOSED",
+                        "repository": {
+                          "name": "semantic",
+                          "owner": {
+                            "__typename": "Organization",
+                            "login": "github"
+                          }
+                        },
+                        "assignees": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blockedBy": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "blocking": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        },
+                        "subIssues": {
+                          "pageInfo": {
+                            "hasNextPage": false,
+                            "endCursor": null
+                          },
+                          "nodes": []
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "ExaDev",
           "name": "document-schema.js",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOC0xN1QwODowNTo0N1rPAAAAATQjF5A="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOC0xN1QwODowNTo0N1rPAAAAATQjF5A=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -316,6 +877,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -343,6 +911,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -419,6 +994,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -436,12 +1018,18 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "ExaDev",
           "name": "document-schema.js",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOC0xOFQwNzowNjoyMVrPAAAAATSyvhU="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOC0xOFQwNzowNjoyMVrPAAAAATSyvhU=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -522,6 +1110,13 @@
                         }
                       ]
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -555,6 +1150,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -572,12 +1174,18 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0wM1QwNTowMzo1NVrPAAAAAT3XU9w="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0wM1QwNTowMzo1NVrPAAAAAT3XU9w=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -621,6 +1229,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -648,6 +1263,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -687,6 +1309,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -704,12 +1333,177 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDo1OToxM1rPAAAAAU-56QY="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDo0Mzo1NVrPAAAAAU-2-PE=",
+          "states": ["CLOSED"],
+          "labels": ["bug"],
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "agent-permissions",
+              "owner": {
+                "__typename": "User",
+                "login": "Mearman"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": true,
+                  "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDowMDo1OVrPAAAAAU-uPKc="
+                },
+                "nodes": [
+                  {
+                    "number": 56,
+                    "title": "fix(ci): the audit job discards its fixes when the override prune install fails",
+                    "state": "CLOSED",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 40,
+                    "title": "fix: pnpm-lock.yaml on main has a duplicated zod entry and a frozen install fails",
+                    "state": "CLOSED",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 39,
+                    "title": "fix: deduplicateRules drops rules that differ only in their when condition",
+                    "state": "CLOSED",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "Mearman",
+          "name": "agent-permissions",
+          "first": 3,
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDo1OToxM1rPAAAAAU-56QY=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -753,6 +1547,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -780,6 +1581,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -819,6 +1627,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -836,12 +1651,137 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDowMDo1OVrPAAAAAU-uPKc="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDowMDo1OVrPAAAAAU-uPKc=",
+          "states": ["CLOSED"],
+          "labels": ["bug"],
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "agent-permissions",
+              "owner": {
+                "__typename": "User",
+                "login": "Mearman"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": false,
+                  "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDowMDo1MlrPAAAAAU-uNjY="
+                },
+                "nodes": [
+                  {
+                    "number": 38,
+                    "title": "fix: a prefix or wildcard allow rule matches a whole compound command",
+                    "state": "CLOSED",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 37,
+                    "title": "fix: treat a rule's when condition as unknown, not satisfied, when the context lacks the field",
+                    "state": "CLOSED",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "Mearman",
+          "name": "agent-permissions",
+          "first": 3,
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDowMDo1OVrPAAAAAU-uPKc=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -885,6 +1825,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -912,6 +1859,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -951,6 +1905,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -968,12 +1929,18 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDowMToxMVrPAAAAAU-uSGI="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDowMToxMVrPAAAAAU-uSGI=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -1017,6 +1984,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1044,6 +2018,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -1083,6 +2064,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1100,12 +2088,18 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDowMToyNlrPAAAAAU-uVY0="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDowMToyNlrPAAAAAU-uVY0=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -1149,6 +2143,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1176,6 +2177,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -1215,6 +2223,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1232,12 +2247,18 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDowMTozOFrPAAAAAU-uYCQ="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDowMTozOFrPAAAAAU-uYCQ=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -1281,6 +2302,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1308,6 +2336,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -1347,6 +2382,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1364,12 +2406,18 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDozNTo1MFrPAAAAAU-1Rv4="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDozNTo1MFrPAAAAAU-1Rv4=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -1413,6 +2461,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1440,6 +2495,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -1479,6 +2541,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1496,12 +2565,177 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNTowNjozOVrPAAAAAU-7caY="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNTowNjozNVrPAAAAAU-7bW8=",
+          "states": ["CLOSED"],
+          "labels": ["bug"],
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "agent-permissions",
+              "owner": {
+                "__typename": "User",
+                "login": "Mearman"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": true,
+                  "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNDo0Mzo1NVrPAAAAAU-2-PE="
+                },
+                "nodes": [
+                  {
+                    "number": 63,
+                    "title": "fix(release): the release commit push is rejected by the main branch ruleset",
+                    "state": "CLOSED",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 60,
+                    "title": "fix(release): the release notes step fails with conventionalcommits preset 10",
+                    "state": "CLOSED",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 59,
+                    "title": "fix(ci): the audit job cannot open its fix PR because Actions may not create pull requests",
+                    "state": "CLOSED",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "Mearman",
+          "name": "agent-permissions",
+          "first": 3,
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNTowNjozOVrPAAAAAU-7caY=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -1545,6 +2779,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1572,6 +2813,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -1611,6 +2859,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1628,12 +2883,18 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNzowNjowMFrPAAAAAU_Szl8="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNzowNjowMFrPAAAAAU_Szl8=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -1677,6 +2938,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1704,6 +2972,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -1743,6 +3018,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1760,12 +3042,137 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxOTo0NTo0MVrPAAAAAU_vpQU="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxOTo0NTo0M1rPAAAAAU_vphg=",
+          "states": ["OPEN"],
+          "labels": null,
+          "orderBy": {
+            "field": "UPDATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "agent-permissions",
+              "owner": {
+                "__typename": "User",
+                "login": "Mearman"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": false,
+                  "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxOTowNDowN1rPAAAAAU_oDFY="
+                },
+                "nodes": [
+                  {
+                    "number": 101,
+                    "title": "Codex codec: support profile allow-list extends",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 93,
+                    "title": "feat(codec): report the canonical fields a codec does not carry",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "Mearman",
+          "name": "agent-permissions",
+          "first": 3,
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxOTo0NTo0MVrPAAAAAU_vpQU=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -1809,6 +3216,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1836,6 +3250,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -1875,6 +3296,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1892,12 +3320,18 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxOTo0NTo0NlrPAAAAAU_vqPs="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxOTo0NTo0NlrPAAAAAU_vqPs=",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -1941,6 +3375,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -1968,6 +3409,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -2007,6 +3455,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -2024,12 +3479,177 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "Mearman",
+          "name": "agent-permissions",
+          "first": 3,
+          "after": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxOTo0NTo0OFrPAAAAAU_vqyw=",
+          "states": ["OPEN"],
+          "labels": null,
+          "orderBy": {
+            "field": "UPDATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "agent-permissions",
+              "owner": {
+                "__typename": "User",
+                "login": "Mearman"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": true,
+                  "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxOTo0NTo0M1rPAAAAAU_vphg="
+                },
+                "nodes": [
+                  {
+                    "number": 104,
+                    "title": "Codex decoding rejects glob_scan_max_depth",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 103,
+                    "title": "sync: write Codex config and rules files",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 102,
+                    "title": "Codex codec: command rules are not caught inside redirections or command substitutions",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "octo-org",
           "name": "octo-template",
           "first": 3,
-          "after": "Y3Vyc29yOnYyOpK0MjAyNS0wNi0yMlQxNzo1MzoxNFrOvLeAFA=="
+          "after": "Y3Vyc29yOnYyOpK0MjAyNS0wNi0yMlQxNzo1MzoxNFrOvLeAFA==",
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -2073,6 +3693,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -2106,6 +3733,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -2123,12 +3757,296 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "octo-org",
+          "name": "octo-template",
+          "first": 3,
+          "after": "Y3Vyc29yOnYyOpK0MjAyNS0wNi0yMlQxNzo1MzoxNFrOvLeAFA==",
+          "states": ["OPEN"],
+          "labels": null,
+          "orderBy": {
+            "field": "UPDATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "octo-template",
+              "owner": {
+                "__typename": "Organization",
+                "login": "octo-org"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": false,
+                  "endCursor": "Y3Vyc29yOnYyOpK0MjAyMy0wMy0yOVQyMDowNTozMVrOYiLJyA=="
+                },
+                "nodes": [
+                  {
+                    "number": 1,
+                    "title": "Objectionable content!",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "octo-template",
+                      "owner": {
+                        "__typename": "Organization",
+                        "login": "octo-org"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 2,
+                    "title": "I don't think this belongs here...",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "octo-template",
+                      "owner": {
+                        "__typename": "Organization",
+                        "login": "octo-org"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "Mearman",
           "name": "agent-permissions",
           "first": 3,
-          "after": null
+          "after": null,
+          "states": ["CLOSED"],
+          "labels": ["bug"],
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "agent-permissions",
+              "owner": {
+                "__typename": "User",
+                "login": "Mearman"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": true,
+                  "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxNTowNjozNVrPAAAAAU-7bW8="
+                },
+                "nodes": [
+                  {
+                    "number": 79,
+                    "title": "fix(loader): loadPolicy silently skips a policy file it cannot use",
+                    "state": "CLOSED",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 65,
+                    "title": "fix(codec): Codex path rules are written to the filesystem root instead of the project",
+                    "state": "CLOSED",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 64,
+                    "title": "fix(codec): the other codecs still drop or loosen rules on encode without reporting it",
+                    "state": "CLOSED",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "Mearman",
+          "name": "agent-permissions",
+          "first": 3,
+          "after": null,
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -2172,6 +4090,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -2199,6 +4124,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -2251,6 +4183,13 @@
                         }
                       ]
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -2268,12 +4207,177 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "Mearman",
+          "name": "agent-permissions",
+          "first": 3,
+          "after": null,
+          "states": ["OPEN"],
+          "labels": null,
+          "orderBy": {
+            "field": "UPDATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "agent-permissions",
+              "owner": {
+                "__typename": "User",
+                "login": "Mearman"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": true,
+                  "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0wOS0yOVQxOTo0NTo0OFrPAAAAAU_vqyw="
+                },
+                "nodes": [
+                  {
+                    "number": 107,
+                    "title": "Oh My Pi codec: prompt for reads with per-tool approval entries",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 106,
+                    "title": "Oh My Pi: read named profiles",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 105,
+                    "title": "Oh My Pi codec: merge the two entries written for a prefix rule on decode",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "agent-permissions",
+                      "owner": {
+                        "__typename": "User",
+                        "login": "Mearman"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "ExaDev",
           "name": "document-schema.js",
           "first": 3,
-          "after": null
+          "after": null,
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -2317,6 +4421,26 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": "MQ"
+                      },
+                      "nodes": [
+                        {
+                          "number": 569,
+                          "title": "Populate the unified DocumentPackage shape once document-schema.js defines it",
+                          "state": "CLOSED",
+                          "repository": {
+                            "name": "documents.js",
+                            "owner": {
+                              "__typename": "Organization",
+                              "login": "ExaDev"
+                            }
+                          }
+                        }
+                      ]
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -2349,6 +4473,50 @@
                         "endCursor": null
                       },
                       "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": true,
+                        "endCursor": "Mw"
+                      },
+                      "nodes": [
+                        {
+                          "number": 54,
+                          "title": "Populate headingLevel on read; switch the write-side clamp to the shared helper",
+                          "state": "CLOSED",
+                          "repository": {
+                            "name": "markdown-codec",
+                            "owner": {
+                              "__typename": "Organization",
+                              "login": "ExaDev"
+                            }
+                          }
+                        },
+                        {
+                          "number": 52,
+                          "title": "Expose the already-parsed text:outline-level as headingLevel, not just re-encoded into styleId",
+                          "state": "CLOSED",
+                          "repository": {
+                            "name": "odf.js",
+                            "owner": {
+                              "__typename": "Organization",
+                              "login": "ExaDev"
+                            }
+                          }
+                        },
+                        {
+                          "number": 51,
+                          "title": "Populate headingLevel on docx paragraphs from the style's own w:outlineLvl",
+                          "state": "CLOSED",
+                          "repository": {
+                            "name": "ooxml.js",
+                            "owner": {
+                              "__typename": "Organization",
+                              "login": "ExaDev"
+                            }
+                          }
+                        }
+                      ]
                     },
                     "subIssues": {
                       "pageInfo": {
@@ -2396,6 +4564,13 @@
                         }
                       ]
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -2413,12 +4588,56 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "ExaDev",
+          "name": "document-schema.js",
+          "first": 3,
+          "after": null,
+          "states": ["OPEN"],
+          "labels": null,
+          "orderBy": {
+            "field": "UPDATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "document-schema.js",
+              "owner": {
+                "__typename": "Organization",
+                "login": "ExaDev"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": false,
+                  "endCursor": null
+                },
+                "nodes": []
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "octo-org",
           "name": "hello-world-javascript-action",
           "first": 3,
-          "after": null
+          "after": null,
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -2445,12 +4664,56 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "octo-org",
+          "name": "hello-world-javascript-action",
+          "first": 3,
+          "after": null,
+          "states": ["OPEN"],
+          "labels": null,
+          "orderBy": {
+            "field": "UPDATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "hello-world-javascript-action",
+              "owner": {
+                "__typename": "Organization",
+                "login": "octo-org"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": false,
+                  "endCursor": null
+                },
+                "nodes": []
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "octocat",
           "name": "Hello-World",
           "first": 3,
-          "after": null
+          "after": null,
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -2464,12 +4727,18 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "octo-org",
           "name": "octo-repo-go",
           "first": 3,
-          "after": null
+          "after": null,
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -2513,6 +4782,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -2546,6 +4822,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -2563,12 +4846,137 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "octo-org",
+          "name": "octo-repo-go",
+          "first": 3,
+          "after": null,
+          "states": ["OPEN"],
+          "labels": null,
+          "orderBy": {
+            "field": "UPDATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "octo-repo-go",
+              "owner": {
+                "__typename": "Organization",
+                "login": "octo-org"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": false,
+                  "endCursor": "Y3Vyc29yOnYyOpK0MjAyMy0wNC0yMVQxMzozMTo0NFrOZAxO3A=="
+                },
+                "nodes": [
+                  {
+                    "number": 1,
+                    "title": "Fix code scanning alert - Database query built from user-controlled sources",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "octo-repo-go",
+                      "owner": {
+                        "__typename": "Organization",
+                        "login": "octo-org"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 2,
+                    "title": "Fix code scanning alert - Database query built from user-controlled sources",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "octo-repo-go",
+                      "owner": {
+                        "__typename": "Organization",
+                        "login": "octo-org"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "octo-org",
           "name": "octo-template",
           "first": 3,
-          "after": null
+          "after": null,
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -2612,6 +5020,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -2639,6 +5054,13 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null
@@ -2678,6 +5100,13 @@
                       },
                       "nodes": []
                     },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
                     "subIssues": {
                       "pageInfo": {
                         "hasNextPage": false,
@@ -2695,12 +5124,177 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "octo-org",
+          "name": "octo-template",
+          "first": 3,
+          "after": null,
+          "states": ["OPEN"],
+          "labels": null,
+          "orderBy": {
+            "field": "UPDATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "octo-template",
+              "owner": {
+                "__typename": "Organization",
+                "login": "octo-org"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": true,
+                  "endCursor": "Y3Vyc29yOnYyOpK0MjAyNS0wNi0yMlQxNzo1MzoxNFrOvLeAFA=="
+                },
+                "nodes": [
+                  {
+                    "number": 8,
+                    "title": "Draft Issue",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "octo-template",
+                      "owner": {
+                        "__typename": "Organization",
+                        "login": "octo-org"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 7,
+                    "title": "is everything unblock",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "octo-template",
+                      "owner": {
+                        "__typename": "Organization",
+                        "login": "octo-org"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  },
+                  {
+                    "number": 6,
+                    "title": "blue frames",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "octo-template",
+                      "owner": {
+                        "__typename": "Organization",
+                        "login": "octo-org"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "not.a.login",
           "name": "repository",
           "first": 3,
-          "after": null
+          "after": null,
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -2727,12 +5321,18 @@
     },
     {
       "request": {
-        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
         "variables": {
           "owner": "octo-org",
           "name": "sabrowning1-test",
           "first": 3,
-          "after": null
+          "after": null,
+          "states": ["OPEN", "CLOSED"],
+          "labels": null,
+          "orderBy": {
+            "field": "CREATED_AT",
+            "direction": "ASC"
+          }
         }
       },
       "response": {
@@ -2770,6 +5370,92 @@
                       "nodes": []
                     },
                     "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "subIssues": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "query": "query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {\n  repository(owner: $owner, name: $name) {\n    name\n    owner { __typename login }\n    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {\n      pageInfo { hasNextPage endCursor }\n      nodes {\n        number title state repository { name owner { __typename login } }\n        assignees(first: $first) { pageInfo { hasNextPage endCursor } nodes { login } }\n        blockedBy(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        blocking(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n        subIssues(first: $first) { pageInfo { hasNextPage endCursor } nodes { number title state repository { name owner { __typename login } } } }\n      }\n    }\n  }\n}",
+        "variables": {
+          "owner": "octo-org",
+          "name": "sabrowning1-test",
+          "first": 3,
+          "after": null,
+          "states": ["OPEN"],
+          "labels": null,
+          "orderBy": {
+            "field": "UPDATED_AT",
+            "direction": "DESC"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "data": {
+            "repository": {
+              "name": "sabrowning1-test",
+              "owner": {
+                "__typename": "Organization",
+                "login": "octo-org"
+              },
+              "issues": {
+                "pageInfo": {
+                  "hasNextPage": false,
+                  "endCursor": "Y3Vyc29yOnYyOpK0MjAyNC0wMy0wOFQxODozMzowMFrOgbu-Kg=="
+                },
+                "nodes": [
+                  {
+                    "number": 1,
+                    "title": "hi",
+                    "state": "OPEN",
+                    "repository": {
+                      "name": "sabrowning1-test",
+                      "owner": {
+                        "__typename": "Organization",
+                        "login": "octo-org"
+                      }
+                    },
+                    "assignees": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blockedBy": {
+                      "pageInfo": {
+                        "hasNextPage": false,
+                        "endCursor": null
+                      },
+                      "nodes": []
+                    },
+                    "blocking": {
                       "pageInfo": {
                         "hasNextPage": false,
                         "endCursor": null

@@ -9,12 +9,12 @@ export const githubGraphqlEndpoint = "https://api.github.com/graphql";
 
 /**
  * Supplies the token for requests about one owner's repositories, so different organisations can use different credentials. The token is only ever sent in the `Authorization` header; this adapter never logs or returns it.
- * @param owner - The login of the account whose repositories the request reads.
+ * @param owner - The login of the account whose repositories or board the request reads, or `undefined` for a request about the token's own holder (the viewer and the organisations it belongs to), which no owner names.
  * @param signal - The caller's abort signal.
  * @returns The token.
  */
 export type GitHubTokenPort = (
-  owner: string,
+  owner: string | undefined,
   signal: AbortSignal | undefined,
 ) => Promise<string>;
 
@@ -145,8 +145,8 @@ export interface GraphqlRequest<Schema extends z.ZodType> {
   readonly query: string;
   /** Its variables. */
   readonly variables: Readonly<Record<string, unknown>>;
-  /** The login whose token authorises the request. */
-  readonly owner: string;
+  /** The login whose token authorises the request, or `undefined` for a request about the token's own holder. */
+  readonly owner: string | undefined;
   /** The schema `data` must match. */
   readonly schema: Schema;
 }
@@ -185,7 +185,7 @@ export const graphql = async <Schema extends z.ZodType>(
   if (response.status === unauthorised) {
     throw new GraphSourceError({
       kind: "unauthorised",
-      message: `GitHub rejected the token for ${request.owner}: ${messageOf(body) ?? "HTTP 401"}`,
+      message: `GitHub rejected the token${request.owner === undefined ? "" : ` for ${request.owner}`}: ${messageOf(body) ?? "HTTP 401"}`,
     });
   }
   if (isRateLimited(response, body, errors)) {

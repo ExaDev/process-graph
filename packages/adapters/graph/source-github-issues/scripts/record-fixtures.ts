@@ -9,9 +9,15 @@ import { writeFileSync } from "node:fs";
 import {
   assembleSync,
   createGraphSourceRouter,
+  type GraphSourceClient,
+  paginate,
+  type SyncFilter,
   type SyncPage,
 } from "@exadev/process-graph-source-contract";
-import { inProcessClient } from "@exadev/process-graph-source-contract/conformance";
+import {
+  conformanceFilter,
+  inProcessClient,
+} from "@exadev/process-graph-source-contract/conformance";
 import { createGitHubIssuesSource } from "../src/source.ts";
 import { githubTokenFromEnvironment } from "../src/node.ts";
 import {
@@ -21,7 +27,11 @@ import {
   requestKey,
 } from "../src/test-support/recording.ts";
 import {
+  fixtureFilter,
+  fixtureFilteredScope,
+  fixtureListingParent,
   fixturePageSize,
+  fixtureProjectScope,
   fixtureScope,
   missingOwnerScope,
   missingRepositoryScope,
@@ -45,11 +55,10 @@ const recordingFetch = async (
   return new Response(JSON.stringify(body), { status: response.status });
 };
 
-const walk = async (
+const clientWith = (
   token: ReturnType<typeof githubTokenFromEnvironment>,
-  scope: readonly string[],
-): Promise<readonly SyncPage[]> => {
-  const client = inProcessClient(
+): GraphSourceClient =>
+  inProcessClient(
     createGraphSourceRouter(
       createGitHubIssuesSource({
         token,
@@ -58,17 +67,46 @@ const walk = async (
       }),
     ),
   );
+
+const walk = async (
+  token: ReturnType<typeof githubTokenFromEnvironment>,
+  scope: readonly string[],
+  filter?: SyncFilter,
+): Promise<readonly SyncPage[]> => {
   const pages: SyncPage[] = [];
-  for await (const page of await client.v1.sync.stream({ scope })) {
+  for await (const page of await clientWith(token).v1.sync.stream(
+    filter === undefined ? { scope } : { scope, filter },
+  )) {
     pages.push(page);
   }
 
   return pages;
 };
 
+/** Reads every page of an owner's scope listing. The viewer's own listing is never recorded: it would name the recording account's organisations. */
+const walkChildren = async (
+  token: ReturnType<typeof githubTokenFromEnvironment>,
+  parent: string,
+): Promise<void> => {
+  const client = clientWith(token);
+  const pages = paginate(undefined, async (after) =>
+    client.v1.scopes.children(
+      after === undefined ? { scope: parent } : { scope: parent, after },
+    ),
+  );
+  for await (const page of pages) {
+    console.log(`listed ${String(page.entries.length)} scopes of ${parent}`);
+  }
+};
+
 const token = githubTokenFromEnvironment();
 const pages = await walk(token, fixtureScope);
+await walk(token, fixtureScope, conformanceFilter);
+await walk(token, [fixtureFilteredScope], fixtureFilter);
+await walk(token, [fixtureProjectScope]);
 await walk(token, [missingOwnerScope, missingRepositoryScope]);
+await walkChildren(token, fixtureListingParent);
+await walkChildren(token, missingOwnerScope);
 // A made-up token, so GitHub's answer to bad credentials is recorded too. Its scope is read nowhere else, so its request has its own key.
 await walk(
   async () => Promise.resolve("not-a-real-token"),

@@ -37,6 +37,7 @@ const userSchema = z.object({ login: z.string() });
 const issueSchema = issueRefSchema.extend({
   assignees: connectionOf(userSchema),
   blockedBy: connectionOf(issueRefSchema),
+  blocking: connectionOf(issueRefSchema),
   subIssues: connectionOf(issueRefSchema),
 });
 
@@ -50,18 +51,22 @@ const accountFields = "__typename login";
 const issueRefFields = `number title state repository { name owner { ${accountFields} } }`;
 const pageInfoFields = "pageInfo { hasNextPage endCursor }";
 
-/** A page of one repository's issues, oldest first, each with the first page of its assignees, blockers and sub-issues. */
-export const repositoryIssuesQuery = `query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String) {
+/** An issue with the first page of each of its connections: assignees, the issues blocking it, the issues it blocks, and its sub-issues. */
+const issueFields = `${issueRefFields}
+        assignees(first: $first) { ${pageInfoFields} nodes { login } }
+        blockedBy(first: $first) { ${pageInfoFields} nodes { ${issueRefFields} } }
+        blocking(first: $first) { ${pageInfoFields} nodes { ${issueRefFields} } }
+        subIssues(first: $first) { ${pageInfoFields} nodes { ${issueRefFields} } }`;
+
+/** A page of one repository's issues, in the states, labels and order the variables give, each with the first page of its connections. */
+export const repositoryIssuesQuery = `query RepositoryIssues($owner: String!, $name: String!, $first: Int!, $after: String, $states: [IssueState!]!, $labels: [String!], $orderBy: IssueOrder!) {
   repository(owner: $owner, name: $name) {
     name
     owner { ${accountFields} }
-    issues(first: $first, after: $after, orderBy: { field: CREATED_AT, direction: ASC }) {
+    issues(first: $first, after: $after, states: $states, labels: $labels, orderBy: $orderBy) {
       ${pageInfoFields}
       nodes {
-        ${issueRefFields}
-        assignees(first: $first) { ${pageInfoFields} nodes { login } }
-        blockedBy(first: $first) { ${pageInfoFields} nodes { ${issueRefFields} } }
-        subIssues(first: $first) { ${pageInfoFields} nodes { ${issueRefFields} } }
+        ${issueFields}
       }
     }
   }
@@ -77,29 +82,115 @@ export const repositoryIssuesSchema = z.object({
     .nullable(),
 });
 
-/** A page of the repositories an account owns, by name. */
+/** A page of the repositories an account owns, by name, with what a scope picker shows of each. A sync reads the names; a scope listing reads the rest too, so both share one request. */
 export const ownerRepositoriesQuery = `query OwnerRepositories($login: String!, $first: Int!, $after: String) {
   repositoryOwner(login: $login) {
     ${accountFields}
     repositories(first: $first, after: $after, ownerAffiliations: [OWNER], orderBy: { field: NAME, direction: ASC }) {
       ${pageInfoFields}
-      nodes { name }
+      nodes { name description url isArchived }
     }
   }
 }`;
+
+const repositoryEntrySchema = z.object({
+  name: z.string(),
+  description: z.string().nullable(),
+  url: z.url(),
+  isArchived: z.boolean(),
+});
+
+export type RepositoryEntry = z.infer<typeof repositoryEntrySchema>;
 
 export const ownerRepositoriesSchema = z.object({
   repositoryOwner: z
     .object({
       __typename: z.enum(["Organization", "User"]),
       login: z.string(),
-      repositories: connectionOf(z.object({ name: z.string() })),
+      repositories: connectionOf(repositoryEntrySchema),
+    })
+    .nullable(),
+});
+
+/** The viewer's own account and a page of the organisations it belongs to, as a scope picker shows them. */
+export const viewerScopesQuery = `query ViewerScopes($first: Int!, $after: String) {
+  viewer {
+    login
+    name
+    url
+    organizations(first: $first, after: $after) {
+      ${pageInfoFields}
+      nodes { login name description url archivedAt }
+    }
+  }
+}`;
+
+const organisationEntrySchema = z.object({
+  login: z.string(),
+  name: z.string().nullable(),
+  description: z.string().nullable(),
+  url: z.url(),
+  archivedAt: z.string().nullable(),
+});
+
+export type OrganisationEntry = z.infer<typeof organisationEntrySchema>;
+
+export const viewerScopesSchema = z.object({
+  viewer: z.object({
+    login: z.string(),
+    name: z.string().nullable(),
+    url: z.url(),
+    organizations: connectionOf(organisationEntrySchema),
+  }),
+});
+
+/** A page of a Projects v2 board's items, each issue with the first page of its connections. Other kinds of item (pull requests, draft issues) are named only by type, since they are not issues. */
+export const projectItemsQuery = `query ProjectItems($login: String!, $number: Int!, $first: Int!, $after: String) {
+  repositoryOwner(login: $login) {
+    ${accountFields}
+    ... on ProjectV2Owner {
+      projectV2(number: $number) {
+        items(first: $first, after: $after) {
+          ${pageInfoFields}
+          nodes {
+            content {
+              __typename
+              ... on Issue {
+                ${issueFields}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+/** An item's content: an issue, or another kind of item named only by its type. */
+const itemContentSchema = z.union([
+  issueSchema.extend({ __typename: z.literal("Issue") }),
+  z.object({ __typename: z.enum(["PullRequest", "DraftIssue"]) }),
+]);
+
+export const projectItemsSchema = z.object({
+  repositoryOwner: z
+    .object({
+      __typename: z.enum(["Organization", "User"]),
+      login: z.string(),
+      projectV2: z
+        .object({
+          items: connectionOf(
+            z.object({ content: itemContentSchema.nullable() }),
+          ),
+        })
+        .nullable(),
     })
     .nullable(),
 });
 
 /** The issue connections a page can overflow, each read on its own when it has more than one page. */
-export type IssueConnection = "assignees" | "blockedBy" | "subIssues";
+export type IssueConnection =
+  "assignees" | "blockedBy" | "blocking" | "subIssues";
 
 /** The rest of one issue connection after `after`. */
 export const issueConnectionQuery = (connection: IssueConnection): string => {
@@ -125,6 +216,9 @@ export const assigneesConnectionSchema = issueConnectionDataSchema({
 });
 export const blockedByConnectionSchema = issueConnectionDataSchema({
   blockedBy: connectionOf(issueRefSchema),
+});
+export const blockingConnectionSchema = issueConnectionDataSchema({
+  blocking: connectionOf(issueRefSchema),
 });
 export const subIssuesConnectionSchema = issueConnectionDataSchema({
   subIssues: connectionOf(issueRefSchema),
