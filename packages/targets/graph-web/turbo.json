@@ -3,6 +3,7 @@
   "extends": ["//"],
   "tasks": {
     "_build": {
+      "env": ["GRAPH_WEB_BASE"],
       "inputs": ["$TURBO_EXTENDS$", "index.html", "build/**", "vite.config.ts"]
     },
     "_test:e2e": {
