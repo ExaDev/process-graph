@@ -59,6 +59,12 @@ The service worker precaches the app shell: the page, scripts, styles, icons and
 
 `pnpm build` runs `vite build`. `build/icons.ts` renders the icons at build time: one SVG glyph in the theme contract's colours, rasterised by resvg to the 192 and 512 pixel PNGs, `any` and `maskable`, that Chromium's install criteria ask for, and emitted into the bundle, so no generated image is committed. The manifest's theme and background colours come from graph-ui's theme values. `GRAPH_WEB_BASE` sets the base path the app is served under, such as `/process-graph/`; the manifest's `start_url` and `scope` follow it.
 
+## Deployment
+
+`.github/workflows/pages.yml` builds the app on every push to `main` and deploys it to GitHub Pages as a project site, at `https://exadev.github.io/process-graph/`. The workflow sets `GRAPH_WEB_BASE` to `/<repository name>/`; without it the app builds for the root, which is what `vite preview`, the tests and any host serving the app at the top of its own origin use. Vite's `base` takes the value, and the manifest's `start_url` and `scope`, the service worker's scope and precache, the icons and the page's own asset links are all relative to it. `e2e/base-path.e2e.test.ts` builds the app with the base set and checks that its shell, manifest, service worker scope and icons are served under it and that nothing is requested outside it.
+
+The repository's Pages source must be set to GitHub Actions once, by someone with admin rights: `gh api repos/ExaDev/process-graph/pages -X POST -f build_type=workflow`. Until then the deploy job fails.
+
 ## Tests
 
 The screen tests render the app with Testing Library in happy-dom against the store contract's in-memory fake and the source contract's fake source, each through its oRPC client, laid out by a stub engine. `test/app.smoke.test.ts` checks the built `dist/`: the manifest, the rendered icons and the precache.
