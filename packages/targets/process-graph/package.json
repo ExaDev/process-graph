@@ -1,6 +1,6 @@
 {
   "name": "process-graph",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A process and dependency graph model with projections into flowcharts, swimlanes, state machines and sequence diagrams, reasoning over a run, layout, the GitHub issues source, the SQLite store for Node and the browser, and the process-graph command line, each behind its own subpath.",
   "type": "module",
   "repository": {
@@ -121,7 +121,7 @@
   ],
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
-    "@exadev/process-graph-cli": "1.3.1",
+    "@exadev/process-graph-cli": "1.3.2",
     "@exadev/process-graph-dag": "1.1.1",
     "@exadev/process-graph-domain": "1.2.2",
     "@exadev/process-graph-export": "1.0.1",
@@ -132,10 +132,10 @@
     "@exadev/process-graph-schema": "2.0.0",
     "@exadev/process-graph-source-contract": "2.0.0",
     "@exadev/process-graph-source-github-issues": "2.0.0",
-    "@exadev/process-graph-sqlite-node": "1.1.1",
-    "@exadev/process-graph-sqlite-wasm": "1.0.7",
+    "@exadev/process-graph-sqlite-node": "1.1.2",
+    "@exadev/process-graph-sqlite-wasm": "1.0.8",
     "@exadev/process-graph-store-contract": "2.0.0",
-    "@exadev/process-graph-store-sqlite": "1.2.2",
+    "@exadev/process-graph-store-sqlite": "1.2.3",
     "@exadev/process-graph-sync": "1.0.1",
     "@exadev/process-graph-ui": "1.1.2",
     "@orpc/client": "2.0.0-beta.42",

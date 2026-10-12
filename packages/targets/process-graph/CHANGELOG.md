@@ -1,3 +1,17 @@
+## [2.0.1](https://github.com/ExaDev/process-graph/compare/process-graph@2.0.0...process-graph@2.0.1) (2026-10-12)
+
+### Build System
+
+* **deps:** bump oRPC to 2.0.0-beta.42 and Drizzle to 1.0.0-rc.5-5935859 ([ab45d2d](https://github.com/ExaDev/process-graph/commit/ab45d2d4102ececf1fcb6c95c5b53fe547efce5c))
+
+
+### Dependencies
+
+- Updated @exadev/process-graph-store-sqlite to 1.2.3
+- Updated @exadev/process-graph-sqlite-node to 1.1.2
+- Updated @exadev/process-graph-sqlite-wasm to 1.0.8
+- Updated @exadev/process-graph-cli to 1.3.2
+
 ## [2.0.0](https://github.com/ExaDev/process-graph/compare/process-graph@1.4.0...process-graph@2.0.0) (2026-10-12)
 
 
