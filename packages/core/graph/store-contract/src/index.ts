@@ -5,7 +5,6 @@
  */
 export { graphStoreContract, type GraphStoreClient } from "./contract.ts";
 export {
-  boundActivitySchema,
   boundItemsSchema,
   changeKinds,
   factChangeSchema,
@@ -22,7 +21,6 @@ export {
   storeChangeSchema,
   storedFactsSchema,
   storedModelSchema,
-  type BoundActivity,
   type BoundItems,
   type ChangeKind,
   type FactChange,

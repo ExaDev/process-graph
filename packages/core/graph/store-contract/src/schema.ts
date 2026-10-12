@@ -1,5 +1,9 @@
 import type { FactRecord } from "@exadev/process-graph-domain";
-import { modelSchema, overlaySchema } from "@exadev/process-graph-schema";
+import {
+  boundActivitySchema,
+  modelSchema,
+  overlaySchema,
+} from "@exadev/process-graph-schema";
 import { ComputedValueSchema } from "trilean";
 import { z } from "zod";
 
@@ -8,9 +12,6 @@ import { z } from "zod";
  */
 const modelShape = modelSchema.unwrap().shape;
 
-/** The model's `activity` element: the first variant of its element union. A type test pins the order, so reordering the union is a compile error. */
-const [activityElementSchema] = modelShape.elements.unwrap().element.options;
-
 /** The name a store files a model under. Any non-empty string; the store gives it no structure. */
 export const modelIdSchema = z.string().min(1);
 
@@ -18,18 +19,6 @@ export const modelIdSchema = z.string().min(1);
  * A position in the store's history. Every change to any model takes the next revision from one store-wide sequence, so revisions only grow, a model's revision is the revision of its last change, and a model deleted and saved again never reuses an earlier one.
  */
 export const revisionSchema = z.int().positive();
-
-/**
- * An activity bound to the external record it stands for. `source` is required here, where the model leaves it optional: a bound item's identity is its source record, and the source-qualified identifier is its element id.
- */
-export const boundActivitySchema = activityElementSchema
-  .unwrap()
-  .extend({ source: z.string().min(1) })
-  .refine((activity) => activity.id === activity.source, {
-    message: "a bound activity's id must equal its source",
-    path: ["id"],
-  })
-  .readonly();
 
 /** The relation kinds a store keeps beside a model, the same kinds a source reports. */
 export const relationKinds = ["child-of", "assigned-to", "part-of"] as const;
@@ -46,7 +35,7 @@ export const relationSchema = z
   .readonly();
 
 /**
- * Items read from a source, to be merged into a stored model by identifier. Each participant, activity and transition replaces the one with the same id or is appended after the existing ones; the overlay's entries replace the run state of the elements they name; each relation not already stored is appended. Everything else in the model is left as it is.
+ * Items read from a source, to be merged into a stored model by identifier. Activities are graph-schema's `boundActivitySchema`, the same schema a source's sync page uses, so a page's items pass unchanged. Each participant, activity and transition replaces the one with the same id or is appended after the existing ones; the overlay's entries replace the run state of the elements they name; each relation not already stored is appended. Everything else in the model is left as it is.
  */
 export const boundItemsSchema = z
   .strictObject({
@@ -162,7 +151,6 @@ export const issueSchema = z
 
 export type ModelId = z.infer<typeof modelIdSchema>;
 export type Revision = z.infer<typeof revisionSchema>;
-export type BoundActivity = z.infer<typeof boundActivitySchema>;
 export type BoundItems = z.infer<typeof boundItemsSchema>;
 export type Relation = z.infer<typeof relationSchema>;
 export type RelationKind = (typeof relationKinds)[number];

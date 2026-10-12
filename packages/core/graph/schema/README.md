@@ -58,6 +58,8 @@ An activity's actor and a message's ends must be actors; a state machine project
 
 An activity may carry `source`, a source-qualified identifier such as `github:org/repo#12`, tying it to the external record it stands for. The source is the activity's identity in its system, so two activities may not share one (`duplicate-source`). Activities without a source are unaffected.
 
+`boundActivitySchema` is the one definition of a bound activity: the model's activity with `source` required and equal to its `id`, so the same record reached twice is the same element. `BoundActivity` is its type. The source contract's sync pages and the store contract's upserted items both use this schema rather than defining their own, so what a source emits is exactly what a store accepts. It is built from the same object schema as the model's own activity, so the two cannot drift, and it is declared as the named interface `BoundActivitySchema` for the same reason as `ModelSchema` below.
+
 ## Affected entities
 
 An activity may list the `entity` participants whose lifecycle it changes in `affects`. It is typed to the entity space only, so naming a role or a system is a compile error, and `validate` reports the same mistake in a loaded model (`affects-not-entity`). A state machine projection uses it to keep only the activities that change its subject.

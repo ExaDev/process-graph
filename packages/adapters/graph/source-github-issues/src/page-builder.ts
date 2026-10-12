@@ -1,5 +1,5 @@
+import type { BoundActivity } from "@exadev/process-graph-schema";
 import type {
-  BoundActivity,
   Gap,
   Relation,
   SourceParticipant,

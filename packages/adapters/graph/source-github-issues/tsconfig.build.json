@@ -13,6 +13,9 @@
   "exclude": ["src/**/*.test.ts", "src/test-support/**"],
   "references": [
     {
+      "path": "../../../core/graph/schema/tsconfig.build.json"
+    },
+    {
       "path": "../../../core/graph/source-contract/tsconfig.build.json"
     }
   ]

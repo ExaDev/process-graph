@@ -1,4 +1,8 @@
-import { modelSchema, overlaySchema } from "@exadev/process-graph-schema";
+import {
+  boundActivitySchema,
+  modelSchema,
+  overlaySchema,
+} from "@exadev/process-graph-schema";
 import { z } from "zod";
 
 /**
@@ -11,21 +15,6 @@ export const participantSchema = modelShape.participants.unwrap().element;
 
 /** A transition as the model declares it. A source emits one per dependency, from the prerequisite to the work that waits on it. */
 export const transitionSchema = modelShape.transitions.unwrap().element;
-
-/** The model's `activity` element: the first variant of its element union, pinned by a type test so a reordering of the union is a compile error. */
-const [activityElementSchema] = modelShape.elements.unwrap().element.options;
-
-/**
- * An activity bound to the external record it stands for. `source` is required here, where the model leaves it optional, and it equals `id`: the source-qualified identifier (`github:org/repo#12`) is the element's identity, so the same record synced twice, or reached from two places, is the same element.
- */
-export const boundActivitySchema = activityElementSchema
-  .unwrap()
-  .extend({ source: z.string().min(1) })
-  .refine((activity) => activity.id === activity.source, {
-    message: "a bound activity's id must equal its source",
-    path: ["id"],
-  })
-  .readonly();
 
 /** The relation kinds a source reports beside the model's transitions. */
 export const relationKinds = ["child-of", "assigned-to", "part-of"] as const;
@@ -56,7 +45,7 @@ export const gapSchema = z
   .readonly();
 
 /**
- * One page of a sync: bound activities, the participants they name, the transitions between them, their relations, their run state, and any gaps. A page is a partial view; `assembleSync` merges a whole sync into one model.
+ * One page of a sync: bound activities (graph-schema's `boundActivitySchema`), the participants they name, the transitions between them, their relations, their run state, and any gaps. A page is a partial view; `assembleSync` merges a whole sync into one model.
  *
  * `next` is the cursor to resume after this page. It is absent on the last page.
  */
@@ -162,7 +151,6 @@ export const sourceDescriptionSchema = z
 /** Why a request was rejected as malformed. */
 export const badRequestReasons = ["invalid-cursor", "invalid-scope"] as const;
 
-export type BoundActivity = z.infer<typeof boundActivitySchema>;
 export type SourceParticipant = z.infer<typeof participantSchema>;
 export type SourceTransition = z.infer<typeof transitionSchema>;
 export type Relation = z.infer<typeof relationSchema>;

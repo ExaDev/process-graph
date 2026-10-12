@@ -2,11 +2,14 @@ import { join } from "node:path";
 import ts from "typescript";
 import { expect, test } from "vitest";
 
-/** A consumer's module that embeds `modelSchema` in a schema of its own and exports it, so its declaration file has to write the schema's type. */
+/** A consumer's module that embeds `modelSchema` and `boundActivitySchema` in a schema of its own and exports it, so its declaration file has to write each schema's type. */
 const consumerSource = `import { z } from "zod";
-import { modelSchema } from "./index.ts";
+import { boundActivitySchema, modelSchema } from "./index.ts";
 
-export const envelope = z.object({ model: modelSchema });
+export const envelope = z.object({
+  model: modelSchema,
+  activities: z.array(boundActivitySchema),
+});
 `;
 
 /**
@@ -64,13 +67,17 @@ const declarationsOf = (
 const unbounded = 0;
 
 test(
-  "a consumer's schema embedding modelSchema emits declarations that name ModelSchema rather than writing it out",
+  "a consumer's schema embedding modelSchema and boundActivitySchema emits declarations that name ModelSchema and BoundActivitySchema rather than writing them out",
   { timeout: unbounded },
   () => {
     const { declarations, diagnostics } = declarationsOf(consumerSource);
 
     expect(diagnostics).toEqual([]);
     expect(declarations).toMatch(/model: import\("[^"]+"\)\.ModelSchema;/);
+    expect(declarations).toMatch(
+      /activities: z\.ZodArray<import\("[^"]+"\)\.BoundActivitySchema>;/,
+    );
     expect(declarations).not.toContain("participants");
+    expect(declarations).not.toContain("consumes");
   },
 );
