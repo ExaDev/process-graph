@@ -11,6 +11,8 @@ reports
 test-results
 playwright-report
 dev-dist
+# The sub-path build the web app's base-path end-to-end test serves.
+dist-base-path
 
 # Un-ignore AGENTS.md/CLAUDE.md against a machine-wide global gitignore that excludes them everywhere by default. README.md symlinked to AGENTS.md and CLAUDE.md is this repository's deliberate "one instruction file" pattern, so these symlinks must be tracked.
 !AGENTS.md

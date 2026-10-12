@@ -11,6 +11,11 @@ export default defineConfig(
     isomorphic: true,
     browserGlobals: true,
     react: { version },
-    additionalIgnores: ["dev-dist", "playwright-report", "test-results"],
+    additionalIgnores: [
+      "dev-dist",
+      "dist-base-path",
+      "playwright-report",
+      "test-results",
+    ],
   }),
 );
