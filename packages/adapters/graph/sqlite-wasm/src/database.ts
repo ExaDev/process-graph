@@ -4,6 +4,7 @@ import type {
   Sqlite3Static,
 } from "@sqlite.org/sqlite-wasm";
 import type { Exclusive } from "@exadev/process-graph-store-sqlite";
+import { sqlJsCodecs } from "drizzle-orm/sql-js/codecs";
 import { drizzle, type SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 
 /** Where the database lives: an OPFS `opfs-sahpool` pool and a file in it. */
@@ -38,24 +39,28 @@ export const openWorkerDatabase = (
   let pool: Promise<SAHPoolUtil> | undefined;
   let open: Database | undefined;
 
-  // The store reads through `values`, `all` and query builders, never `.get()`, so `get` is refused rather than answered: the proxy's declared result type has no way to say "no row", which Drizzle's `get` signals with a missing `rows`.
-  const db = drizzle(async (statement, params, method) => {
-    if (method === "get") {
-      throw new Error("The graph store's worker database does not serve get");
-    }
-    if (open === undefined) {
-      throw new Error(
-        "The database was used outside a store operation; only the store's exclusive section may run statements",
-      );
-    }
-    const rows = open.exec(statement, {
-      bind: params,
-      rowMode: "array",
-      returnValue: "resultRows",
-    });
+  /* The store reads through `values`, `all` and query builders, never `.get()`, so `get` is refused rather than answered: the proxy's declared result type has no way to say "no row", which Drizzle's `get` signals with a missing `rows`.
+     The proxy driver decodes nothing by itself: the codecs say how SQLite's stored values become the columns' types (JSON text, booleans, timestamps). SQLite wasm answers in array mode with native JavaScript values and `Uint8Array` blobs, which is what sql.js answers with, so its codecs apply. */
+  const db = drizzle(
+    async (statement, params, method) => {
+      if (method === "get") {
+        throw new Error("The graph store's worker database does not serve get");
+      }
+      if (open === undefined) {
+        throw new Error(
+          "The database was used outside a store operation; only the store's exclusive section may run statements",
+        );
+      }
+      const rows = open.exec(statement, {
+        bind: params,
+        rowMode: "array",
+        returnValue: "resultRows",
+      });
 
-    return Promise.resolve({ rows });
-  });
+      return Promise.resolve({ rows });
+    },
+    { codecs: sqlJsCodecs },
+  );
 
   const exclusive: Exclusive = async (operation) =>
     navigator.locks.request(location.pool, { mode: "exclusive" }, async () => {
