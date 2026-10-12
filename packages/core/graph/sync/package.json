@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-sync",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Syncs a GraphSource into a GraphStore page by page: participants, bound activities, transitions, relations and run state, resumable from a checkpoint, with an optional typed filter.",
   "private": true,
   "type": "module",
