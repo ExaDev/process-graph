@@ -14,6 +14,20 @@ export const OfflineNotice = (): ReactElement => (
   </p>
 );
 
+/**
+ * Says this copy of the app keeps nothing between visits, because the origin it is served from is shared with other sites. It has no dismiss control: what it says holds for the whole visit.
+ * @returns The notice.
+ */
+export const EphemeralNotice = (): ReactElement => (
+  <p role="status" className={notice.warning} data-notice="ephemeral">
+    This copy keeps nothing between visits: its address is shared with other
+    sites, which could read anything it saved. The token, the synced issues and
+    your settings are held in memory and are gone when you close or reload the
+    page. Installing the app and using it offline need an address of its own,
+    for example running it locally from the repository.
+  </p>
+);
+
 export interface UpdateNoticeProps {
   readonly onReload: () => void;
 }

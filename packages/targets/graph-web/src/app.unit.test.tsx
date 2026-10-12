@@ -53,6 +53,37 @@ const cardOf = async (id: string): Promise<Element> =>
     return card;
   });
 
+describe("an ephemeral copy", () => {
+  test("says at the top that nothing is kept between visits, without a way to dismiss it, and takes the token for the visit only", () => {
+    const ports = testPorts({ persistence: "ephemeral" });
+    renderApp(ports);
+
+    const notice = document.querySelector('[data-notice="ephemeral"]');
+    expect(notice?.textContent).toContain("keeps nothing between visits");
+    expect(notice?.textContent).toContain("need an address of its own");
+    expect(notice?.querySelector("button")).toBeNull();
+    const panel = screen.getByRole("region", { name: "GitHub token" });
+    expect(panel.textContent).toContain("held in this page's memory only");
+    expect(
+      within(panel).queryByRole("button", { name: "Save on this device" }),
+    ).toBeNull();
+    fireEvent.change(within(panel).getByLabelText("Token"), {
+      target: { value: "secret-token" },
+    });
+    fireEvent.click(
+      within(panel).getByRole("button", { name: "Use for this visit" }),
+    );
+
+    expect(document.querySelector('[data-notice="ephemeral"]')).not.toBeNull();
+  });
+
+  test("is not announced on a device that keeps its data", () => {
+    renderApp(testPorts());
+
+    expect(document.querySelector('[data-notice="ephemeral"]')).toBeNull();
+  });
+});
+
 describe("the token screen", () => {
   test("is shown until a token is saved, says what the token needs and where it goes, and never shows it back", () => {
     const ports = testPorts();
