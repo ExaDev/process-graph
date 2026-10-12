@@ -1,5 +1,6 @@
 import type {
   Element,
+  Extensions,
   OpenIds,
   Participant,
   Transition,
@@ -12,6 +13,7 @@ import {
   type SourceTransition,
   syncInputSchema,
   syncPageSchema,
+  type SyncPage,
 } from "./schema.ts";
 
 describe("boundActivitySchema", () => {
@@ -20,6 +22,21 @@ describe("boundActivitySchema", () => {
     expectTypeOf<BoundActivity>().toExtend<Element<string, OpenIds>>();
     expectTypeOf<SourceParticipant>().toEqualTypeOf<Participant<string>>();
     expectTypeOf<SourceTransition>().toExtend<Transition<string, OpenIds>>();
+  });
+
+  test("is exactly the model's activity with a required source", () => {
+    expectTypeOf<SyncPage["activities"][number]>().toEqualTypeOf<{
+      readonly kind: "activity";
+      readonly id: string;
+      readonly extensions?: Extensions;
+      readonly label: string;
+      readonly actor?: string;
+      readonly action?: string;
+      readonly source: string;
+      readonly affects?: readonly string[];
+      readonly consumes?: readonly string[];
+      readonly produces?: readonly string[];
+    }>();
   });
 
   test("requires the source and its equality with the identifier", () => {

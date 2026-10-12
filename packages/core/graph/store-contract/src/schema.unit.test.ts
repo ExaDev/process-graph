@@ -1,7 +1,15 @@
-import { modelSchema, validate } from "@exadev/process-graph-schema";
+import {
+  modelSchema,
+  validate,
+  type Extensions,
+} from "@exadev/process-graph-schema";
 import { describe, expect, expectTypeOf, test } from "vitest";
 import { everyFieldModel, queryModel } from "./conformance.ts";
-import { boundActivitySchema, type BoundActivity } from "./schema.ts";
+import {
+  boundActivitySchema,
+  type BoundActivity,
+  type BoundItems,
+} from "./schema.ts";
 
 describe("fixtures", () => {
   test.each([
@@ -18,6 +26,21 @@ describe("boundActivitySchema", () => {
     expectTypeOf<BoundActivity>().toMatchObjectType<{
       readonly kind: "activity";
       readonly source: string;
+    }>();
+  });
+
+  test("is exactly the model's activity with a required source", () => {
+    expectTypeOf<BoundItems["activities"][number]>().toEqualTypeOf<{
+      readonly kind: "activity";
+      readonly id: string;
+      readonly extensions?: Extensions;
+      readonly label: string;
+      readonly actor?: string;
+      readonly action?: string;
+      readonly source: string;
+      readonly affects?: readonly string[];
+      readonly consumes?: readonly string[];
+      readonly produces?: readonly string[];
     }>();
   });
 
