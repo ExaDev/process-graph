@@ -31,6 +31,8 @@ export function packageStrykerConfig(
       "!src/test-support/**",
       // A worker file a test spawns through `new Worker(new URL(...))` runs in its own thread, outside the sandboxed vitest process Stryker instruments — so its mutants can never be killed, only error or sit uncovered. Mutating test infrastructure no in-process test can observe is noise, not coverage.
       "!src/**/*.worker.ts",
+      // A Vanilla Extract style module is evaluated by the Vite plugin's own compiler, which turns it into a stylesheet and the class names a test imports; the instrumented module never runs in the test process, so every one of its mutants reports no coverage, even where a test reads a rule back through `getComputedStyle`.
+      "!src/**/*.css.ts",
       ...additionalMutate,
     ],
     reporters: ["html", "clear-text", "progress"],
