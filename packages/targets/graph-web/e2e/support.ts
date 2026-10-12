@@ -35,10 +35,9 @@ export const syncScopes = async (
   page: Page,
   token: string,
   scopes: readonly string[],
-  saveButton = "Save on this device",
 ): Promise<void> => {
   await page.getByLabel("Token", { exact: true }).fill(token);
-  await page.getByRole("button", { name: saveButton }).click();
+  await page.getByRole("button", { name: "Save on this device" }).click();
   // Each scope is added after the one before, as a person would add them.
   await scopes.reduce(async (previous, scope) => {
     await previous;

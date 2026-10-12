@@ -59,8 +59,6 @@ export interface DownloadFile {
  * Everything the app reads or writes outside React, injected at the composition root (`main.tsx`) so every screen runs against fakes in tests and against the browser in the app.
  */
 export interface AppPorts {
-  /** Whether the ports below keep anything on this device (`device`), or only in the page's memory (`ephemeral`), as on an origin shared with other sites. */
-  readonly persistence: "device" | "ephemeral";
   readonly store: GraphStoreClient;
   /** The sources the app can read, given the token to read GitHub with. */
   readonly sources: (token: string) => SourceLookup;
