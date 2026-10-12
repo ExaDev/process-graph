@@ -44,7 +44,7 @@ const { model, overlay, relations, gaps } = assembleSync(pages);
 
 A `SyncPage` is a slice of a model: bound activities, the participants they name, the transitions between them, relations, run state as an `Overlay`, and gaps. Its record schemas are taken from `modelSchema`, so a page can never drift from the model.
 
-- **Bound activity.** A model `activity` whose `source` is required and equal to its `id`, a source-qualified identifier such as `github:org/repo#12`. The same record reached twice is the same element.
+- **Bound activity.** A model `activity` whose `source` is required and equal to its `id`, a source-qualified identifier such as `github:org/repo#12`. The same record reached twice is the same element. Its schema is graph-schema's `boundActivitySchema`, the same one the store contract's `items.upsert` accepts.
 - **Transition.** One per dependency, from the prerequisite to the work that waits on it.
 - **Relation.** A link the model has no field for: `child-of` (a sub-task to its parent), `assigned-to` (an activity to a person) and `part-of` (a repository to its organisation). Relations carry no ordering; a consumer decides whether a parent waits on its children.
 - **Gap.** Part of the scope the source could not read (`not-found` or `forbidden`), reported as data so the rest of the sync still arrives.

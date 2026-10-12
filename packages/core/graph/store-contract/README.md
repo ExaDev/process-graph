@@ -59,7 +59,7 @@ Every write is atomic and checked: a change that would leave the model invalid, 
 - `models.save` replaces the model and keeps the run state only of elements the new model still declares, the relations only of what it still declares, and the facts about artefacts only of those it still declares. Named facts are kept.
 - `overlay.set` sets the run state of the elements it names and leaves the others.
 - `facts.set` records each artefact's provision and each named fact's value it gives, and keeps the rest; `facts.clear` forgets the artefacts and named facts it lists, or the whole record with `{ all: true }`.
-- `items.upsert` merges items read from a source: participants, bound activities and transitions replace the record with the same id in its place, or are appended in their given order; overlay entries replace the run state of the elements they name; each relation not already stored is appended. It creates the model from an empty one when there is none. A bound activity's `source` is required and equals its id.
+- `items.upsert` merges items read from a source: participants, bound activities and transitions replace the record with the same id in its place, or are appended in their given order; overlay entries replace the run state of the elements they name; each relation not already stored is appended. It creates the model from an empty one when there is none. A bound activity's `source` is required and equals its id: its schema is graph-schema's `boundActivitySchema`, the same one a source's sync page uses, so a page's items pass unchanged.
 
 ## Relations
 

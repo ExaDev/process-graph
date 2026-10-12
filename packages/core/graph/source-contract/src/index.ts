@@ -6,7 +6,6 @@
 export { graphSourceContract, type GraphSourceClient } from "./contract.ts";
 export {
   badRequestReasons,
-  boundActivitySchema,
   filterStates,
   gapReasons,
   gapSchema,
@@ -25,7 +24,6 @@ export {
   syncPageSchema,
   transitionSchema,
   type BadRequestReason,
-  type BoundActivity,
   type FilterState,
   type Gap,
   type GapReason,

@@ -508,6 +508,9 @@ importers:
 
   packages/adapters/graph/source-github-issues:
     dependencies:
+      '@exadev/process-graph-schema':
+        specifier: workspace:*
+        version: link:../../../core/graph/schema
       '@exadev/process-graph-source-contract':
         specifier: workspace:*
         version: link:../../../core/graph/source-contract

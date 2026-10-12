@@ -47,5 +47,11 @@ export {
   type OverlayIssue,
 } from "./overlay.ts";
 export type { OverlayStatus } from "./vocabulary.ts";
-export { modelSchema, type ModelSchema } from "./schema.ts";
+export {
+  boundActivitySchema,
+  modelSchema,
+  type BoundActivity,
+  type BoundActivitySchema,
+  type ModelSchema,
+} from "./schema.ts";
 export { ModelParseError, parseModel, type ModelIssue } from "./parse.ts";

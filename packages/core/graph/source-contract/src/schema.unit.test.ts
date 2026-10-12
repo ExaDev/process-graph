@@ -1,14 +1,12 @@
-import type {
-  Element,
-  Extensions,
-  OpenIds,
-  Participant,
-  Transition,
+import {
+  boundActivitySchema,
+  type Extensions,
+  type OpenIds,
+  type Participant,
+  type Transition,
 } from "@exadev/process-graph-schema";
 import { describe, expect, expectTypeOf, test } from "vitest";
 import {
-  boundActivitySchema,
-  type BoundActivity,
   type SourceParticipant,
   type SourceTransition,
   syncInputSchema,
@@ -16,15 +14,13 @@ import {
   type SyncPage,
 } from "./schema.ts";
 
-describe("boundActivitySchema", () => {
-  test("is the model's activity variant", () => {
-    expectTypeOf<BoundActivity["kind"]>().toEqualTypeOf<"activity">();
-    expectTypeOf<BoundActivity>().toExtend<Element<string, OpenIds>>();
+describe("a sync page's records", () => {
+  test("are the model's own", () => {
     expectTypeOf<SourceParticipant>().toEqualTypeOf<Participant<string>>();
     expectTypeOf<SourceTransition>().toExtend<Transition<string, OpenIds>>();
   });
 
-  test("is exactly the model's activity with a required source", () => {
+  test("hold activities exactly as the model's activity with a required source", () => {
     expectTypeOf<SyncPage["activities"][number]>().toEqualTypeOf<{
       readonly kind: "activity";
       readonly id: string;
@@ -39,37 +35,10 @@ describe("boundActivitySchema", () => {
     }>();
   });
 
-  test("requires the source and its equality with the identifier", () => {
-    const bound = {
-      kind: "activity",
-      id: "github:o/r#1",
-      source: "github:o/r#1",
-      label: "x",
-    };
-    expect(boundActivitySchema.parse(bound)).toEqual(bound);
-    expect(
-      boundActivitySchema.safeParse({ ...bound, source: "github:o/r#2" })
-        .success,
-    ).toBe(false);
-    expect(
-      boundActivitySchema.safeParse({
-        kind: "activity",
-        id: "github:o/r#1",
-        label: "x",
-      }).success,
-    ).toBe(false);
-  });
-
-  test("rejects a field the model does not define", () => {
-    expect(
-      boundActivitySchema.safeParse({
-        kind: "activity",
-        id: "a:1",
-        source: "a:1",
-        label: "x",
-        url: "u",
-      }).success,
-    ).toBe(false);
+  test("hold activities parsed by graph-schema's boundActivitySchema itself", () => {
+    expect(syncPageSchema.unwrap().shape.activities.unwrap().element).toBe(
+      boundActivitySchema,
+    );
   });
 });
 

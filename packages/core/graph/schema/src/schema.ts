@@ -43,19 +43,22 @@ const artefactSchema = record({
   deliverable: z.boolean().exactOptional(),
 });
 
+/** The strict object schema of an `activity` element, before it is made read-only: the one definition both the model's activity and a bound activity are built from. */
+const activityObjectSchema = z.strictObject({
+  kind: z.literal("activity"),
+  id,
+  extensions: extensionsSchema.exactOptional(),
+  label: z.string(),
+  actor: actorRef.exactOptional(),
+  action: actionRef.exactOptional(),
+  source: z.string().exactOptional(),
+  affects: z.array(entityRef).readonly().exactOptional(),
+  consumes: z.array(artefactRef).readonly().exactOptional(),
+  produces: z.array(artefactRef).readonly().exactOptional(),
+});
+
 const elementSchema = z.discriminatedUnion("kind", [
-  record({
-    kind: z.literal("activity"),
-    id,
-    extensions: extensionsSchema.exactOptional(),
-    label: z.string(),
-    actor: actorRef.exactOptional(),
-    action: actionRef.exactOptional(),
-    source: z.string().exactOptional(),
-    affects: z.array(entityRef).readonly().exactOptional(),
-    consumes: z.array(artefactRef).readonly().exactOptional(),
-    produces: z.array(artefactRef).readonly().exactOptional(),
-  }),
+  activityObjectSchema.readonly(),
   record({
     kind: z.literal("decision"),
     id,
@@ -165,3 +168,32 @@ export interface ModelSchema extends z.ZodReadonly<typeof modelObjectSchema> {
  * Every object is strict. The inferred type is exactly `Model<OpenIds>`, which a type-level test pins in both directions.
  */
 export const modelSchema: ModelSchema = modelObjectSchema.readonly();
+
+/** The strict object schema inside `boundActivitySchema`, before it is made read-only. */
+const boundActivityObjectSchema = activityObjectSchema
+  .extend({ source: z.string().min(1) })
+  .refine((activity) => activity.id === activity.source, {
+    message: "a bound activity's id must equal its source",
+    path: ["id"],
+  });
+
+/**
+ * The type of `boundActivitySchema`, declared by name for the same reason as `ModelSchema`: a consumer's declaration file that embeds the schema, such as a source page's or a store's item list, refers to `BoundActivitySchema` rather than writing out the activity with trilean's JSON value inline.
+ */
+export interface BoundActivitySchema extends z.ZodReadonly<
+  typeof boundActivityObjectSchema
+> {
+  /** The strict object schema inside, whose `shape` holds each field's own schema. */
+  readonly unwrap: () => typeof boundActivityObjectSchema;
+}
+
+/**
+ * An activity bound to the external record it stands for: the model's `activity` element with `source` required, where the model leaves it optional, and equal to `id`. The source-qualified identifier (`github:org/repo#12`) is the element's identity, so the same record synced twice, or reached from two places, is the same element.
+ *
+ * This is the one definition of a bound activity: a source's sync page and a store's upserted items both use it, so what a source emits is exactly what a store accepts.
+ */
+export const boundActivitySchema: BoundActivitySchema =
+  boundActivityObjectSchema.readonly();
+
+/** An activity bound to the external record it stands for, as `boundActivitySchema` parses it. */
+export type BoundActivity = z.output<BoundActivitySchema>;
