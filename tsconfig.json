@@ -11,6 +11,7 @@
     "release-workspace.config.unit.test.ts",
     "eslint.shared.ts",
     "stryker.shared.ts",
+    "stryker.shared.unit.test.ts",
     ".github/scripts/**/*.ts",
     "scripts/**/*.ts"
   ]
