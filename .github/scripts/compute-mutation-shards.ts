@@ -1,6 +1,6 @@
 // Turns the set of packages `_test:mutation` is affected for into a GitHub Actions matrix of weighted shards. Greedy longest-processing-time-first (LPT) bin-packing, not round-robin: a naive `package N -> shard N mod shardCount` assignment can strand the single largest affected package alone on one shard while every other shard finishes and idles waiting on it, since per-package mutation-test cost varies enormously by package size. LPT is a well-known constant-factor approximation of optimal balanced partitioning, the same class of algorithm behind most real-world "spread N differently-sized jobs across K workers evenly" schedulers.
 //
-// The weight proxy is each package's own `src/**/*.ts` line count (excluding `*.test.ts`, mirroring stryker.shared.ts's own default `mutate` exclusions exactly, so the weight actually reflects what Stryker will mutate). This is a proxy for likely mutant count and related-test runtime, not a direct measurement. The only way to know a package's real mutant count ahead of time is Stryker's own dry run, and running that dry run for every affected package just to decide how to shard them would cost as much as the sharding is meant to save. Line count is free and correlates well enough with both to beat round-robin.
+// The weight proxy is each package's own `src/**/*.ts` line count (excluding `*.test.ts`, as stryker.shared.ts's own default `mutate` globs do, so the weight approximates what Stryker will mutate; those globs also leave out test support, worker and style modules). This is a proxy for likely mutant count and related-test runtime, not a direct measurement. The only way to know a package's real mutant count ahead of time is Stryker's own dry run, and running that dry run for every affected package just to decide how to shard them would cost as much as the sharding is meant to save. Line count is free and correlates well enough with both to beat round-robin.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -59,7 +59,7 @@ export function affectedMutationPackages(
     .map((task) => ({ name: task.package, directory: task.directory }));
 }
 
-/** Every `.ts` file under a package's own `src/`, minus its own unit test files. This is the same scope stryker.shared.ts's default `mutate` glob covers. A package listed by turbo's own dry-run plan is a real workspace package with a real `src/` directory by construction, so a missing `src/` here would be a genuine bug in the affected-package list, not an input this function should tolerate silently. */
+/** Every `.ts` file under a package's own `src/`, minus its own unit test files. This approximates the scope stryker.shared.ts's default `mutate` globs cover. A package listed by turbo's own dry-run plan is a real workspace package with a real `src/` directory by construction, so a missing `src/` here would be a genuine bug in the affected-package list, not an input this function should tolerate silently. */
 function packageSourceFiles(directory: string): readonly string[] {
   const sourceRoot = join(directory, "src");
 
