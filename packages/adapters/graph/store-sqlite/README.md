@@ -4,7 +4,7 @@
 
 A private workspace package, not published on its own: it is bundled into [`process-graph`](../../../targets/process-graph/README.md), which exposes it as `process-graph/store`, beside the store contract.
 
-The `GraphStore` port from `@exadev/process-graph-store-contract` on SQLite through [Drizzle](https://orm.drizzle.team) (`drizzle-orm` 1.0.0-rc.4). It is written against Drizzle's async SQLite database type, so any Drizzle SQLite driver plugs in: `@exadev/process-graph-sqlite-node` supplies `node:sqlite`, `@exadev/process-graph-sqlite-wasm` supplies SQLite in a browser worker on OPFS. `src/` imports nothing Node-only.
+The `GraphStore` port from `@exadev/process-graph-store-contract` on SQLite through [Drizzle](https://orm.drizzle.team). It is written against Drizzle's async SQLite database type, so any Drizzle SQLite driver plugs in: `@exadev/process-graph-sqlite-node` supplies `node:sqlite`, `@exadev/process-graph-sqlite-wasm` supplies SQLite in a browser worker on OPFS. `src/` imports nothing Node-only.
 
 ```ts
 import { createGraphStoreRouter } from "@exadev/process-graph-store-contract";
