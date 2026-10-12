@@ -139,7 +139,7 @@
     "@exadev/process-graph-sync": "1.0.1",
     "@exadev/process-graph-ui": "1.1.2",
     "@orpc/client": "2.0.0-beta.41",
-    "@orpc/contract": "2.0.0-beta.41",
+    "@orpc/contract": "2.0.0-beta.42",
     "@orpc/server": "2.0.0-beta.41",
     "@sqlite.org/sqlite-wasm": "3.53.4-build2",
     "@stryker-mutator/core": "10.0.0",
@@ -170,7 +170,7 @@
   },
   "peerDependencies": {
     "@orpc/client": "2.0.0-beta.41",
-    "@orpc/contract": "2.0.0-beta.41",
+    "@orpc/contract": "2.0.0-beta.42",
     "@orpc/server": "2.0.0-beta.41",
     "@sqlite.org/sqlite-wasm": "3.53.4-build2",
     "@vanilla-extract/css": "^1.21.2",
