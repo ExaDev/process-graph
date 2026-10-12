@@ -69,9 +69,10 @@ jobs:
         if: always()
         with:
           name: mutation-report-shard-${{ matrix.index }}
+          # A target sits one level shallower than a package in the other layers (packages/targets/<package> against packages/<layer>/<domain>/<package>).
           path: |
             packages/*/*/*/reports/mutation/mutation.html
-            packages/*/reports/mutation/mutation.html
+            packages/targets/*/reports/mutation/mutation.html
           if-no-files-found: ignore
 
   mutation-result:
