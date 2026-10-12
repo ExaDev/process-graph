@@ -138,7 +138,7 @@
     "@exadev/process-graph-store-sqlite": "1.2.2",
     "@exadev/process-graph-sync": "1.0.1",
     "@exadev/process-graph-ui": "1.1.2",
-    "@orpc/client": "2.0.0-beta.41",
+    "@orpc/client": "2.0.0-beta.42",
     "@orpc/contract": "2.0.0-beta.41",
     "@orpc/server": "2.0.0-beta.41",
     "@sqlite.org/sqlite-wasm": "3.53.4-build2",
@@ -169,7 +169,7 @@
     "zod": "4.6.5"
   },
   "peerDependencies": {
-    "@orpc/client": "2.0.0-beta.41",
+    "@orpc/client": "2.0.0-beta.42",
     "@orpc/contract": "2.0.0-beta.41",
     "@orpc/server": "2.0.0-beta.41",
     "@sqlite.org/sqlite-wasm": "3.53.4-build2",
