@@ -1,3 +1,13 @@
-import { packageStrykerConfig } from "../../../../stryker.shared.ts";
+import {
+  breakThresholdFromBaseline,
+  packageStrykerConfig,
+} from "../../../../stryker.shared.ts";
 
-export default packageStrykerConfig();
+export default packageStrykerConfig({
+  breakThreshold: breakThresholdFromBaseline({
+    killed: 43,
+    timedOut: 0,
+    survived: 21,
+    noCoverage: 10,
+  }),
+});

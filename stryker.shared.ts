@@ -8,7 +8,7 @@ import type { PartialStrykerOptions } from "@stryker-mutator/api/core";
  * Every other workspace package has its own `stryker.config.ts` and `_test:mutation` script.
  */
 export interface PackageStrykerOptions {
-  /** Every package's own `stryker.config.ts` passes this, as `breakThresholdFromBaseline` of a completed CI run's measured counts. Left unset (`undefined`) until a real CI run has measured a baseline: a mutation-score gate chosen before ever running the suite is exactly the arbitrary magic number this workspace's own conventions exist to avoid. */
+  /** Every package's own `stryker.config.ts` passes this, as `breakThresholdFromBaseline` of the counts a completed CI run on `main` measured for it. Re-measure and update the counts when a package's tests kill more mutants, so the gate rises with them; a value chosen without a measured run would be an arbitrary number. */
   readonly breakThreshold?: number;
   /** Extra glob patterns to mutate, appended to the package's own `src/**\/*.ts` default. */
   readonly additionalMutate?: readonly string[];
