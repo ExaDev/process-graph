@@ -14,8 +14,6 @@ import {
 export interface TokenPanelProps {
   /** Whether a token is kept on this device. The token itself is never passed to the screen. */
   readonly hasToken: boolean;
-  /** Whether a saved token outlives the page. When it does not, the panel says so and asks for the token again each visit. */
-  readonly persistent: boolean;
   readonly onSave: (token: string) => void;
   readonly onForget: () => void;
 }
@@ -26,7 +24,7 @@ export interface TokenPanelProps {
  * @returns The panel.
  */
 export const TokenPanel = (props: TokenPanelProps): ReactElement => {
-  const { hasToken, persistent, onSave, onForget } = props;
+  const { hasToken, onSave, onForget } = props;
   const [draft, setDraft] = useState("");
   const headingId = useId();
   const inputId = useId();
@@ -68,9 +66,7 @@ export const TokenPanel = (props: TokenPanelProps): ReactElement => {
           </li>
         </ul>
         <p className={muted}>
-          {persistent
-            ? "The token is kept in this browser's storage on this device only. "
-            : "The token is held in this page's memory only and is gone when the page is closed or reloaded. "}
+          The token is kept in this browser&apos;s storage on this device only.
           It is sent to api.github.com and nowhere else, and never shown again
           once saved.
         </p>
@@ -92,7 +88,7 @@ export const TokenPanel = (props: TokenPanelProps): ReactElement => {
           }}
         />
         <button type="submit" className={primaryButton}>
-          {persistent ? "Save on this device" : "Use for this visit"}
+          Save on this device
         </button>
         {hasToken ? (
           <button type="button" className={button} onClick={onForget}>
@@ -102,9 +98,7 @@ export const TokenPanel = (props: TokenPanelProps): ReactElement => {
       </form>
       <p className={muted} role="status">
         {hasToken
-          ? persistent
-            ? "A token is saved on this device."
-            : "A token is held for this visit."
+          ? "A token is saved on this device."
           : "No token is saved yet."}
       </p>
     </section>

@@ -273,8 +273,6 @@ export interface TestPortOptions {
   /** The GitHub pager; the fake source over `fakeScopes` by default. */
   readonly pager?: GraphSourcePager;
   readonly records?: readonly SyncRecord[];
-  /** `device` by default. */
-  readonly persistence?: AppPorts["persistence"];
 }
 
 /**
@@ -306,7 +304,6 @@ export const testPorts = (options: TestPortOptions = {}): TestPorts => {
     });
 
   const ports: AppPorts = {
-    persistence: options.persistence ?? "device",
     store: createRouterClient(createGraphStoreRouter(createFakeGraphStore())),
     sources: (used) => (prefix) => {
       tokensUsed.push(used);
