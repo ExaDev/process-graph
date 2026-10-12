@@ -30,6 +30,8 @@
     "_test:coverage": "vitest run --project unit --coverage",
     "test:smoke": "turbo run _test:smoke",
     "_test:smoke": "vitest run --project smoke",
+    "test:mutation": "turbo run _test:mutation",
+    "_test:mutation": "stryker run stryker.config.ts",
     "test:e2e": "turbo run _test:e2e",
     "_test:e2e": "playwright test"
   },
@@ -63,6 +65,9 @@
     "@exadev/process-graph-cli": "workspace:*",
     "@playwright/test": "catalog:",
     "@resvg/resvg-js": "catalog:",
+    "@stryker-mutator/core": "catalog:",
+    "@stryker-mutator/typescript-checker": "catalog:",
+    "@stryker-mutator/vitest-runner": "catalog:",
     "@testing-library/dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/node": "catalog:",

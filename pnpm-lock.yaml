@@ -1233,6 +1233,15 @@ importers:
       '@resvg/resvg-js':
         specifier: 'catalog:'
         version: 2.6.2
+      '@stryker-mutator/core':
+        specifier: 'catalog:'
+        version: 10.0.0(@types/node@26.6.4)
+      '@stryker-mutator/typescript-checker':
+        specifier: 'catalog:'
+        version: 10.0.0(@stryker-mutator/core@10.0.0(@types/node@26.6.4))(typescript@6.0.3)
+      '@stryker-mutator/vitest-runner':
+        specifier: 'catalog:'
+        version: 10.0.0(@stryker-mutator/core@10.0.0(@types/node@26.6.4))(vitest@4.1.11)
       '@testing-library/dom':
         specifier: 'catalog:'
         version: 10.4.2
