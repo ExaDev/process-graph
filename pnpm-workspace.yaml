@@ -43,9 +43,9 @@ catalog:
   "@eslint/markdown": 8.0.3
   "@exadev/eslint-config": 3.1.0
   "@exadev/semantic-release-workspace": 3.2.0
-  "@orpc/client": 2.0.0-beta.41
-  "@orpc/contract": 2.0.0-beta.41
-  "@orpc/server": 2.0.0-beta.41
+  "@orpc/client": 2.0.0-beta.42
+  "@orpc/contract": 2.0.0-beta.42
+  "@orpc/server": 2.0.0-beta.42
   "@playwright/test": 1.63.0
   "@resvg/resvg-js": 2.6.2
   "@semantic-release/changelog": 7.0.0
@@ -73,8 +73,8 @@ catalog:
   "@xyflow/react": 12.12.0
   commander: 15.0.0
   conventional-changelog-conventionalcommits: 9.3.1
-  drizzle-kit: 1.0.0-rc.4
-  drizzle-orm: 1.0.0-rc.4
+  drizzle-kit: 1.0.0-rc.5-5935859
+  drizzle-orm: 1.0.0-rc.5-5935859
   elkjs: 0.12.0
   eslint: 10.12.0
   eslint-config-prettier: 10.1.8

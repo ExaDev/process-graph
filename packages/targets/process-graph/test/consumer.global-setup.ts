@@ -59,7 +59,7 @@ const consumerOf = (tarball: string, specifiers: readonly string[]): string => {
     join(consumer, "package.json"),
     JSON.stringify({ name: "consumer", private: true, type: "module" }),
   );
-  // pnpm rather than npm: npm 11.19.0, the npm the pinned Node ships, cannot resolve drizzle-orm 1.0.0-rc.4's optional `effect` peer range at all (ERESOLVE, with or without this package), which npm 11.19.1 fixes.
+  // pnpm rather than npm: npm 11.19.0, the npm the pinned Node ships, cannot resolve the `effect` peer range of drizzle-orm's 1.0.0 release candidates at all (ERESOLVE, with or without this package), which npm 11.19.1 fixes.
   execFileSync("pnpm", ["add", "--ignore-scripts", tarball, ...specifiers], {
     cwd: consumer,
     // Output is captured rather than shown, and a failure's error carries pnpm's own report of why.
