@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-domain",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Reasoning over the process model and a run overlay: control graph, illegal cycles, three-valued status, decision evaluation, ready set, blocked-by, impact, what-if and critical path.",
   "private": true,
   "type": "module",

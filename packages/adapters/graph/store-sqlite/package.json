@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-store-sqlite",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "The GraphStore port on SQLite through Drizzle: one schema, committed drizzle-kit migrations applied the same way in every runtime, recursive SQL for the structural queries, written against Drizzle's async SQLite database so any driver plugs in.",
   "private": true,
   "type": "module",

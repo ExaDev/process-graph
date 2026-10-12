@@ -1,3 +1,30 @@
+## [2.0.2](https://github.com/ExaDev/process-graph/compare/process-graph@2.0.1...process-graph@2.0.2) (2026-10-12)
+
+### Tests
+
+* gate each package's mutation score on its measured baseline ([63c9f3d](https://github.com/ExaDev/process-graph/commit/63c9f3d851f3eb878d6652b7c758f089dd78b54c)), closes [#43](https://github.com/ExaDev/process-graph/issues/43)
+
+
+### Dependencies
+
+- Updated @exadev/process-graph-dag to 1.1.2
+- Updated @exadev/process-graph-schema to 2.0.1
+- Updated @exadev/process-graph-domain to 1.2.3
+- Updated @exadev/process-graph-projection to 1.1.5
+- Updated @exadev/process-graph-source-contract to 2.0.1
+- Updated @exadev/process-graph-export to 1.0.2
+- Updated @exadev/process-graph-layout to 1.0.8
+- Updated @exadev/process-graph-source-github-issues to 2.0.1
+- Updated @exadev/process-graph-store-contract to 2.0.1
+- Updated @exadev/process-graph-react to 1.1.5
+- Updated @exadev/process-graph-store-sqlite to 1.2.4
+- Updated @exadev/process-graph-sync to 1.0.2
+- Updated @exadev/process-graph-sqlite-node to 1.1.3
+- Updated @exadev/process-graph-sqlite-wasm to 1.0.9
+- Updated @exadev/process-graph-ui to 1.1.3
+- Updated @exadev/process-graph-cli to 1.3.3
+- Updated @exadev/process-graph-react-flow to 1.1.5
+
 ## [2.0.1](https://github.com/ExaDev/process-graph/compare/process-graph@2.0.0...process-graph@2.0.1) (2026-10-12)
 
 ### Build System

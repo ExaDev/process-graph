@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-source-github-issues",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "The GitHub issues GraphSource adapter: issues as bound activities, blockedBy and blocking as transitions, sub-issues, repositories, organisations and assignees, read through the GraphQL API with server-side filters, pagination, rate-limit handling and typed errors across organisations, repositories and Projects v2 boards, with a scope listing for pickers.",
   "private": true,
   "type": "module",

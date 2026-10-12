@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-sqlite-wasm",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "The SQLite graph store in the browser: SQLite compiled to WebAssembly in a dedicated worker on the OPFS sahpool VFS, shared safely between tabs with no special headers, served to the page over oRPC.",
   "private": true,
   "type": "module",

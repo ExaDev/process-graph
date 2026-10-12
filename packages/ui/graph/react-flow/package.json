@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-react-flow",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "private": true,
   "description": "React Flow views of the process model: a flowchart, a swimlane with lanes as group nodes and a state machine, laid out by graph-layout and styled by graph-ui, showing each element's status and the critical path; a sequence projection is drawn by graph-ui's SVG sequence diagram.",
   "type": "module",

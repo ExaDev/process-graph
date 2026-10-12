@@ -1,6 +1,6 @@
 {
   "name": "@exadev/process-graph-react",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "private": true,
   "description": "Headless React hooks and unstyled components over the process model: load and follow a stored model, derive statuses, ready set, blocked chains, impact and explanations, select, filter and navigate by keyboard, and render elements, lanes, legends and panels as semantic markup.",
   "type": "module",
