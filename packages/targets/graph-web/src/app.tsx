@@ -23,6 +23,7 @@ import {
   FailureNotice,
   GapsNotice,
   LinkProblems,
+  EphemeralNotice,
   OfflineNotice,
   UpdateNotice,
 } from "./notices.tsx";
@@ -165,6 +166,7 @@ export const App = (props: AppProps): ReactElement => {
             GitHub token
           </button>
         </header>
+        {ports.persistence === "ephemeral" ? <EphemeralNotice /> : null}
         {online ? null : <OfflineNotice />}
         {updateAvailable ? (
           <UpdateNotice onReload={ports.updates.apply} />
@@ -184,6 +186,7 @@ export const App = (props: AppProps): ReactElement => {
           {tokenOpen || !hasToken ? (
             <TokenPanel
               hasToken={hasToken}
+              persistent={ports.persistence === "device"}
               onSave={(token) => {
                 ports.token.write(token);
                 setHasToken(true);
