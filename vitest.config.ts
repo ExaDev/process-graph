@@ -11,6 +11,7 @@ export default defineConfig({
             ".github/scripts/**/*.test.ts",
             "scripts/**/*.test.ts",
             "release-workspace.config.unit.test.ts",
+            "stryker.shared.unit.test.ts",
           ],
         },
       },

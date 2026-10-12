@@ -1,10 +1,48 @@
 import type { PartialStrykerOptions } from "@stryker-mutator/api/core";
 
+/**
+ * Packages with no Stryker run, each for a reason a run cannot get round:
+ *
+ * - `@exadev/process-graph-sqlite-wasm`: its tests drive a real browser over OPFS, which Stryker's sandboxed copies cannot start, so a run could only score the few in-process unit tests as if they were the package's coverage.
+ *
+ * Every other workspace package has its own `stryker.config.ts` and `_test:mutation` script.
+ */
 export interface PackageStrykerOptions {
-  /** Every package's own `stryker.config.ts` passes this. Left unset (`undefined`) until a real CI run has actually measured a baseline. A mutation-score gate chosen before ever running the suite is exactly the arbitrary magic number this workspace's own conventions exist to avoid. */
+  /** Every package's own `stryker.config.ts` passes this, as `breakThresholdFromBaseline` of a completed CI run's measured counts. Left unset (`undefined`) until a real CI run has measured a baseline: a mutation-score gate chosen before ever running the suite is exactly the arbitrary magic number this workspace's own conventions exist to avoid. */
   readonly breakThreshold?: number;
   /** Extra glob patterns to mutate, appended to the package's own `src/**\/*.ts` default. */
   readonly additionalMutate?: readonly string[];
+}
+
+/** One package's verdict counts from a completed Stryker run, as its clear-text report's `All files` row prints them (`# killed`, `# timeout`, `# survived`, `# no cov`). Errored and ignored mutants are left out, as Stryker leaves them out of the score. */
+export interface MutationBaseline {
+  readonly killed: number;
+  readonly timedOut: number;
+  readonly survived: number;
+  readonly noCoverage: number;
+}
+
+/** Stryker states a mutation score, and compares it with `thresholds.break`, as a percentage. */
+const PERCENT = 100;
+
+/**
+ * The break threshold a measured baseline supports: the package's mutation score with every timed-out mutant counted as survived, floored to a whole percentage.
+ *
+ * Stryker counts a timed-out mutant as detected, but whether a mutant runs past its time budget depends on how loaded the runner is, so the same mutant can time out on one run and complete, killed or survived, on the next. Killed, survived and no-coverage verdicts depend only on the code and its tests. Counting every timeout as survived therefore gives the lowest score the same code and tests can produce, so the gate absorbs run-to-run variation without a margin picked by hand, and fails only when a change loses a kill. Flooring keeps the threshold a whole number at or below that score.
+ *
+ * The result is never below zero and never above the measured score (killed plus timed out over every scored mutant). Raise a package's threshold by re-measuring it once its tests kill more mutants.
+ * @throws RangeError when the baseline scored no mutant, since a score over nothing measures nothing.
+ */
+export function breakThresholdFromBaseline(baseline: MutationBaseline): number {
+  const { killed, timedOut, survived, noCoverage } = baseline;
+  const scored = killed + timedOut + survived + noCoverage;
+  if (scored === 0) {
+    throw new RangeError(
+      "a mutation baseline needs at least one scored mutant to derive a break threshold from",
+    );
+  }
+
+  return Math.floor((killed * PERCENT) / scored);
 }
 
 /**
