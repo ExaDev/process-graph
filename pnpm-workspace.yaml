@@ -45,7 +45,7 @@ catalog:
   "@exadev/semantic-release-workspace": 3.2.0
   "@orpc/client": 2.0.0-beta.42
   "@orpc/contract": 2.0.0-beta.42
-  "@orpc/server": 2.0.0-beta.42
+  "@orpc/server": 2.0.0-beta.43
   "@playwright/test": 1.63.0
   "@resvg/resvg-js": 2.6.2
   "@semantic-release/changelog": 7.0.0
