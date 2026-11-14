@@ -25,10 +25,10 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           standalone: true
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .tool-versions
           cache: pnpm
@@ -156,7 +156,7 @@ jobs:
         with:
           persist-credentials: false
       # uvx rather than zizmorcore/zizmor-action: the action runs zizmor's container image, which needs a Docker daemon. setup-uv checks the uv download against its published checksum, and uv fetches a Python for zizmor's environment if the runner has none.
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: 0.12.19
           enable-cache: false
@@ -198,11 +198,11 @@ jobs:
           fetch-depth: 0
           # The deploy key, not this job's token, is the push credential, so nothing is left in git config for later steps. @semantic-release/github calls the GitHub API with GITHUB_TOKEN from the Release step's env and needs no git credential.
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           standalone: true
       # Deliberately no `registry-url`: setting it writes an .npmrc `_authToken` line that wins over the OIDC exchange, so the input that looks like it configures the registry is the one that breaks trusted publishing.
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .tool-versions
           cache: pnpm
